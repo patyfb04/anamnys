@@ -1,0 +1,659 @@
+{
+  "common": {
+    "autoDetect": "Detecção automática",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "provider": "Profissional",
+    "specialty": {
+      "mentalHealth": "Saúde Mental",
+      "physicalTherapy": "Fisioterapia"
+    },
+    "passwordRequirements": {
+      "length": "Pelo menos 10 caracteres",
+      "lowercase": "Uma letra minúscula",
+      "uppercase": "Uma letra maiúscula",
+      "digit": "Um número",
+      "symbol": "Um símbolo"
+    }
+  },
+  "nav": {
+    "home": "Início",
+    "patients": "Pacientes",
+    "newNote": "Nova Nota",
+    "settings": "Ajustes"
+  },
+  "welcome": {
+    "signIn": "Entrar",
+    "getStarted": "Começar",
+    "nav": {
+      "product": "Produto",
+      "solutions": "Soluções",
+      "pricing": "Preços e Planos",
+      "aboutUs": "Sobre nós",
+      "contact": "Contato"
+    },
+    "headline": "Seu parceiro na <accent>excelência clínica</accent>",
+    "subhead": "O Anamnys cuida da documentação complexa e das notas clínicas, permitindo que você se concentre no que realmente importa: seus pacientes.",
+    "startTrial": "Comece seu teste gratuito",
+    "watchDemo": "Assistir demonstração",
+    "liveSyncing": "Sincronização ao vivo",
+    "sectionTitle": "Desenvolvido para a prática clínica moderna",
+    "sectionSubtitle": "Ferramentas de precisão para otimizar seu fluxo de trabalho e proteger a privacidade do paciente.",
+    "features": {
+      "speechToNote": {
+        "title": "Fala para nota",
+        "body": "Transforme conversas em documentação clínica estruturada instantaneamente. Nossa IA entende terminologia clínica e contexto com 99% de precisão."
+      },
+      "structuredNotes": {
+        "title": "Notas Estruturadas, na Hora",
+        "body": "Cada sessão é organizada automaticamente em seções claras e profissionais — prontas para revisar, editar e assinar em minutos."
+      },
+      "billing": {
+        "title": "Assistente de Faturamento Inteligente",
+        "body": "Receba sugestões de códigos de faturamento para cada sessão, com índice de confiança e alertas de risco de glosa antes de enviar."
+      },
+      "auditTrail": {
+        "title": "Trilha de Auditoria Completa",
+        "body": "Cada rascunho, edição e assinatura é registrado e datado, mantendo seus prontuários completos e defensáveis."
+      },
+      "secure": {
+        "title": "Seguro e Privado",
+        "body": "Criptografia de nível bancário para todos os dados, com padrões rígidos de privacidade e confidencialidade desde o primeiro dia — onde quer que você atue."
+      },
+      "therapy": {
+        "title": "Feito para terapia",
+        "body": "Desenvolvido especificamente para terapeutas e conselheiros. Nossos modelos são treinados em fluxos de trabalho de saúde comportamental para fornecer o rascunho mais relevante."
+      }
+    },
+    "roadmapTitle": "Preparado para o futuro da prática em saúde mental",
+    "roadmapSubtitle": "Estes recursos estão no nosso roteiro e chegarão a todos os planos.",
+    "comingSoon": "Em breve",
+    "roadmapFeatures": {
+      "longitudinal": {
+        "title": "Identifique Padrões entre Sessões",
+        "body": "Acompanhe temas, escalas e evolução ao longo de todas as sessões — cada insight vinculado diretamente ao trecho de onde veio."
+      },
+      "evidenceLinking": {
+        "title": "Evidências Rastreáveis",
+        "body": "Cruze notas, escalas e documentos automaticamente, com rastreabilidade completa até a origem de cada dado."
+      },
+      "scheduling": {
+        "title": "Agendamento sem Esforço",
+        "body": "Sincronize compromissos com sua agenda e mantenha cada sessão conectada à sua nota, automaticamente."
+      },
+      "videoSessions": {
+        "title": "Videochamadas Integradas",
+        "body": "Atenda seus pacientes em uma sala de vídeo segura e integrada — sem necessidade de conta ou download do lado deles — enquanto sua nota já começa a tomar forma durante a conversa."
+      },
+      "documentIntake": {
+        "title": "Traga seus Documentos Existentes",
+        "body": "Envie laudos e documentos anteriores — extraímos os dados principais para sua revisão, com referência de página, sem nunca reinterpretar o trabalho de outro profissional."
+      },
+      "compliance": {
+        "title": "Sempre Pronto para Auditoria",
+        "body": "Verificações automáticas apontam elementos obrigatórios ausentes antes de você assinar, e acompanham prazos de retenção para que nada passe despercebido."
+      },
+      "secureSharing": {
+        "title": "Compartilhe Documentos com Segurança",
+        "body": "Envie laudos por links com marca d'água e validade, com autorização do paciente registrada — revogáveis a qualquer momento e totalmente auditados."
+      }
+    },
+    "ctaTitle": "Pronto para recuperar seu tempo?",
+    "ctaBody": "Junte-se aos profissionais que transformaram seu fluxo de documentação clínica com o Anamnys.",
+    "ctaGetStarted": "Comece gratuitamente",
+    "contactSales": "Fale com vendas",
+    "footerCopyright": "© 2026 Anamnys. Seguro e privado por padrão.",
+    "footerPrivacy": "Política de privacidade",
+    "footerTerms": "Termos de serviço",
+    "footerFAQ": "Perguntas Frequentes",
+    "footerContact": "Contato"
+  },
+  "auth": {
+    "secureBadge": "Seguro e Privado",
+    "login": {
+      "heroHeadline": "Bem-vindo(a) <accent>de volta</accent>.",
+      "heroSubhead": "Entre para continuar sua documentação de onde parou.",
+      "formTitle": "Entrar",
+      "subtitle": "Notas clínicas nativas por especialidade",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "dr.smith@clinic.pro",
+      "passwordLabel": "Senha",
+      "passwordPlaceholder": "••••••••••••",
+      "submit": "Entrar",
+      "biometric": "Usar Face ID / Touch ID",
+      "noAccount": "Não tem uma conta? Cadastre-se",
+      "missingFieldsTitle": "Campos obrigatórios",
+      "missingFieldsBody": "Digite seu e-mail e senha.",
+      "biometricUnavailableTitle": "Biometria indisponível",
+      "biometricUnavailableBody": "Entre com seu e-mail e senha.",
+      "biometricPromptMessage": "Autentique-se no Anamnys",
+      "biometricFallbackLabel": "Usar senha",
+      "biometricSuccessTitle": "Biometria bem-sucedida",
+      "biometricSuccessBody": "Digite suas credenciais uma vez para ativar o login biométrico.",
+      "twoFactor": {
+        "formTitle": "Verificação em Duas Etapas",
+        "subtitle": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
+        "codeLabel": "Código de verificação",
+        "codePlaceholder": "123456 ou um código de recuperação",
+        "submit": "Verificar e Entrar",
+        "back": "Voltar para a senha",
+        "missingCodeTitle": "Código ausente",
+        "missingCodeBody": "Digite seu código de verificação."
+      }
+    },
+    "register": {
+      "heroHeadline": "Junte-se aos profissionais que <accent>documentam com confiança</accent>.",
+      "heroSubhead": "Simplifique sua documentação clínica desde a primeira sessão.",
+      "formTitle": "Crie sua Conta",
+      "formSubtitle": "Comece a documentar sua primeira sessão em minutos.",
+      "subtitle": "Crie sua conta de profissional",
+      "fullNameLabel": "Nome completo",
+      "fullNamePlaceholder": "Dra. Alex Smith",
+      "emailLabel": "E-mail",
+      "emailPlaceholder": "dr.smith@clinic.pro",
+      "passwordLabel": "Senha",
+      "passwordPlaceholder": "Mín. 10 caracteres",
+      "confirmPasswordLabel": "Confirmar senha",
+      "confirmPasswordPlaceholder": "••••••••••••",
+      "agreement": "Eu concordo com os <terms>Termos de Serviço</terms> e a <privacy>Política de Privacidade</privacy>.",
+      "agreementRequiredTitle": "Concordância necessária",
+      "agreementRequiredBody": "Para continuar, você precisa concordar com os Termos de Serviço e a Política de Privacidade.",
+      "submit": "Criar conta",
+      "haveAccount": "Já tem uma conta? Entrar",
+      "missingFieldsTitle": "Campos obrigatórios",
+      "missingFieldsBody": "Preencha seu nome, e-mail e senha.",
+      "weakPasswordTitle": "Senha fraca",
+      "weakPasswordBody": "A senha deve ter pelo menos 10 caracteres e incluir uma letra maiúscula, uma minúscula, um número e um símbolo.",
+      "passwordMismatchTitle": "As senhas não coincidem",
+      "passwordMismatchBody": "Digite sua senha novamente."
+    }
+  },
+  "home": {
+    "greeting": "Bom dia, {{name}} 👋",
+    "patientsCount": "{{count}} PACIENTES",
+    "liveTranscriptionBadge": "TRANSCRIÇÃO AO VIVO",
+    "heroTitle": "Capture cada detalhe do atendimento ao paciente em tempo real.",
+    "startLiveNote": "Iniciar nota ao vivo",
+    "resumeDraft": "Retomar rascunho",
+    "uploadAudio": "Enviar áudio",
+    "recentPatients": "Pacientes recentes",
+    "recentActivity": "Atividade recente",
+    "viewAll": "VER TUDO",
+    "noPatients": "Ainda não há pacientes — adicione seu primeiro paciente para começar.",
+    "lastVisit": "Última visita: {{date}}",
+    "noVisitsYet": "Ainda sem visitas"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "accountSecurity": "Conta e Segurança",
+    "notifications": "Notificações",
+    "transcriptionLanguage": "Idioma de transcrição",
+    "appLanguage": "Idioma do aplicativo",
+    "privacyHipaa": "Privacidade e Segurança",
+    "signOut": "Sair"
+  },
+  "account": {
+    "title": "Conta e Segurança",
+    "changePassword": {
+      "title": "Alterar Senha",
+      "currentLabel": "Senha atual",
+      "newLabel": "Nova senha",
+      "confirmLabel": "Confirmar nova senha",
+      "submit": "Atualizar Senha",
+      "successTitle": "Senha atualizada",
+      "successBody": "Sua senha foi alterada com sucesso.",
+      "failedTitle": "Não foi possível atualizar a senha",
+      "missingFieldsTitle": "Campos obrigatórios",
+      "missingFieldsBody": "Digite sua senha atual e a nova senha.",
+      "weakPasswordTitle": "Senha fraca",
+      "weakPasswordBody": "A senha deve ter pelo menos 10 caracteres e incluir uma letra maiúscula, uma minúscula, um número e um símbolo.",
+      "mismatchTitle": "As senhas não coincidem",
+      "mismatchBody": "Digite sua nova senha novamente."
+    },
+    "twoFactor": {
+      "title": "Verificação em Duas Etapas",
+      "description": "Adicione uma camada extra de segurança à sua conta usando um aplicativo autenticador como Google Authenticator ou Authy.",
+      "enabled": "Ativada",
+      "disabled": "Não ativada",
+      "enable": "Ativar 2FA",
+      "disable": "Desativar 2FA",
+      "scanTitle": "Escaneie este QR code com seu aplicativo autenticador",
+      "manualEntry": "Ou digite este código manualmente",
+      "codeLabel": "Código de verificação",
+      "codePlaceholder": "Código de 6 dígitos",
+      "codeOrRecoveryPlaceholder": "Código de 6 dígitos ou código de recuperação",
+      "verify": "Verificar",
+      "setupFailedTitle": "Não foi possível iniciar a configuração",
+      "invalidCodeTitle": "Código inválido",
+      "missingCodeTitle": "Código ausente",
+      "missingCodeBody": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
+      "recoveryCodesTitle": "Salve seus códigos de recuperação",
+      "recoveryCodesBody": "Guarde estes códigos em um local seguro. Cada um pode ser usado uma única vez para entrar caso você perca acesso ao seu aplicativo autenticador.",
+      "recoveryCodesDone": "Já salvei estes códigos",
+      "passwordLabel": "Senha",
+      "missingFieldsTitle": "Campos obrigatórios",
+      "missingFieldsBody": "Digite sua senha e um código de verificação.",
+      "disabledTitle": "Verificação em duas etapas desativada",
+      "disabledBody": "O 2FA foi desativado para sua conta.",
+      "disableFailedTitle": "Não foi possível desativar o 2FA"
+    }
+  },
+  "patients": {
+    "list": {
+      "searchPlaceholder": "Buscar pacientes…",
+      "recent": "Recentes",
+      "last48h": "ÚLTIMAS 48H",
+      "allPatients": "Todos os pacientes",
+      "noPatientsFound": "Nenhum paciente encontrado.",
+      "failedToLoad": "Falha ao carregar pacientes.",
+      "lastVisit": "Última visita: {{date}}",
+      "dob": "Nascimento: {{date}}"
+    },
+    "add": {
+      "title": "Adicionar paciente",
+      "basicInfo": "Informações básicas",
+      "firstName": "Nome",
+      "firstNamePlaceholder": "Alice",
+      "lastName": "Sobrenome",
+      "lastNamePlaceholder": "Torres",
+      "dob": "Data de nascimento",
+      "dobPlaceholder": "1990-01-31",
+      "preferredLanguage": "Idioma preferido",
+      "clinicalProfile": "Perfil clínico (opcional)",
+      "diagnoses": "Diagnósticos — um por linha",
+      "diagnosesPlaceholder": "Transtorno depressivo maior (F33.1)\nTranstorno de ansiedade generalizada (F41.1)",
+      "medications": "Medicamentos atuais — um por linha",
+      "medicationsPlaceholder": "Sertralina 100mg 1x/dia\nBuspirona 10mg 2x/dia",
+      "treatmentPlan": "Plano de tratamento",
+      "treatmentPlanPlaceholder": "Psicoterapia individual semanal (TCC)…",
+      "submit": "Adicionar paciente",
+      "missingInfoTitle": "Informações faltando",
+      "missingInfoBody": "Nome e sobrenome são obrigatórios.",
+      "invalidDateTitle": "Data inválida",
+      "invalidDateBody": "A data de nascimento deve estar no formato AAAA-MM-DD.",
+      "createFailedTitle": "Não foi possível adicionar o paciente"
+    },
+    "detail": {
+      "dob": "Nascimento: {{date}}",
+      "language": "Idioma: {{language}}",
+      "lastVisit": "Última visita: {{date}}",
+      "diagnoses": "Diagnósticos",
+      "currentMedications": "Medicamentos atuais",
+      "treatmentPlan": "Plano de tratamento",
+      "viewNotes": "Ver notas",
+      "newNote": "+ Nova nota",
+      "failedToLoad": "Falha ao carregar o paciente."
+    },
+    "notes": {
+      "title": "Notas",
+      "noNotes": "Ainda não há notas para este paciente.",
+      "failedToLoad": "Falha ao carregar as notas."
+    }
+  },
+  "notes": {
+    "status": {
+      "draft": "Rascunho",
+      "processing": "Processando…",
+      "ready_for_review": "Pronto para revisão",
+      "signed": "Assinado",
+      "exported": "Exportado"
+    },
+    "liveTranscribe": {
+      "title": "Nova nota",
+      "connected": "Conectado",
+      "connecting": "Conectando…",
+      "recordingWith": "Gravando com {{name}}.",
+      "selectPatientTitle": "Selecione um paciente para começar",
+      "noPatientsHint": "Ainda não há pacientes — adicione um na aba Pacientes.",
+      "privacyActive": "Privacidade ativa · Processamento local",
+      "transcriptionLanguage": "Idioma de transcrição",
+      "transcribing": "Transcrevendo…",
+      "readyPlaceholder": "Toque no botão abaixo para começar a gravar…",
+      "selectPatientPlaceholder": "Selecione um paciente acima para começar.",
+      "tip": "Continue falando naturalmente. Nosso mecanismo clínico de IA identifica sintomas e códigos automaticamente.",
+      "startRecording": "Iniciar gravação",
+      "stopAndGenerate": "Parar e gerar nota",
+      "hintTranscribing": "Transcrevendo sua gravação…",
+      "hintRecording": "Gravando… fale naturalmente",
+      "hintReady": "Pressione para começar a gravar",
+      "hintChoosePatient": "Escolha um paciente para habilitar a gravação",
+      "noSpeechTitle": "Nenhuma fala detectada",
+      "noSpeechBody": "Tente gravar novamente.",
+      "couldNotSaveTitle": "Não foi possível salvar a nota",
+      "transcriptionFailedTitle": "Falha na transcrição",
+      "connectFailed": "Não foi possível conectar ao serviço de transcrição: {{message}}",
+      "permissionDeniedTitle": "Permissão negada",
+      "permissionDeniedBody": "É necessário acesso ao microfone.",
+      "couldNotStartTitle": "Não foi possível iniciar a gravação",
+      "recordingFailedTitle": "Falha na gravação"
+    },
+    "editor": {
+      "title": "Nota",
+      "activeSession": "Sessão ativa",
+      "sessionTitle": "Nota {{format}}",
+      "defaultFormat": "Clínica",
+      "aiDrafted": "Redigido por IA",
+      "rawTranscript": "Transcrição bruta",
+      "suggestedBillingCodes": "Códigos de faturamento sugeridos",
+      "signAndLock": "Assinar e bloquear nota",
+      "signNoteTitle": "Assinar nota",
+      "signNoteBody": "Assinar e bloquear esta nota?",
+      "sign": "Assinar",
+      "noteSignedTitle": "Nota assinada",
+      "noteSignedBody": "A nota foi assinada e bloqueada.",
+      "notFound": "Nota não encontrada.",
+      "uploadFailedTitle": "Falha no envio",
+      "processingFailedTitle": "Falha no processamento"
+    }
+  },
+  "audioRecorder": {
+    "title": "Ditado pós-consulta",
+    "subtitle": "Grave as notas da sua sessão e a IA as estruturará automaticamente.",
+    "startRecording": "Iniciar gravação",
+    "stop": "Parar",
+    "reRecord": "Gravar novamente",
+    "submit": "Enviar para redação com IA"
+  },
+  "billing": {
+    "lowRisk": "Risco baixo",
+    "mediumRisk": "Risco médio",
+    "highRisk": "Risco alto",
+    "confidence": "Confiança: {{value}}%",
+    "denialRisk": "Risco de negação: {{value}}/100",
+    "modifiers": "Modificadores: {{list}}",
+    "missingDocumentation": "⚠ Documentação ausente"
+  },
+  "contact": {
+    "title": "Fale com nosso time",
+    "subtitle": "Estamos aqui para ajudar. Entre em contato com nossa equipe de suporte para dúvidas ou problemas na plataforma Anamnys.",
+    "fullName": "Nome completo",
+    "fullNamePlaceholder": "Dra. Jane Doe",
+    "email": "E-mail da clínica",
+    "emailPlaceholder": "jane.doe@clinica.com",
+    "phone": "Telefone",
+    "phoneOptional": "Opcional",
+    "phonePlaceholder": "(11) 91234-5678",
+    "message": "Mensagem",
+    "messagePlaceholder": "Como podemos ajudar você hoje?",
+    "submit": "Enviar mensagem",
+    "missingFieldsTitle": "Campos obrigatórios",
+    "missingFieldsBody": "Preencha nome, e-mail e mensagem.",
+    "sentTitle": "Mensagem enviada",
+    "sentBody": "Nossa equipe responde em até 24 horas.",
+    "sendFailedBody": "Não foi possível enviar sua mensagem. Tente novamente.",
+    "directContact": "Contato Direto",
+    "supportEmail": "E-mail de suporte",
+    "supportEmailResponseTime": "Costumamos responder em até 24 horas.",
+    "headquarters": "Sede",
+    "secureTitle": "Atendimento Seguro e Privado",
+    "secureBody": "Nossos canais de atendimento são criptografados. Evite enviar dados sensíveis de pacientes neste formulário geral de contato."
+  },
+  "pricing": {
+    "title": "Você paga pelo que usa. Não por quantas sessões atende.",
+    "subtitle": "Assinatura individual, sem limite de notas, pacientes ou documentos. Sem fidelidade, sem multa, exportação dos seus dados disponível o tempo todo.",
+    "perMonth": "/mês",
+    "cta": "Testar por 14 dias",
+    "comingSoon": "Em breve",
+    "plans": {
+      "essencial": { "name": "Essencial", "price": "R$ 89" },
+      "profissional": { "name": "Profissional", "price": "R$ 179" },
+      "completo": { "name": "Completo", "price": "R$ 239" }
+    },
+    "audienceTitle": "Para quem é cada plano",
+    "audience": {
+      "essencial": "Para quem produz o registro e quer segurança documental. Atendimento particular, sem convênio.",
+      "profissional": "Para quem quer a visão do caso ao longo do tempo e os documentos externos organizados junto com as sessões.",
+      "completo": "Para quem atende convênio, ou para quem quer capturar a sessão com consentimento e acompanhar a aderência ao plano terapêutico."
+    },
+    "clinicTitle": "Trabalho em clínica",
+    "clinicBody1": "A conta é <b>individual e pessoal</b> — um profissional por conta, sem compartilhamento de credenciais. Se você atende em clínica, a assinatura continua sendo sua, e os registros que você produz também.",
+    "clinicBody2": "Clínicas que queiram contratar para vários profissionais podem falar com a gente: hoje tratamos caso a caso.",
+    "clinicLink": "Falar sobre contratação para equipe",
+    "annualTitle": "Plano anual",
+    "annualBody": "<b>20% de desconto</b> em qualquer plano na cobrança anual.",
+    "limitsTitle": "Limites e condições",
+    "limits": [
+      "<b>Captura de sessão</b> (plano Completo): até <b>40 sessões capturadas por mês</b>. O limite existe porque 50 minutos de áudio consomem muito mais processamento do que uma narração de três minutos — e é folgado para uso clínico normal.",
+      "<b>Sem limite de notas, pacientes ou documentos</b> em nenhum plano. Limitar o registro puniria justamente quem mais usa o produto.",
+      "<b>Teste de 14 dias</b> com acesso às funcionalidades do plano escolhido.",
+      "<b>Sem fidelidade e sem multa.</b> Cancelamento a qualquer momento, com efeito ao final do ciclo já pago.",
+      "<b>Exportação integral disponível o tempo todo</b> — não apenas na saída.",
+      "<b>Troca de plano a qualquer momento</b>, com efeito a partir do ciclo seguinte."
+    ],
+    "billingTitle": "Observação sobre a cobrança",
+    "billingBody": "A venda das assinaturas é processada pela <b>Paddle</b>, que atua como vendedor registrado. É ela que emite o documento fiscal — por isso <b>na sua fatura vai constar \"Paddle\"</b>, e não Anamnys. Não temos acesso ao número do seu cartão.",
+    "featureGroups": [
+      {
+        "title": "Documentação clínica",
+        "features": [
+          { "name": "Ditado por voz e transcrição ao vivo", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Digitação direta", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "DAP, SOAP e Biopsicossocial", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Revisão e assinatura", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Exportação em PDF", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Cadastro de pacientes", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Trilha de auditoria", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Códigos TUSS e CID sugeridos", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Aviso de documentação incompleta", "plans": ["essencial", "profissional", "completo"] },
+          { "name": "Conferência conforme a Res. CFP nº 006/2019", "plans": ["essencial", "profissional", "completo"], "comingSoon": true }
+        ]
+      },
+      {
+        "title": "Visão longitudinal e documentos",
+        "features": [
+          { "name": "Upload e resumo de documentos externos", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Cronologia do caso", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Escalas (PHQ-9, GAD-7, BDI-II, EVA)", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Linha do tempo de temas", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Detecção de ausência", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Trajetória de escalas com eventos", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Busca em linguagem natural", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Compartilhamento protegido com log", "plans": ["profissional", "completo"], "comingSoon": true },
+          { "name": "Painel de guarda documental", "plans": ["profissional", "completo"], "comingSoon": true }
+        ]
+      },
+      {
+        "title": "Convênio e captura de sessão",
+        "features": [
+          { "name": "Captura de sessão com consentimento", "plans": ["completo"] },
+          { "name": "Aderência ao plano terapêutico", "plans": ["completo"], "comingSoon": true },
+          { "name": "Guia no padrão TISS", "plans": ["completo"], "comingSoon": true },
+          { "name": "Previsão de risco de glosa", "plans": ["completo"], "comingSoon": true },
+          { "name": "Controle de autorizações e histórico de glosas", "plans": ["completo"], "comingSoon": true }
+        ]
+      }
+    ]
+  },
+  "product": {
+    "hero": {
+      "title": "Da sessão ao registro assinado, em menos de dois minutos.",
+      "subtitle": "Sem digitar depois do expediente. Sem descobrir a falha no documento tarde demais.",
+      "ctaPrimary": "Testar por 14 dias",
+      "ctaSecondary": "Ver como funciona"
+    },
+    "howItWorks": {
+      "title": "Como funciona",
+      "steps": [
+        {
+          "title": "Você narra",
+          "body": "Ao final da sessão, conte o que aconteceu, pelo celular ou pelo computador, do jeito que você falaria com um supervisor. Sem formulário, sem campo obrigatório, sem ordem certa."
+        },
+        {
+          "title": "O sistema estrutura",
+          "body": "A fala vira uma evolução organizada no formato que você usa — DAP, SOAP ou Biopsicossocial — com os códigos de convênio sugeridos para conferência."
+        },
+        {
+          "title": "Você revisa e assina",
+          "body": "Lê, corrige o que quiser, assina. <b>Nada entra no prontuário sem passar por você.</b> O rascunho é do sistema; o registro é seu."
+        }
+      ]
+    },
+    "available": {
+      "title": "O que já funciona hoje",
+      "badge": "Disponível agora",
+      "items": [
+        { "title": "Ditado por voz", "body": "narrar a sessão e receber a evolução estruturada em menos de dois minutos." },
+        { "title": "Transcrição ao vivo", "body": "transcrever durante o atendimento, para quem prefere não narrar depois." },
+        { "title": "Digitação direta", "body": "escrever sem usar voz, quando for mais conveniente." },
+        { "title": "Três formatos de registro", "body": "DAP, SOAP e Biopsicossocial, conforme a abordagem e a exigência do caso." },
+        { "title": "Revisão e assinatura", "body": "ler o rascunho, ajustar e assinar. Nada é registrado sem leitura humana." },
+        { "title": "Códigos de convênio sugeridos", "body": "TUSS e CID indicados a partir da conduta registrada, para sua conferência." },
+        { "title": "Aviso de documentação incompleta", "body": "alerta do que falta registrar para reduzir risco de glosa." },
+        { "title": "Exportação em PDF", "body": "documento formatado, pronto para anexar ao prontuário ou arquivar." },
+        { "title": "Cadastro de pacientes", "body": "lista com a situação de cada nota: pendente ou concluída." },
+        { "title": "Trilha de auditoria", "body": "histórico de cada documento: o que foi sugerido, o que você alterou, quando assinou." }
+      ]
+    },
+    "upcoming": {
+      "title": "Em desenvolvimento",
+      "badge": "Em desenvolvimento",
+      "note": "Especificado, com ordem de implementação definida. Não está disponível hoje e não entra na assinatura atual como promessa.",
+      "groups": [
+        {
+          "title": "Conformidade documental",
+          "items": [
+            { "title": "Conferência conforme a Res. CFP nº 006/2019", "body": "verificação dos elementos obrigatórios antes da assinatura, apontando exatamente o que falta. Tentar assinar um laudo sem metodologia e sem finalidade declarada devolve a lista do que está ausente." },
+            { "title": "Painel de guarda documental", "body": "prazos de guarda por prontuário, rascunhos parados e documentos com descarte vencido, numa tela só." }
+          ]
+        },
+        {
+          "title": "Leitura de documentos externos",
+          "items": [
+            { "title": "Upload de documentos", "body": "laudos, exames, receitas, relatórios escolares, avaliações anteriores, documentos judiciais." },
+            { "title": "Resumo do que o documento declara", "body": "emitente e registro, data, CID citado, medicação e posologia. O sistema extrai o que o documento <b>afirma</b>; nunca reinterpreta o conteúdo clínico de outro profissional." },
+            { "title": "Cronologia do caso", "body": "o conteúdo anexado organizado na linha do tempo do paciente." }
+          ]
+        },
+        {
+          "title": "Visão longitudinal",
+          "items": [
+            { "title": "Registro de escalas", "body": "PHQ-9, GAD-7, BDI-II, EVA de dor e outras, guardadas com data e escore, recuperáveis como série." },
+            { "title": "Linha do tempo de temas", "body": "o que apareceu em quais sessões, com clique até a passagem de origem." },
+            { "title": "Detecção de ausência", "body": "temas que se repetiam e pararam de aparecer. \"Registrado em 9 das 9 primeiras sessões; sem registro nas 11 seguintes.\" A observação é do sistema; a leitura clínica é sua." },
+            { "title": "Trajetória de escalas com eventos", "body": "escores ao longo do tempo, com mudanças de medicação e anotações no mesmo eixo. É também a evidência de evolução objetiva que a operadora pede na prorrogação." },
+            { "title": "Busca em linguagem natural", "body": "\"quando falamos de sono pela primeira vez?\" devolve as sessões e os trechos, com data e origem." }
+          ]
+        },
+        {
+          "title": "Convênios",
+          "items": [
+            { "title": "Guia no padrão TISS", "body": "montada a partir da nota assinada, pronta para o portal da operadora." },
+            { "title": "Aviso de risco de glosa", "body": "conferência antes do envio: código contra duração registrada, consistência entre diagnóstico e procedimento, documentação exigida." },
+            { "title": "Controle de autorizações", "body": "sessões autorizadas contra realizadas, com aviso de saldo e de vencimento, para que a prorrogação seja pedida a tempo." }
+          ]
+        },
+        {
+          "title": "Compartilhamento protegido",
+          "items": [
+            { "title": "Registro de autorização do paciente", "body": "antes de qualquer envio, fica registrado que o paciente autorizou <b>aquela</b> divulgação, para <b>aquele</b> destinatário, com <b>aquela</b> finalidade. Sem isso, o compartilhamento não acontece." },
+            { "title": "Link com senha e prazo", "body": "senha entregue por outro canal, marca d'água com o nome de quem acessou, log de acesso visível a você, revogação imediata em um clique." }
+          ]
+        }
+      ]
+    },
+    "differential": {
+      "title": "O diferencial que ninguém mais tem",
+      "lead": "Cruzamento entre fontes.",
+      "p1": "As ferramentas do mercado cruzam sessões dentro das notas. Nós cruzamos <b>o que estava em lugares diferentes</b>: o que você registrou na sessão, o que o laudo do psiquiatra declarou, o que a escala mediu, o que a guia do convênio autorizou, o que foi compartilhado e para quem.",
+      "p2": "Um exemplo concreto. A troca de medicação está numa receita anexada em março. A queda de oito pontos no PHQ-9 está numa escala aplicada em maio. A menção a sono está na nota da sessão 14. Hoje essas três informações moram em três lugares e ninguém as vê juntas.",
+      "p3": "<b>O sistema coloca as três no mesmo eixo, com data e origem. E para por aí.</b>",
+      "p4": "Ele não diz que a medicação causou a melhora. Não diz que houve melhora. Diz o que foi registrado, quando, e onde você confere. <b>A conclusão é sua — é ela que você assina, e é por ela que você responde.</b>",
+      "p5": "Essa contenção não é timidez de produto. É o que separa uma ferramenta que <b>protege</b> o profissional de uma que produz opinião clínica sem CRP."
+    },
+    "security": {
+      "title": "Segurança, sem eufemismo",
+      "items": [
+        {
+          "title": "A IA roda na nossa infraestrutura",
+          "body": "Nenhum fornecedor externo de inteligência artificial recebe dado de paciente. Não é cláusula contratual com terceiro — é ausência de terceiro."
+        },
+        {
+          "title": "Áudio, quando existe, é transitório",
+          "body": "A gravação de sessão é opcional, desativada por padrão, e só é liberada com termo de consentimento do paciente assinado e registrado, nos moldes da Resolução CFP nº 13/2022. Quando ativa, o áudio é transcrito e <b>destruído em seguida</b> — não é gravado em disco, não entra em backup, não vai para terceiros. A destruição fica registrada na trilha de auditoria."
+        },
+        {
+          "title": "Nomes de terceiros são substituídos",
+          "body": "Quando o paciente menciona outras pessoas, o sistema troca esses nomes por identificadores e preserva o vínculo: \"meu irmão João\" vira \"meu irmão [P1]\". <b>Dizemos com franqueza o limite disso:</b> é pseudonimização, não anonimização. O reconhecimento automático de nomes é imperfeito e o contexto pode identificar por si só. Pela LGPD, o dado continua sendo dado pessoal, com todas as proteções."
+        },
+        {
+          "title": "Dados clínicos no Brasil",
+          "body": "Armazenados e processados em território nacional, sob jurisdição brasileira. A operação técnica é conduzida do Canadá, e esse acesso — restrito, registrado e, quanto a conteúdo clínico, condicionado a um pedido de suporte seu — está declarado na Política de Privacidade, amparado nas cláusulas contratuais padrão da ANPD."
+        },
+        {
+          "title": "Seus dados não treinam modelo nenhum",
+          "body": "Os modelos são estáticos. Não aprendem com o que passa por eles."
+        },
+        {
+          "title": "Em operação normal, nossa equipe não acessa conteúdo clínico",
+          "body": "O acesso técnico só ocorre se você pedir suporte, é limitado ao necessário, e aparece na sua trilha de auditoria."
+        }
+      ],
+      "linkPrivacy": "Ler a Política de Privacidade completa",
+      "linkTerms": "Ler os Termos de Uso"
+    },
+    "audience": {
+      "title": "Para quem é",
+      "items": [
+        { "title": "Psicólogos", "body": "em consultório particular ou clínica, atendendo por convênio ou particular, presencial ou on-line." },
+        { "title": "Fisioterapeutas", "body": "que precisam registrar evolução objetiva e sustentar pedidos de prorrogação junto a operadoras." },
+        { "title": "Profissionais que atendem em clínica", "body": "e querem manter a própria documentação sob controle. A conta é individual e pessoal — os registros que você produz são seus, e vão com você." }
+      ],
+      "notNote": "<b>Não somos</b> prontuário eletrônico substitutivo, nem sistema de gestão de clínica. Somos a camada de documentação — e não substituímos nenhuma obrigação legal ou ética sua."
+    },
+    "finalCta": {
+      "title": "14 dias para testar",
+      "body": "Sem cartão para começar. Sem fidelidade. Exportação dos seus dados disponível o tempo todo.",
+      "ctaPrimary": "Começar o teste",
+      "ctaSecondary": "Falar com quem construiu"
+    }
+  },
+  "about": {
+    "title": "Feito por quem leu as resoluções.",
+    "subtitle": "O Anamnys nasceu de uma pergunta específica: por que a documentação clínica, que é obrigação legal e ética do profissional, é tratada por todo mundo como um problema de digitação?",
+    "block1": {
+      "title": "Por que existimos",
+      "p1": "Psicólogo e fisioterapeuta não reclamam de escrever. Reclamam de escrever <b>duas vezes</b>, de escrever <b>tarde da noite</b>, e de descobrir meses depois que faltava um elemento obrigatório no laudo que já foi entregue.",
+      "p2": "A maior parte das ferramentas de inteligência artificial para saúde resolve a primeira dor e ignora as outras duas. Transcrevem bem, resumem bem, e param aí — porque o resto exige ler a Resolução CFP nº 006/2019 linha por linha, entender por que a 001/2009 fala em cinco anos de guarda, e saber o que o Manual Orientativo de 2025 permite e proíbe a um software.",
+      "p3": "Foi por aí que começamos. A transcrição é a parte fácil."
+    },
+    "block2": {
+      "title": "O que nos diferencia",
+      "p1": "<b>Não terceirizamos o seu dado.</b> Os modelos de transcrição e de redação rodam na nossa própria infraestrutura. Nenhuma chamada a OpenAI, Google ou Microsoft. A cadeia de tratamento do dado do seu paciente termina em nós — e isso não é uma promessa contratual, é uma decisão de arquitetura que custa mais caro e foi tomada de propósito.",
+      "p2": "<b>Não fingimos ser o profissional.</b> O sistema transcreve, organiza, localiza, conta e compara o que <b>você</b> registrou. Ele não interpreta, não conclui, não formula hipótese diagnóstica e não avalia risco. Essa limitação não é falta de capacidade técnica — é respeito ao item 16 do Manual Orientativo do CFP, que reserva esses atos à sua competência privativa. Software que atravessa essa linha coloca <b>você</b> em risco, não a si mesmo.",
+      "p3": "<b>Não escondemos o que ainda não existe.</b> Nosso site separa o que já funciona do que está em desenvolvimento. É menos impressionante e evita a conversa constrangedora depois da assinatura."
+    },
+    "block3": {
+      "title": "Quem está por trás",
+      "p1": "O Anamnys é operado por um  time de desenvolvedores de software sênior, e liderado por <b>Patrícia F. Braga</b>, desenvolvedora sênior de software com significativa experiência em tecnologia aplicada na área da saúde, a partir do <b>Canadá</b>.",
+      "p2": "Somos uma operação pequena e independente. Dizemos isso na primeira página em vez de esconder atrás de um \"nós\" corporativo, porque é a informação que você precisa para decidir — e porque você vai descobrir de qualquer maneira.",
+      "p3": "O que uma operação pequena tem de bom: quem responde o suporte é quem escreveu o código; decisões de produto não passam por comitê; e não há investidor pressionando para monetizar dado de paciente, porque não há investidor.",
+      "riskLead": "O que ela tem de arriscado, e como tratamos isso:",
+      "p4": "<b>Você pode sair a qualquer momento com tudo.</b> Exportação integral dos seus registros, em formato aberto, disponível o tempo todo — não só no cancelamento. Sem multa, sem fidelidade, sem período mínimo.",
+      "p5": "<b>Os dados clínicos ficam no Brasil</b>, em infraestrutura contratada para isso, sob jurisdição brasileira, independentemente de onde estejamos.",
+      "p6": "<b>Nada é opaco.</b> Termos de Uso e Política de Privacidade estão publicados na íntegra, sem linguagem defensiva, incluindo a declaração de que a operação técnica é conduzida do exterior — informação que a maioria dos concorrentes omite."
+    },
+    "block4": {
+      "title": "Nosso compromisso, em quatro frases",
+      "items": [
+        "<b>O documento é seu.</b> Não reivindicamos titularidade sobre nada que você produz.",
+        "<b>Seus dados não treinam nossos modelos.</b> Os modelos são estáticos e não aprendem com o que passa por eles. Está no contrato, e é tecnicamente verdadeiro.",
+        "<b>A responsabilidade é sua, e o sistema é construído para lembrar disso.</b> Nada é registrado, assinado ou compartilhado sem a sua revisão e o seu comando.",
+        "<b>Se errarmos, você fica sabendo.</b> Trilha de auditoria não editável, visível a você, de tudo que o sistema sugeriu, de tudo que você alterou e de todo acesso realizado."
+      ]
+    },
+    "cta": {
+      "title": "Quer conversar antes de decidir?",
+      "body": "Fale direto com quem construiu.",
+      "button": "Agendar uma conversa",
+      "email": "[E-MAIL]"
+    }
+  },
+  "faq": {
+    "title": "Perguntas Frequentes",
+    "subtitle": "Respostas diretas sobre inteligência artificial, gravação de sessão, segurança, responsabilidade profissional, uso prático e assinatura.",
+    "closingTitle": "Ainda tem dúvida?",
+    "closingBody": "Fale direto com quem construiu o produto. Não há central de atendimento, script nem primeiro nível.",
+    "closingButton": "Agendar uma conversa",
+    "closingEmail": "[E-MAIL]"
+  }
+}

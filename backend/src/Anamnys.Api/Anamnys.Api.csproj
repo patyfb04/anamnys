@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>8803aaa6-4f74-41f8-8c61-8db736506c01</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Anamnys.Application\Anamnys.Application.csproj" />
+    <ProjectReference Include="..\Anamnys.Domain\Anamnys.Domain.csproj" />
+    <ProjectReference Include="..\Anamnys.Infrastructure\Anamnys.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" Version="1.8.14" />
+    <PackageReference Include="QuestPDF" Version="2024.10.4" />
+    <!-- SignalR is built into ASP.NET Core in .NET 10 — no separate package needed -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+  </ItemGroup>
+</Project>
