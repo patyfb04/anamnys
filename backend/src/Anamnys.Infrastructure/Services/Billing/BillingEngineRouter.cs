@@ -26,10 +26,7 @@ public class BillingEngineRouter : IBillingEngine
         // Register all available billing engine strategies
         var strategies = new IBillingEngineStrategy[]
         {
-            new UsBillingEngine(),
-            new CanadaBillingEngine(),
             new BrazilBillingEngine(),
-            new EuropeGenericBillingEngine(),
         };
 
         _engines = strategies.ToDictionary(s => s.BillingSystem);
