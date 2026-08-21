@@ -20,7 +20,16 @@
     "home": "Início",
     "patients": "Pacientes",
     "newNote": "Nova Nota",
-    "settings": "Ajustes"
+    "settings": "Ajustes",
+    "calendar": "Agenda",
+    "liveSession": "Sessão ao Vivo",
+    "noteEditor": "Editor de Notas",
+    "documentIntake": "Documentos",
+    "analytics": "Análises",
+    "secureSharing": "Compartilhamento",
+    "complianceVault": "Conformidade",
+    "billing": "Faturamento",
+    "viewProfile": "Ver perfil"
   },
   "welcome": {
     "signIn": "Entrar",
@@ -170,6 +179,7 @@
   },
   "home": {
     "greeting": "Bom dia, {{name}} 👋",
+    "documentationStatus": "{{percent}}% da sua documentação está completa hoje.",
     "patientsCount": "{{count}} PACIENTES",
     "liveTranscriptionBadge": "TRANSCRIÇÃO AO VIVO",
     "heroTitle": "Capture cada detalhe do atendimento ao paciente em tempo real.",
@@ -182,6 +192,30 @@
     "noPatients": "Ainda não há pacientes — adicione seu primeiro paciente para começar.",
     "lastVisit": "Última visita: {{date}}",
     "noVisitsYet": "Ainda sem visitas"
+  },
+  "dashboard": {
+    "metrics": {
+      "notesToReview": "Notas para revisar",
+      "transcribing": "Transcrevendo",
+      "signaturePending": "Assinatura pendente"
+    },
+    "actions": {
+      "startLiveTranscription": "Iniciar Transcrição ao Vivo",
+      "startLiveTranscriptionBody": "Comece a documentação em tempo real da sessão atual.",
+      "uploadAudio": "Enviar Áudio",
+      "uploadAudioBody": "Processe um áudio de sessão já gravado para redigir a nota.",
+      "uploadDocument": "Enviar Documento Externo",
+      "uploadDocumentBody": "Importe PDFs, imagens ou notas clínicas anteriores para análise."
+    },
+    "schedule": {
+      "title": "Agenda de Hoje",
+      "viewCalendar": "Ver agenda"
+    },
+    "activity": {
+      "noteFinalized": "Nota finalizada para {{patientName}}",
+      "transcriptionSaved": "Transcrição salva para {{patientName}}",
+      "intakeReceived": "Formulário de admissão recebido de {{patientName}}"
+    }
   },
   "settings": {
     "title": "Ajustes",

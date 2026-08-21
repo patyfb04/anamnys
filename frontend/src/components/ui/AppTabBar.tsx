@@ -27,7 +27,7 @@ export default function AppTabBar() {
   const { t } = useTranslation();
 
   return (
-    <div className="flex justify-around items-end bg-surface border-t border-surfaceVariant pt-2.5 pb-3">
+    <div className="md:hidden flex justify-around items-end bg-surface border-t border-surfaceVariant pt-2.5 pb-3">
       {TABS.map((tab) => {
         const isActive = pathname.startsWith(tab.matchPrefix);
         const isNewNote = tab.labelKey === "nav.newNote";
