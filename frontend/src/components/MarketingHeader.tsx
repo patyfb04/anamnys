@@ -38,7 +38,7 @@ export default function MarketingHeader({
         ) : (
           <Link href="/" className="w-[145px] h-[35px] shrink-0">
             <Image
-              src="/logo.png"
+              src="/logo1.png"
               alt="Anamnys"
               width={145}
               height={35}

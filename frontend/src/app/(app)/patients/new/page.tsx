@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { patientsApi } from "@/lib/api";
+import { patientsApi } from "@/api/patients";
 import TopBar from "@/components/ui/TopBar";
 import Card from "@/components/ui/Card";
 import TextField from "@/components/ui/TextField";

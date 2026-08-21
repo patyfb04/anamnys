@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Search, ChevronRight, UserPlus, Loader2 } from "lucide-react";
-import { patientsApi } from "@/lib/api";
+import { patientsApi } from "@/api/patients";
 import { Patient } from "@/lib/types";
 import TextField from "@/components/ui/TextField";
 import Card from "@/components/ui/Card";

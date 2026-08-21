@@ -7,7 +7,7 @@ import { Mail, MapPin, Send, ShieldCheck } from "lucide-react";
 import TextField from "@/components/ui/TextField";
 import Button from "@/components/ui/Button";
 import AlertMessage from "@/components/ui/AlertMessage";
-import { contactApi } from "@/lib/api";
+import { contactApi } from "@/api/contact";
 
 // Matches specs/UI/Contact/screen.png: centered header, then a 12-col grid — an 8-col contact
 // form card and a 4-col sidebar (Direct Contact info + a secure/private-handling callout — no

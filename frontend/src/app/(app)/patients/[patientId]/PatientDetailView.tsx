@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { patientsApi } from "@/lib/api";
+import { patientsApi } from "@/api/patients";
 import { SUPPORTED_LANGUAGES } from "@/lib/types";
 import TopBar from "@/components/ui/TopBar";
 import Card from "@/components/ui/Card";

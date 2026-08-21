@@ -18,7 +18,7 @@ npm run dev
 - Authenticated app shell (TopBar + bottom AppTabBar) with an auth gate that redirects to
   `/login` when signed out.
 - Full route skeleton for Patients/Notes/Settings — each currently a placeholder page.
-- Ported business logic: `src/lib/api.ts`, `src/lib/signalr.ts`, `src/lib/store/`,
+- Ported business logic: `src/api/`, `src/lib/signalr.ts`, `src/lib/store/`,
   `src/lib/i18n/`, `src/lib/types.ts`, `src/lib/password.ts`, `src/hooks/useAudioRecorder.ts`.
 
 ### Verification status

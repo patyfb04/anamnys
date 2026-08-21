@@ -38,7 +38,7 @@ export default function AuthShellLayout({
         <div className="h-16 max-w-5xl mx-auto w-full flex items-center justify-between">
           <Link href="/" className="w-[140px] h-[30px] shrink-0">
             <Image
-              src="/logo.png"
+              src="/logo1.png"
               alt="Anamnys"
               width={140}
               height={30}

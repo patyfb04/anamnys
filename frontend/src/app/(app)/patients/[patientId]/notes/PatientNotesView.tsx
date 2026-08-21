@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
-import { notesApi } from "@/lib/api";
+import { notesApi } from "@/api/notes";
 import TopBar from "@/components/ui/TopBar";
 import NoteCard from "@/components/NoteCard";
 

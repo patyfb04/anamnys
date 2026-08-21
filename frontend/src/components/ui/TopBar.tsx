@@ -13,7 +13,7 @@ export default function TopBar({ title }: { title?: string }) {
         ) : (
           <div className="w-[140px] h-7">
             <Image
-              src="/logo.png"
+              src="/logo1.png"
               alt="Anamnys"
               width={140}
               height={28}
