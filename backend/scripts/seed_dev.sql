@@ -1,9 +1,9 @@
 -- =============================================================================
 -- Anamnys AI — Dev Seed Data
--- Run against: clinical_draft_dev
+-- Run against: anamnys_dev
 --
 -- Usage:
---   psql -U postgres -d clinical_draft_dev -f seed_dev.sql
+--   psql -U postgres -d anamnys_dev -f seed_dev.sql
 --
 -- Uses pgcrypto for bcrypt password hashing (same algorithm as BCrypt.Net).
 -- =============================================================================

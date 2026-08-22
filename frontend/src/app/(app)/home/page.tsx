@@ -170,7 +170,7 @@ export default function HomePage() {
       {/* ── Desktop ────────────────────────────────────────────────────────── */}
       <div className="hidden md:block">
         <div className="grid grid-cols-3 gap-4 mb-8">
-          <Card className="bg-errorContainer border-none flex items-center justify-between">
+          <div className="rounded-radii-lg p-4 flex items-center justify-between bg-errorContainer border border-onErrorContainer/25">
             <div>
               <p className="text-headline-md text-onSurface">{data.metrics.notesToReview}</p>
               <p className="text-label-md text-onSurfaceVariant uppercase tracking-wider">
@@ -180,8 +180,8 @@ export default function HomePage() {
             <div className="w-10 h-10 rounded-full bg-errorContainer text-onErrorContainer flex items-center justify-center">
               <FileEdit size={20} />
             </div>
-          </Card>
-          <Card className="bg-secondaryContainer border-none flex items-center justify-between">
+          </div>
+          <div className="rounded-radii-lg p-4 flex items-center justify-between bg-secondaryContainer border border-onSecondaryContainer/25">
             <div>
               <p className="text-headline-md text-onSurface">{data.metrics.transcribing}</p>
               <p className="text-label-md text-onSurfaceVariant uppercase tracking-wider">
@@ -191,8 +191,8 @@ export default function HomePage() {
             <div className="w-10 h-10 rounded-full bg-secondaryContainer text-onSecondaryContainer flex items-center justify-center">
               <Mic size={20} />
             </div>
-          </Card>
-          <Card className="bg-primaryFixed border-none flex items-center justify-between">
+          </div>
+          <div className="rounded-radii-lg p-4 flex items-center justify-between bg-primaryFixed border border-onPrimaryFixedVariant/25">
             <div>
               <p className="text-headline-md text-onSurface">{data.metrics.signaturePending}</p>
               <p className="text-label-md text-onSurfaceVariant uppercase tracking-wider">
@@ -202,7 +202,7 @@ export default function HomePage() {
             <div className="w-10 h-10 rounded-full bg-primaryContainer text-onPrimaryContainer flex items-center justify-center">
               <Check size={20} />
             </div>
-          </Card>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mb-8">

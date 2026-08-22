@@ -370,7 +370,7 @@ clinical-draft-api/
 docker compose up minio minio-init -d
 
 # 2. Set environment (or use appsettings.Development.json)
-export ConnectionStrings__Default="Host=localhost;Port=5432;Database=clinical_draft_dev;Username=postgres;Password=postgres"
+export ConnectionStrings__Default="Host=localhost;Port=5432;Database=anamnys_dev;Username=postgres;Password=postgres"
 
 # 3. Run migrations and start API
 cd src/Anamnys.Api

@@ -82,10 +82,10 @@ export default function Sidenav() {
   return (
     <nav className="hidden md:flex h-screen flex-col py-6 border-r border-outlineVariant bg-surfaceContainerLow fixed left-0 top-0 z-40 w-72">
       <div className="px-6 mb-8">
-        <div className="w-[140px] h-7">
-          <Image src="/logo1.png" alt="Anamnys" width={140} height={28} className="w-full h-full object-contain" />
+        <div className="w-[170px] h-[34px]">
+          <Image src="/logo1.png" alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
         </div>
-        <p className="text-label-md text-onSurfaceVariant mt-1">{t("auth.login.subtitle")}</p>
+        <p className="text-label-md text-onSurfaceVariant mt-1 text-center">{t("auth.login.subtitle")}</p>
       </div>
       <div className="flex-1 overflow-y-auto space-y-1">
         {items.map((item) => {

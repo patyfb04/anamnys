@@ -30,7 +30,7 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .Build();
 
         var connectionString = config.GetConnectionString("Default")
-            ?? "Host=localhost;Port=5432;Database=clinical_draft_dev;Username=postgres;Password=postgres";
+            ?? "Host=localhost;Port=5432;Database=anamnys_dev;Username=postgres;Password=postgres";
 
         var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
         optionsBuilder.UseNpgsql(connectionString);

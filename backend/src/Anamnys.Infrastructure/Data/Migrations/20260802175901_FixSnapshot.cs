@@ -10,25 +10,14 @@ namespace Anamnys.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<int>(
-                name: "BillingSystem",
-                table: "Providers",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "text");
+            // No-op: previously assumed BillingSystem existed as text, but the prior
+            // migration (AddProviderBillingSystem, now properly registered with its
+            // Designer.cs) already adds it as integer. Nothing left to fix here.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterColumn<string>(
-                name: "BillingSystem",
-                table: "Providers",
-                type: "text",
-                nullable: false,
-                oldClrType: typeof(int),
-                oldType: "integer");
         }
     }
 }
