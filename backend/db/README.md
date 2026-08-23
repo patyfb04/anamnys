@@ -1,14 +1,26 @@
 # Esquema do banco
 
-Os três scripts que constroem o banco do Anamnys do zero. Derivados de
-`specs/docs/anamnys-modelo-dados.html`; os identificadores `F-nn` nos comentários
-apontam para `TODO.txt`.
+Os três scripts que constroem o banco do Anamnys do zero.
+
+**Quem manda em quê.** Este esquema é a **fonte da verdade do modelo de dados** —
+é o único artefato executado contra um PostgreSQL real com cada restrição
+testada, e nenhuma página de documentação pode contradizê-lo sem estar errada. A
+**documentação oficial** vive no Notion, em
+[Arquitetura e Fluxo de Dados](https://app.notion.com/p/3c5f8dcecd4080e2a2cbe62bcf882790):
+*Overview* (arquitetura), *Plano de Implementação* (backlog), *Modelo de Dados* e
+*Diagramas de Sequencia* (fluxos). Os dois não conflitam — respondem a perguntas
+diferentes.
+
+Os identificadores `F-nn` e `D-nn` nos comentários apontam para o **Plano de
+Implementação** no Notion. `TODO.txt` na raiz do repositório ficou como ponteiro
+para lá, e não como cópia, porque duas cópias do mesmo backlog divergem em
+silêncio.
 
 | Arquivo | O que faz |
 | --- | --- |
 | `01_schema.sql` | As 71 tabelas, com chaves, restrições, índices, gatilhos e uma visão |
 | `02_seed_reference.sql` | Registros que a aplicação lê e não inventa: instrumentos, vocabulários, regras de conferência, planos |
-| `03_jobs.sql` | Três rotinas agendadas e as consultas de acompanhamento |
+| `03_jobs.sql` | Quatro rotinas agendadas e as consultas de acompanhamento |
 
 ## Rodar
 
@@ -35,10 +47,42 @@ Três cuidados:
   extensão, mas as tarefas só disparam com a computação acordada, e ela hiberna
   por inatividade. A varredura de reservas importa justamente quando ninguém
   está usando o sistema. Usar o Hangfire, que já existe no projeto.
+- **O Hangfire mantém a computação acordada, e isso aparece na fatura.** Uma
+  rotina a cada minuto significa que o Neon nunca hiberna: paga-se contínuo em
+  vez de por uso. Foi o que rebaixou a varredura de reservas de um minuto para
+  uma hora, com a varredura primária movida para a consulta de disponibilidade.
+  As cadências atuais: `release_expired_holds` horária, `expire_consents`
+  horária, as duas purgas diárias.
 - **A primeira conexão do dia demora.** A computação hibernada leva alguns
   segundos para acordar, e cliente com tempo limite curto desiste antes.
 
 `02_seed_reference.sql` é idempotente: rodar de novo não insere nada.
+
+**A ordem importa, e o `03_jobs.sql` agora cobra isso.** O PostgreSQL não valida o
+corpo de função `plpgsql` na criação — confere a sintaxe e resolve os nomes de
+tabela só na chamada. Sem guarda, esse arquivo rodava com sucesso contra um banco
+**vazio**: quatro `CREATE FUNCTION`, `COMMIT`, código de saída 0, zero tabelas — e
+o erro só apareceria semanas depois, dentro de uma tarefa de fundo, quando não há
+ninguém olhando. Um bloco no topo do arquivo agora recusa e diz o que falta.
+
+### Onde cada função aparece no pgAdmin
+
+Nove funções `anamnys_*`, em duas pastas diferentes da árvore, e a divisão confunde:
+
+| Arquivo | Quantas | Pasta no pgAdmin |
+| --- | --- | --- |
+| `03_jobs.sql` | 4 rotinas agendadas | **Functions** |
+| `01_schema.sql` | 5 funções de gatilho | **Trigger Functions** |
+
+O pgAdmin separa por tipo de retorno: quem devolve `trigger` nunca aparece em
+*Functions*, por mais que se atualize. Para ver as nove de uma vez:
+
+```sql
+select p.proname, pg_get_function_result(p.oid) as retorna
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public' and p.proname like 'anamnys%'
+ order by 2, 1;
+```
 
 ## Convenção de nomes
 
@@ -83,6 +127,11 @@ garantia abaixo foi testada — não inspecionada:
 | Ligar exibição de itens em instrumento sem classificação | recusado |
 | Recusa carrega a explicação para a profissional | sim, na mensagem do gatilho |
 | Instrumento gravado com explicação vazia ou curta | recusado |
+| Reserva vencida varrida, reserva viva preservada | 1 liberada, 1 intacta |
+| Consentimento vencido expirado, com evento gravado | `SIGNED → EXPIRED` registrado |
+| Estado de consentimento inválido | recusado pela restrição |
+| Purga de reservas abandonadas | apaga a antiga, preserva a que virou compromisso |
+| `03_jobs.sql` contra banco sem esquema | **recusado**, com a lista do que falta |
 
 O teste concorrente é o critério de aceitação escrito em F-62: conferir conflito
 antes de gravar perde a corrida quando dois pacientes clicam junto, e só a
@@ -96,7 +145,23 @@ restrição precisa ser. Medido, não suposto: uma reserva vencida **não** impe
 compromisso — o gatilho entre tabelas filtra por validade — mas **impede outra
 reserva** no mesmo horário. Ou seja, um formulário abandonado não atrapalha o
 profissional, e sim o próximo paciente que tentar marcar ali. Invisível de quem
-opera. Por isso `anamnys_release_expired_holds()` roda a cada minuto.
+opera.
+
+A varredura primária fica na **consulta de disponibilidade** (F-62): ao calcular
+os intervalos livres de um profissional, liberar antes as reservas vencidas dele.
+Resolve no momento em que importa, sem latência.
+
+Pendurar na **tentativa de marcação**, que é o lugar óbvio, não funciona: o
+paciente nunca tenta marcar um horário bloqueado, porque reserva que parece viva
+remove o horário da lista — ele não vê. O gatilho seria uma ação que o próprio
+defeito impede. Varrer na listagem funciona; varrer na marcação é um laço que se
+anula.
+
+`anamnys_release_expired_holds()` continua existindo como **rede de segurança,
+de hora em hora**. Se a consulta de disponibilidade ganhar um bug, ou alguém a
+refatorar e esquecer da varredura, nada mais percebe — horários somem de todas
+as agendas sem erro nenhum. A rotina pega, e a consulta de acompanhamento
+("reservas que a varredura não está limpando") denuncia.
 
 **O canal do Google Agenda expira em dias.** Sem rotina de renovação a
 sincronização morre em silêncio: o app continua funcionando e só para de ver o
