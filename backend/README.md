@@ -1,6 +1,6 @@
 # Anamnys AI — Backend API
 
-ASP.NET Core 10 backend for Anamnys, a specialty-native clinical note drafting system for solo and small-group mental health and physical therapy practices.
+ASP.NET Core 10 backend for Anamnys, a clinical note drafting system for solo psychologists and small mental-health practices in Brazil.
 
 ---
 
@@ -8,7 +8,7 @@ ASP.NET Core 10 backend for Anamnys, a specialty-native clinical note drafting s
 
 - [Architecture Overview](#architecture-overview)
 - [How the Pieces Communicate](#how-the-pieces-communicate)
-- [Technology Choices and HIPAA Rationale](#technology-choices-and-hipaa-rationale)
+- [Technology Choices and Legal Basis](#technology-choices-and-legal-basis)
 - [Billing Codes and Clinical Notes](#billing-codes-and-clinical-notes)
 - [Note Pipeline — Step by Step](#note-pipeline--step-by-step)
 - [Project Structure](#project-structure)
@@ -107,35 +107,39 @@ Only the Export flow uses storage. After PDF generation, `S3StorageService.Uploa
 
 ---
 
-## Technology Choices and HIPAA Rationale
+## Technology Choices and Legal Basis
 
-HIPAA's Security Rule (45 CFR §164.312) requires covered entities to protect electronic PHI (ePHI) through access controls, audit controls, integrity controls, and transmission security. Every major technology choice below is made with those requirements in mind.
+Anamnys serves psychology practices in Brazil. The LGPD (Lei nº 13.709/2018) classifies health data as *dado pessoal sensível* and subjects it to the law's strictest regime; the CFP resolutions govern what a clinical record must contain and how long it must be kept — 001/2009 (registration, five-year minimum), 006/2019 (required elements of written documents), 09/2024 (technology-mediated practice), 13/2022 (session recording). Professional confidentiality under the Código de Ética Profissional do Psicólogo applies over all of it.
 
-### Self-hosted AI (Whisper + LLaMA) — no PHI leaves the server
+Under the LGPD the practice is the **controlador** of its patients' data and Anamnys is the **operador**, a relationship formalised in an operator contract with obligations of security, confidentiality, retention, and return or deletion at termination. Every technology choice below exists to keep that processing chain as short as possible and to make each remaining link documentable.
 
-This is the most important architectural decision. Cloud AI APIs (OpenAI, Google, Azure OpenAI) require sending patient audio and clinical notes to a third-party server. Under HIPAA, this requires a signed **Business Associate Agreement (BAA)** with the AI provider, and even then the data traverses external networks and is processed on hardware outside your control.
+### Self-hosted AI (Whisper + LLaMA) — no clinical content leaves the server
 
-By running Whisper.net and LLamaSharp locally, **all PHI stays on your infrastructure**. There is no BAA required for the AI layer. The risk surface is entirely within your network boundary.
+This is the most important architectural decision. Cloud AI APIs (OpenAI, Google, Azure OpenAI) require sending patient audio and clinical notes to a third-party server. That adds a **suboperador** to the processing chain, places sensitive health data outside Brazilian jurisdiction, and — under most standard terms of service — permits the content to be used for model training.
+
+By running Whisper.net and LLamaSharp locally, clinical content never leaves our infrastructure. There is no AI vendor in the chain at all: nothing to contract, nothing to audit, no subprocessor to disclose. The models are static — there is no continuous-learning mechanism in the system, and training use is contractually barred besides.
 
 Whisper (MIT license) handles speech-to-text. LLamaSharp with Phi-4 14B (or Mistral 7B for dev) handles note structuring. Both run as in-process .NET services — no sidecar, no network call, no API key.
 
-### PostgreSQL — structured ePHI storage with audit trail
+### PostgreSQL — structured clinical storage with audit trail
 
-PostgreSQL stores all ePHI (notes, patients, providers). The `Notes` table uses JSONB columns for `StructuredContent`, `BillingCodes`, and `AuditTrail` — this gives schema flexibility for multiple note formats while keeping all data in one encrypted database.
+PostgreSQL stores all clinical data (notes, patients, providers). The `Notes` table uses JSONB columns for `StructuredContent`, `BillingCodes`, and `AuditTrail` — this gives schema flexibility for multiple note formats while keeping all data in one encrypted database.
 
-Every mutation to a note appends an `AuditEntry` to the `AuditTrail` JSONB array with a UTC timestamp, action name, and actor ID. This satisfies HIPAA's Audit Control requirement (§164.312(b)) — a complete, tamper-evident history of who accessed or changed each note.
+Every mutation to a note appends an `AuditEntry` to the `AuditTrail` JSONB array with a UTC timestamp, action name, and actor ID. This serves the LGPD's accountability principle (art. 6, X) and produces exactly the evidence a CRP disciplinary proceeding or a judicial request would ask for: who drafted, who edited, what changed, and when it was signed. The AI draft and the professional's edits stay distinguishable forever.
+
+Note that the trail is currently a JSONB array on the note, which cannot be queried across notes by date or action. The retention dashboard, the denial history and the per-patient dossier all need it as a table — see the data-model document. Extract it before the first paying subscriber, not after.
 
 In production, enable PostgreSQL's `pgaudit` extension and **encryption at rest** (either filesystem-level encryption or Transparent Data Encryption via the hosting platform).
 
 ### JWT Authentication — stateless, provider-scoped access
 
-JWTs are signed with HMAC-SHA256. The token contains the provider's ID, which every controller extracts and uses to scope every query — a provider physically cannot query another provider's patients or notes, even with a valid token. This enforces HIPAA's Access Control requirement (§164.312(a)(1)) at the query level, not just the route level.
+JWTs are signed with HMAC-SHA256. The token contains the provider's ID, which every controller extracts and uses to scope every query — a provider physically cannot query another provider's patients or notes, even with a valid token. This enforces need-to-know isolation at the query level, not just the route level — the technical half of the operator contract's commitment that our team does not access clinical content in normal operation. Any access outside that path is a support request the professional authorised, and it is recorded in the audit trail where they can see it.
 
 Tokens expire in 30 days. For stricter environments, reduce this and implement refresh tokens.
 
 ### bcrypt Password Hashing
 
-Provider passwords are stored as bcrypt hashes (cost factor 11) using `BCrypt.Net`. bcrypt is intentionally slow and resistant to GPU-accelerated cracking — the standard for healthcare credential storage. Plaintext passwords are never stored, logged, or returned in any API response.
+Provider passwords are stored as bcrypt hashes (cost factor 11) using `BCrypt.Net`. bcrypt is intentionally slow and resistant to GPU-accelerated cracking. Plaintext passwords are never stored, logged, or returned in any API response.
 
 ### Hangfire — durable job queue for long AI pipelines
 
@@ -145,13 +149,13 @@ Hangfire's job queue also serializes access to the LLM. Because LLamaSharp is no
 
 ### SignalR — real-time progress without polling
 
-Polling the server every second for job status wastes bandwidth and creates unnecessary HTTP request logs (which contain PHI-adjacent metadata). SignalR uses a persistent WebSocket, so the server pushes updates only when something actually changes. The connection is authenticated via JWT before any data flows.
+Polling the server every second for job status wastes bandwidth and creates unnecessary HTTP request logs, which carry metadata about a patient's clinical activity even when they carry no clinical content. SignalR uses a persistent WebSocket, so the server pushes updates only when something actually changes. The connection is authenticated via JWT before any data flows.
 
-### S3-compatible Object Storage — presigned URLs for PHI exports
+### S3-compatible Object Storage — presigned URLs for exported documents
 
-Exported PDFs contain full clinical notes — they are ePHI and must be protected in transit and at rest. `S3StorageService` uploads PDFs to a private bucket (no public ACL). Access is granted only via **time-limited presigned URLs** (1 hour by default). This means:
+Exported PDFs contain full clinical notes — sensitive personal data under the LGPD, protected in transit and at rest. `S3StorageService` uploads PDFs to a private bucket (no public ACL). Access is granted only via **time-limited presigned URLs** (1 hour by default). This means:
 
-- No PHI is embedded in a permanent public URL
+- No clinical content or patient identifier sits behind a permanent public URL
 - The link cannot be shared indefinitely — it expires
 - The storage bucket itself remains private
 
@@ -159,44 +163,36 @@ For local development, **MinIO** is used (zero cost, runs in Docker, fully S3-co
 
 In production, enable **server-side encryption** on the bucket (AES-256, which `S3StorageService` already requests via `ServerSideEncryptionMethod.AES256`).
 
+**Data residency is an open decision.** The commercial proposal states that clinical records are hosted in Brazil. The storage layer is deliberately provider-agnostic, and the production choice that actually satisfies that statement has not been fixed in any document. Settle it before the first real patient record — the claim is already in writing to customers.
+
 ### QuestPDF — PDF generation without third-party rendering services
 
-PDF rendering services send document content to an external server. QuestPDF renders PDFs entirely in-process (MIT/Community license for non-commercial use). The generated PDF includes the full note, billing codes, audit trail, and provider signature block — everything needed for a compliant clinical record.
+PDF rendering services send document content to an external server. QuestPDF renders PDFs entirely in-process (MIT/Community license for non-commercial use). The generated PDF includes the full note, billing codes, audit trail, and provider signature block — everything the professional needs to attach to a chart, send to an operadora, or produce in an inspection.
 
 ---
 
 ## Billing Codes and Clinical Notes
 
-US healthcare billing requires two code systems on every insurance claim. Anamnys derives both automatically from the structured note content.
+Submitting to a Brazilian *operadora* requires two code systems on every guide. Anamnys derives both automatically from the structured note content and presents them **for the professional to confirm** — the codes are a suggestion, never an automatic submission.
 
-### CPT Codes — what was done
+### TUSS codes — what was done
 
-CPT (Current Procedural Terminology) codes describe the service the provider performed. The billing engine selects the appropriate code based on note content:
+TUSS (Terminologia Unificada da Saúde Suplementar) is the 8-digit ANS-standardised procedure terminology required by every private health insurer in Brazil. The billing engine selects a candidate code from the note content, keyed on the recorded modality and session duration.
 
-| CPT     | Description               | Trigger                                                     |
-| ------- | ------------------------- | ----------------------------------------------------------- |
-| `90837` | Psychotherapy, 60 minutes | Note contains "60 min", "60-minute", or "one hour"          |
-| `90834` | Psychotherapy, 45 minutes | Default for mental health sessions                          |
-| `97110` | Therapeutic exercises     | Note mentions exercise, strengthening, or stretching        |
-| `97140` | Manual therapy            | Note mentions manual therapy, mobilization, or manipulation |
-| `97530` | Therapeutic activities    | Fallback when no specific PT intervention detected          |
+### CID-10 codes — why it was necessary
 
-### ICD-10 Codes — why it was medically necessary
+CID-10 gives the diagnosis that justifies the procedure. A guide needs a TUSS code and a CID-10 that make clinical sense together; a mismatch is a routine cause of *glosa*. Primary and secondary diagnoses are both mandatory on submission.
 
-ICD-10 codes describe the diagnosis that justifies the service. Every insurance claim needs both a CPT and an ICD-10 that make clinical sense together — a mismatch (e.g. a PT exercise code billed against a psychiatric diagnosis) triggers an automatic denial.
-
-The billing engine currently maps to example ICD-10 codes (`F33.1` for MDD, `M54.5` for low back pain). In production this is extended with a payer rules database where each provider's active diagnoses from the patient record drive the ICD-10 selection.
+> **D-04 — verify before any pilot.** The TUSS codes currently in `BrazilBillingEngine` were written as plausible examples and have **not** been checked against the official ANS table. Do that before a single real guide is generated. This blocks any pilot involving billing.
 
 ### Denial Risk Score
 
 Every billing code gets a denial risk score (0–100) estimating the probability an insurer will reject the claim. The score rises when the note is missing documentation that payers require:
 
-| Missing documentation                | Risk increase      |
-| ------------------------------------ | ------------------ |
-| No diagnosis statement               | +30 points         |
-| No treatment plan or goal update     | +30 points         |
-| PT: missing time units for 97110     | flagged as warning |
-| PT: missing GP modifier for Medicare | flagged as warning |
+| Missing documentation            | Risk increase |
+| -------------------------------- | ------------- |
+| No diagnosis statement           | +30 points    |
+| No treatment plan or goal update | +30 points    |
 
 The mobile app displays this score color-coded on `BillingCodeCard` — green (<25), amber (25–49), red (≥50) — so the provider can correct the note before signing. A signed note with a high denial risk is still valid; the score is advisory only.
 
@@ -204,50 +200,40 @@ The mobile app displays this score color-coded on `BillingCodeCard` — green (<
 
 When the billing engine detects that required fields are absent, it populates `MissingDocumentation` on each `BillingCode`. These surface in the mobile UI and are printed in the exported PDF in a highlighted warning block. Common examples:
 
-- "Diagnosis statement required for medical necessity"
+- "Diagnosis statement required to justify the procedure"
 - "Treatment plan or goal update required"
-- "Document time units for 97110"
-- "Ensure GP modifier appended for Medicare"
 
-### Multi-Country Billing System
+### Routing architecture, and the engines that are not the product
 
-Anamnys supports four billing systems out of the box, selected per provider via the `BillingSystem` field on the `Provider` entity. The pipeline reads this field at job enqueue time and passes it through to the billing engine — no code changes needed to switch a provider's country.
+The billing layer uses a strategy interface (`IBillingEngineStrategy`) with one implementation per country. `BillingEngineRouter` implements the public `IBillingEngine` and dispatches on the `BillingSystem` field of `Provider`.
 
-| BillingSystem   | Country                 | Procedure Codes                          | Diagnosis Codes               |
-| --------------- | ----------------------- | ---------------------------------------- | ----------------------------- |
-| `UsCpt`         | United States           | CPT (AMA)                                | ICD-10-CM                     |
-| `CanadaOhip`    | Canada (OHIP baseline)  | K029/K030/K031 (MH), P001/P002/P003 (PT) | ICD-10-CA                     |
-| `BrazilTuss`    | Brazil (private health) | TUSS 8-digit codes                       | CID-10                        |
-| `EuropeGeneric` | Europe (generic)        | SNOMED CT procedure concepts             | ICD-10 national modifications |
+`BrazilTuss` is the product. The enum also carries `UsCpt`, `CanadaOhip` and `EuropeGeneric`, and those strategies remain in the codebase — but they are **not maintained, not documented for customers, and not sold.** Treat them the way `NoteFormat.PtFunctional` is treated: the code path stays, and it appears in no customer-facing text. Do not extend them, and do not cite the router's multi-country capability as a product feature.
 
-**Architecture** — the routing pattern uses a strategy interface (`IBillingEngineStrategy`) with one implementation per country. `BillingEngineRouter` implements the public `IBillingEngine` interface and dispatches based on `BillingSystem`. Adding a new country requires only a new strategy class — no changes to the pipeline, controllers, or interface.
+`BillingSystem` defaults to `UsCpt` for backward compatibility with the earliest migrations. New providers must be created as `BrazilTuss`; the default is a leftover, not an intention.
 
-**Canadian specifics** — OHIP K-codes distinguish session duration at three thresholds (≤45 min, 46–75 min, 76+ min). Provincial consent documentation and treatment goal recording are flagged as requirements. Other provinces (BC MSP, AB Health, RAMQ) use equivalent schedule structures.
+**Brazilian specifics** — TUSS codes are 8-digit ANS-standardised identifiers required for every operadora submission. CID-10 primary and secondary diagnoses are mandatory. The engine flags ANS prior authorisation (prévia autorização) for extended treatment courses. SUS (public system, SIGTAP codes) is not implemented and is not planned.
 
-**Brazilian specifics** — TUSS codes are 8-digit ANS-standardized identifiers required for all private health insurer (operadora) submissions. CID-10 primary and secondary diagnoses are mandatory. The engine also flags ANS pre-authorization (prévia autorização) requirements for extended treatment courses. Eletroterapia (electrotherapy) is detected and coded separately — it's commonly co-billed in Brazilian PT practice. SUS (public system, SIGTAP codes) is not yet implemented.
+**Test credentials** (seeded by `seed_dev.sql`). Only the `BrazilTuss` account reflects the product; the others exercise strategies that are retained but unmaintained.
 
-**European specifics** — The generic engine uses SNOMED CT procedure concepts as a common denominator across national systems. Country-specific modifiers are detected from language indicators in the note (NHS/IAPT → UK, Krankenkasse/GKV → Germany, Sécurité Sociale → France). GDPR consent documentation is flagged as a requirement for all European providers.
+| Provider         | Email                           | Billing System            |
+| ---------------- | ------------------------------- | ------------------------- |
+| Dr. Carlos Souza | `carlos.br@clinicaldraft.local` | Brazil TUSS — **the one** |
+| Dr. Sarah Mendez | `sarah.mh@clinicaldraft.local`  | US CPT (legacy fixture)   |
+| Dr. James Okafor | `james.pt@clinicaldraft.local`  | US CPT (legacy fixture)   |
+| Dr. Ana Silva    | `ana.ca@clinicaldraft.local`    | Canada OHIP (legacy)      |
+| Dr. Marie Dupont | `marie.eu@clinicaldraft.local`  | Europe Generic (legacy)   |
 
-**Test credentials for each billing system** (seeded by `seed_dev.sql`):
-
-| Provider         | Email                           | Billing System |
-| ---------------- | ------------------------------- | -------------- |
-| Dr. Sarah Mendez | `sarah.mh@clinicaldraft.local`  | US CPT         |
-| Dr. James Okafor | `james.pt@clinicaldraft.local`  | US CPT         |
-| Dr. Ana Silva    | `ana.ca@clinicaldraft.local`    | Canada OHIP    |
-| Dr. Carlos Souza | `carlos.br@clinicaldraft.local` | Brazil TUSS    |
-| Dr. Marie Dupont | `marie.eu@clinicaldraft.local`  | Europe Generic |
-
-All use password `Dev1234!`.
+All use password `Dev1234!`. The `clinicaldraft.local` domain in these fixtures predates the rename to Anamnys.
 
 ### Current Limitations and Phase 2
 
 The current billing engine uses keyword heuristics over the structured note text. A production-grade implementation would:
 
-- Use a payer rules database (Medicare, Medicaid, commercial payers have different documentation requirements, unit limits, and modifier rules)
-- Pull the patient's active diagnoses directly from the patient record to auto-select ICD-10 codes
-- Support the `payerName` parameter already present in `IBillingEngine.DeriveCodesAsync` to apply payer-specific rules
-- Detect session duration from the audit trail timestamps rather than relying on text mentions
+- Use an operadora rules database — each insurer sets its own documentation requirements, session limits and authorisation rules
+- Pull the patient's active diagnoses directly from the chart to select CID-10 codes
+- Support the `payerName` parameter already present in `IBillingEngine.DeriveCodesAsync` to apply per-operadora rules
+- Take session duration from the `session` entity (F-04) rather than from text mentions, which is what makes the duration-versus-code check in F-20 possible
+- Generate the submission-ready TISS guide itself (F-19), not just the codes
 
 ---
 
@@ -424,6 +410,6 @@ Seeded by `scripts/seed_dev.sql` or `DevDataSeeder` on first startup:
 | Role                      | Email                          | Password   |
 | ------------------------- | ------------------------------ | ---------- |
 | Mental Health Provider    | `sarah.mh@clinicaldraft.local` | `Dev1234!` |
-| Physical Therapy Provider | `james.pt@clinicaldraft.local` | `Dev1234!` |
+| Legacy fixture provider   | `james.pt@clinicaldraft.local` | `Dev1234!` |
 
 Dev-only seeder (`dev@clinicaldraft.local`) is also created by `DevDataSeeder` if no providers exist.
