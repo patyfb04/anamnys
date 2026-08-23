@@ -197,7 +197,12 @@ create table "ClinicalDocuments" (
   "CreatedAt"      timestamptz not null default now(),
   constraint "ClinicalDocuments_Patient_fk" foreign key ("PatientId", "ProviderId")
                                             references "Patients" ("Id", "ProviderId") on delete restrict,
-  constraint "ClinicalDocuments_Kind_ck"    check ("Kind" in ('declaracao','atestado','relatorio','laudo','parecer'))
+  -- The six modalities of Art. 8 of Res. CFP 006/2019. "relatorio" is the
+  -- Relatório Psicológico (Art. 11); "relatorio_multiprofissional" is the
+  -- distinct modality of Art. 12, which has its own authorship and analysis
+  -- rules and cannot be validated by the Art. 11 ruleset.
+  constraint "ClinicalDocuments_Kind_ck"    check ("Kind" in ('declaracao','atestado','relatorio',
+                                                              'relatorio_multiprofissional','laudo','parecer'))
 );
 create index "ClinicalDocuments_PatientId_idx"      on "ClinicalDocuments" ("PatientId");
 create index "ClinicalDocuments_RetentionUntil_idx" on "ClinicalDocuments" ("RetentionUntil")
@@ -297,14 +302,111 @@ alter table "PlanObjectives"
 -- Registry of instruments. Deliberately stores the score range and NOTHING that
 -- interprets it: recording the number is a record, labelling it "moderate" is
 -- clinical interpretation and belongs to the professional (F-01).
+--
+-- The regulatory columns are not documentation. A catalogue INDUCES the
+-- professional's conduct, and under art. 12 of Res. CFP 31/2022 the ethics
+-- sanction falls on them, not on us — so the rules that decide what may be
+-- offered are constraints here, not conventions in application code.
+--
+--   "SatepsiStatus"  where the instrument sits in the CFP's own lists.
+--   "LicenseMode"    what copyright allows, which is a separate question.
+--   "MayRenderItems" whether the app may show the questionnaire on screen.
+--                    FALSE means score-only: the professional applied the
+--                    instrument through the official material and types the
+--                    number in. That is registro documental, not aplicação.
+--
+-- NOTHING HERE IS "APPROVED BY THE CFP", and no screen may say so.
+-- 'favoravel' means the CFP certified a psychological test. 'nao_privativo'
+-- means the opposite — the CFP determined the thing is NOT a psychological
+-- test, so it falls outside certification entirely; the SATEPSI itself states
+-- that the psychometric quality of non-privative instruments is not assessed
+-- by the CFP and that checking it is the professional's job. Neither status is
+-- an endorsement of the instrument's quality.
 create table "Instruments" (
-  "Id"       uuid primary key default gen_random_uuid(),
-  "Code"     text    not null,
-  "Name"     text    not null,
-  "MaxScore" integer not null,
-  "Version"  text    not null default '1',
-  "Active"   boolean not null default true,
-  constraint "Instruments_Code_key" unique ("Code")
+  "Id"               uuid    primary key default gen_random_uuid(),
+  "Code"             text    not null,
+  "Name"             text    not null,
+  "ItemCount"        integer,
+  "MinScore"         integer not null default 0,
+  "MaxScore"         integer not null,
+  "SatepsiStatus"    text    not null default 'sem_classificacao',
+  "SatepsiCheckedOn" date,
+  "LicenseMode"      text    not null default 'proprietario',
+  "MayRenderItems"   boolean not null default false,
+  "SourceRef"        text,
+  -- OBRIGATÓRIA, e obrigatória para TODOS — não só para os bloqueados.
+  -- A profissional tem de saber por que uma coisa está disponível tanto quanto
+  -- por que outra não está: "o app não oferece o DASS-21" sem explicação parece
+  -- limitação do produto, e ela vai procurar outro caminho. Com a explicação,
+  -- ela aprende algo que a protege. Texto em português, escrito para ela e não
+  -- para quem programa — esta coluna vai para a tela.
+  "StatusExplanation" text   not null,
+  -- Um único sinal de "pode ser usado". Havia também um "Active" default TRUE
+  -- aqui, e manter os dois era um bug esperando: quem escrevesse
+  -- `where "Active"` receberia o DASS-21 de volta. "Enabled" default FALSE é o
+  -- sinal, e é o que as restrições abaixo governam.
+  "Enabled"          boolean not null default false,
+  "Version"          text    not null default '1',
+  constraint "Instruments_Code_key" unique ("Code"),
+
+  constraint "Instruments_Satepsi_ck" check ("SatepsiStatus" in (
+    'nao_privativo',      -- consta na lista de Instrumentos Não Privativos
+    'favoravel',          -- teste psicológico com parecer favorável
+    'desfavoravel',       -- teste psicológico com parecer desfavorável
+    'nao_avaliado',       -- consta na lista de Testes Não Avaliados
+    'sem_classificacao'   -- não consta em lista nenhuma do SATEPSI
+  )),
+
+  constraint "Instruments_License_ck" check ("LicenseMode" in (
+    'livre',                 -- reprodução permitida pelo detentor, sem pedido
+    'dominio_publico',
+    'autorizacao_necessaria',-- gratuito ou não, mas exige pedido antes de exibir
+    'proprietario',          -- editora, venda restrita
+    'vedado_digital'         -- licença proíbe expressamente uso digital
+  )),
+
+  -- A REGRA CENTRAL, e ela é uma LISTA DE PERMISSÃO, não de proibição.
+  --
+  -- Ficar de fora das listas do SATEPSI não é vácuo regulatório — é
+  -- classificação pendente, e o padrão é restritivo. O FAQ do CFP diz, com
+  -- estas palavras: "os testes que não foram analisados pelo CFP não estão
+  -- aprovados e, por isso, não podem ser utilizados para fins profissionais".
+  -- E o art. 13 da Res. 31/2022 mostra o caminho: na dúvida o CRP submete à
+  -- CCAP, que classifica como instrumento não privativo OU como teste
+  -- psicológico — e no segundo caso o instrumento cai na lista de Testes Não
+  -- Avaliados, onde o uso vira falta ética pelo art. 12.
+  --
+  -- Portanto: só é habilitável o que tem POSIÇÃO EXPLÍCITA do CFP. Silêncio
+  -- não conta como permissão. Instrumento sem classificação fica desligado até
+  -- alguém percorrer o art. 13.
+  constraint "Instruments_Enabled_ck" check (
+    "Enabled" = false or "SatepsiStatus" in ('nao_privativo','favoravel')
+  ),
+
+  -- Status sem data de conferência é afirmação sem lastro: as listas do SATEPSI
+  -- mudam, e um status anotado uma vez e nunca reconferido envelhece calado.
+  constraint "Instruments_Checked_ck" check (
+    "SatepsiStatus" = 'sem_classificacao' or "SatepsiCheckedOn" is not null
+  ),
+
+  -- Exibir os itens é reprodução de obra. Só quem tem licença livre ou domínio
+  -- público pode. Ninguém habilita isso por engano num instrumento pago.
+  -- Exibir os itens é reprodução de obra E é aplicação do instrumento. Exige as
+  -- duas permissões: licença que autorize reproduzir, e pronunciamento do CFP.
+  -- Instrumento sem classificação pode ter escore registrado após adesão, mas
+  -- NUNCA ser aplicado pela tela: se a CCAP vier a chamá-lo de teste
+  -- psicológico, a aplicação informatizada dependeria de manual aprovado e
+  -- estudo de equivalência (art. 11 e Cap. V) que ninguém tem.
+  constraint "Instruments_Render_ck" check (
+    "MayRenderItems" = false
+    or ("LicenseMode" in ('livre','dominio_publico')
+        and "SatepsiStatus" in ('nao_privativo','favoravel'))
+  ),
+
+  -- Explicação vazia é o mesmo que explicação ausente.
+  constraint "Instruments_Explanation_ck" check (length(trim("StatusExplanation")) > 20),
+
+  constraint "Instruments_Range_ck" check ("MaxScore" > "MinScore")
 );
 
 
@@ -322,6 +424,185 @@ create table "ScaleApplications" (
 );
 create index "ScaleApplications_Patient_Applied_idx"
   on "ScaleApplications" ("PatientId", "InstrumentId", "AppliedAt");
+
+-- "RawAnswers" holds item-level responses, which only exist if the app SHOWED
+-- the items and COLLECTED them. For an instrument the app may not render, a
+-- populated "RawAnswers" is evidence of exactly the thing the licence forbids —
+-- and, for a teste psicológico, of aplicação outside the approved manual
+-- (Res. CFP 31/2022, art. 11). Score-only means score only.
+create or replace function anamnys_check_scale_application()
+returns trigger language plpgsql as $$
+declare
+  inst record;
+  prov uuid;
+begin
+  select "Code", "MayRenderItems", "SatepsiStatus", "StatusExplanation" into inst
+    from "Instruments" where "Id" = new."InstrumentId";
+
+  -- 1. Respostas item a item só de quem o app pode exibir.
+  if new."RawAnswers" is not null and not inst."MayRenderItems" then
+    raise exception
+      'Instrument "%" is score-only: item-level answers may not be stored.', inst."Code"
+      using hint = 'Record the score the professional obtained. Storing "RawAnswers" '
+                   'implies the app administered the instrument, which its licence '
+                   'or the approved manual does not permit.';
+  end if;
+
+  -- 2. VEDADO PELO CFP: recusa absoluta, sem caminho alternativo.
+  --
+  -- Aqui existe infração publicada (art. 12), e nenhuma confirmação a desfaz.
+  -- Houve uma versão que aceitava o lançamento se a profissional reconhecesse o
+  -- aviso: era pior que o bloqueio. Em prontuário requisitável aquele campo é o
+  -- melhor documento possível CONTRA ela num processo ético-disciplinar —
+  -- registro datado provando que o sistema avisou ser falta ética e que ela
+  -- seguiu. O produto construiria a prova contra a própria usuária.
+  if inst."SatepsiStatus" in ('nao_avaliado','desfavoravel') then
+    raise exception
+      'Instrument "%" may not be recorded: the CFP forbids its use. %',
+      inst."Code", inst."StatusExplanation"
+      using hint = 'Show "StatusExplanation" verbatim. There is no acknowledgement that '
+                   'unlocks this — the prohibition is published, not uncertain.';
+  end if;
+
+  -- 3. SEM CLASSIFICAÇÃO: exige adesão registrada da profissional, uma vez por
+  -- instrumento. Caso diferente do anterior e tratado de forma diferente: não
+  -- há proibição publicada, e o art. 5º atribui a ela a decisão. Ver a nota
+  -- extensa em "ProviderInstrumentOptIns" para o fundamento.
+  --
+  -- O profissional vem do paciente: "ScaleApplications" não guarda ProviderId,
+  -- e "Patients" é dono dessa relação.
+  if inst."SatepsiStatus" = 'sem_classificacao' then
+    select p."ProviderId" into prov from "Patients" p where p."Id" = new."PatientId";
+    if not exists (
+      select 1 from "ProviderInstrumentOptIns" o
+       where o."ProviderId" = prov
+         and o."InstrumentId" = new."InstrumentId"
+         and o."RevokedAt" is null
+    ) then
+      raise exception
+        'Instrument "%" has no CFP classification and this professional has not opted in. %',
+        inst."Code", inst."StatusExplanation"
+        using hint = 'Show "StatusExplanation", then record the decision in '
+                     '"ProviderInstrumentOptIns" with the text she read. One considered '
+                     'opt-in per instrument — never a per-entry confirmation, which only '
+                     'teaches people to click without reading.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger "ScaleApplications_guard"
+  before insert or update on "ScaleApplications"
+  for each row execute function anamnys_check_scale_application();
+
+
+-- Segunda linha de defesa, não a primeira. O gatilho acima já impede que
+-- instrumento vedado entre na tabela, então em banco novo esta visão não filtra
+-- nada — e mesmo assim ela fica, por dois motivos concretos:
+--
+--   1. MIGRAÇÃO. Dado importado de outro sistema é o caminho realista para
+--      linhas proibidas aparecerem, e um superusuário pode desabilitar gatilho
+--      durante uma carga.
+--   2. MUDANÇA DE STATUS. Instrumento hoje regular pode ir parar na lista de
+--      Testes Não Avaliados amanhã. Nesse dia as linhas antigas continuam na
+--      tabela, e é certo que devem sair dos gráficos sem que ninguém precise
+--      lembrar de ajustar consulta nenhuma.
+--
+-- Toda consulta de série longitudinal lê ESTA VISÃO, nunca a tabela.
+-- ADESÃO POR PROFISSIONAL A INSTRUMENTO SEM CLASSIFICAÇÃO.
+--
+-- A distinção que esta tabela existe para respeitar: instrumento JÁ CLASSIFICADO
+-- E EXCLUÍDO é uma coisa; instrumento ainda PENDENTE de classificação é outra, e
+-- juridicamente elas não se equivalem.
+--
+--   O art. 12 tipifica falta ética em duas hipóteses ENUMERADAS: parecer
+--   desfavorável, ou constar da lista de Testes Não Avaliados. É proibição por
+--   lista. O que não está em lista nenhuma não é alcançado por ela.
+--
+--   O art. 5º dá à profissional a prerrogativa de escolher os instrumentos
+--   "desde que fundamentados na literatura científica psicológica e nas normas
+--   vigentes do CFP". Para um instrumento pendente com literatura sólida e
+--   validação brasileira, as duas condições se cumprem — não há norma vigente
+--   que o proíba. Para um da lista de Testes Não Avaliados, a segunda condição
+--   falha, e o art. 5º não ampara.
+--
+--   O art. 4º admite como fonte complementar "instrumentos não psicológicos que
+--   possuam respaldo da literatura científica da área".
+--
+-- O FAQ do SATEPSI diz que teste não analisado não está aprovado e não pode ser
+-- usado profissionalmente. É orientação, não ato normativo, e o sujeito da frase
+-- é "teste psicológico" — que é exatamente a classificação ainda indeterminada.
+-- A frase pressupõe a conclusão que se quer tirar dela. Pesa, e não decide.
+--
+-- POR QUE AQUI A ADESÃO NÃO É O QUE ERA A "CIÊNCIA" DO INSTRUMENTO VEDADO.
+-- Naquele caso, o registro documentava seguir apesar de infração publicada —
+-- confissão datada em prontuário requisitável. Aqui não há infração: há
+-- incerteza, e o art. 5º atribui à profissional justamente resolvê-la. O
+-- registro documenta exercício informado de prerrogativa, que é o que boa
+-- documentação clínica deve conter.
+--
+-- Uma adesão por profissional e por instrumento, não por lançamento. Decisão
+-- ponderada uma vez vale mais que confirmação repetida cinquenta vezes, que
+-- ensina a clicar sem ler.
+create table "ProviderInstrumentOptIns" (
+  "Id"               uuid        primary key default gen_random_uuid(),
+  "ProviderId"       uuid        not null references "Providers"("Id") on delete cascade,
+  "InstrumentId"     uuid        not null references "Instruments"("Id") on delete restrict,
+  "AcknowledgedAt"   timestamptz not null default now(),
+  -- Cópia do texto que ela leu. A explicação muda quando o status muda no
+  -- SATEPSI, e "ela concordou" não significa nada sem saber com o quê.
+  "ExplanationShown" text        not null,
+  "RevokedAt"        timestamptz,
+  constraint "ProviderInstrumentOptIns_key" unique ("ProviderId", "InstrumentId")
+);
+
+-- Adesão só existe para o que está pendente. Não há adesão possível a
+-- instrumento vedado — é a diferença inteira entre os dois casos.
+create or replace function anamnys_check_instrument_optin()
+returns trigger language plpgsql as $$
+declare
+  st   text;
+  code text;
+begin
+  select "SatepsiStatus", "Code" into st, code
+    from "Instruments" where "Id" = new."InstrumentId";
+  if st <> 'sem_classificacao' then
+    raise exception
+      'Instrument "%" does not take an opt-in (status: %).', code, st
+      using hint = 'Opt-in exists only for instruments the CFP has not yet classified. '
+                   'An instrument on the "Testes Não Avaliados" list is forbidden outright '
+                   'and no acknowledgement can unlock it; a classified one needs no opt-in.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger "ProviderInstrumentOptIns_guard"
+  before insert or update on "ProviderInstrumentOptIns"
+  for each row execute function anamnys_check_instrument_optin();
+
+
+create view "InstrumentSeries" as
+  select a.*, i."Code" as "InstrumentCode", i."SatepsiStatus"
+    from "ScaleApplications" a
+    join "Instruments" i on i."Id" = a."InstrumentId"
+   where i."SatepsiStatus" in ('nao_privativo','favoravel');
+
+-- CUIDADO com o art. 5º, que é o artigo mais fácil de usar errado aqui. Ele dá
+-- à profissional a prerrogativa de escolher os instrumentos, mas com uma
+-- condicional que se perde de vista: "desde que fundamentados na literatura
+-- científica psicológica E NAS NORMAS VIGENTES do CFP". Instrumento da lista de
+-- Testes Não Avaliados está fora das normas vigentes — o art. 5º NÃO ampara
+-- esse uso. Ele ampara a escolha entre instrumentos regulares.
+--
+-- E CUIDADO com a palavra "aprovado". 'nao_privativo' não é aprovação: o CFP
+-- determinou que a coisa NÃO É teste psicológico, logo está fora da
+-- certificação, e o próprio SATEPSI diz que não avalia a qualidade psicométrica
+-- desses instrumentos. Nenhuma tela pode dizer "aprovado pelo CFP" sobre nada
+-- desta tabela. O que estes dois status têm em comum não é aprovação: é o CFP
+-- TER SE PRONUNCIADO. É isso que o gatilho exige.
 
 
 create table "ThemeVocabularies" (
@@ -341,6 +622,11 @@ create table "ThemeTerms" (
   "Code"                 text    not null,
   "Label"                text    not null,
   "ParentTermId"         uuid    references "ThemeTerms"("Id") on delete set null,
+  -- When this term became available to tag with. Without it a term added in
+  -- year two draws a timeline that appears to start in year two, and the
+  -- professional reads a vocabulary change as a clinical change. The chart has
+  -- to be able to say "termo introduzido aqui".
+  "IntroducedOn"         date    not null default current_date,
   "Status"               text    not null default 'active',
   "SupersededByTermId"   uuid    references "ThemeTerms"("Id") on delete set null,
   constraint "ThemeTerms_Vocab_Code_key" unique ("VocabularyId", "Code"),
@@ -400,15 +686,24 @@ create index "PatientQuotes_NoteId_idx" on "PatientQuotes" ("NoteId");
 --  D — DOCUMENT COMPLIANCE  (F-05, F-06)
 -- =============================================================================
 
+-- "Elements" is what the document MUST contain; "Prohibitions" is what it must
+-- NOT contain. Both are needed: the most common breach of Res. CFP 006/2019 is
+-- a declaração that records symptoms (Art. 9, §1), and a presence-only checker
+-- is structurally incapable of seeing it.
 create table "ConformityRulesets" (
   "Id"            uuid primary key default gen_random_uuid(),
   "DocumentKind"  text    not null,
   "Version"       text    not null,
   "Elements"      jsonb   not null,
+  "Prohibitions"  jsonb   not null default '[]'::jsonb,
   "SourceRef"     text    not null default 'Res. CFP 006/2019',
+  "ArticleRef"    text,
   "EffectiveFrom" date    not null,
   constraint "ConformityRulesets_Kind_Version_key" unique ("DocumentKind", "Version"),
-  constraint "ConformityRulesets_Kind_ck" check ("DocumentKind" in ('declaracao','atestado','relatorio','laudo','parecer'))
+  constraint "ConformityRulesets_Kind_ck" check ("DocumentKind" in ('declaracao','atestado','relatorio',
+                                                                   'relatorio_multiprofissional','laudo','parecer')),
+  constraint "ConformityRulesets_Elements_ck"     check (jsonb_typeof("Elements") = 'array'),
+  constraint "ConformityRulesets_Prohibitions_ck" check (jsonb_typeof("Prohibitions") = 'array')
 );
 
 
@@ -417,6 +712,10 @@ create table "ConformityChecks" (
   "DocumentId"      uuid        not null references "ClinicalDocuments"("Id") on delete cascade,
   "RulesetId"       uuid        not null references "ConformityRulesets"("Id") on delete restrict,
   "MissingElements" jsonb       not null default '[]'::jsonb,
+  -- Prohibited content the checker believes it found. Separate from
+  -- "MissingElements" because the two demand different wording to the
+  -- professional: one is "falta", the other is "não pode constar".
+  "ForbiddenFound"  jsonb       not null default '[]'::jsonb,
   "Mode"            text        not null default 'advisory',
   "Passed"          boolean     not null,
   "CheckedAt"       timestamptz not null default now(),

@@ -125,3 +125,55 @@ commit;
 --   select count(*) filter (where "RetentionUntil" < current_date + 90) as guarda_vencendo,
 --          count(*) filter (where "SignedAt" is null)                   as nao_assinados
 --     from "ClinicalDocuments";
+
+-- SATEPSI status going stale. The CFP's lists change, and a status recorded once
+-- and never rechecked is a claim with no backing that ages silently — the same
+-- failure family as pg_cron on Neon. Anything past a year needs a human to open
+-- satepsi.cfp.org.br and look, because nothing here can detect the drift.
+--
+--   select "Code", "SatepsiStatus", "SatepsiCheckedOn"
+--     from "Instruments"
+--    where "SatepsiCheckedOn" is not null
+--      and "SatepsiCheckedOn" < current_date - interval '12 months'
+--    order by "SatepsiCheckedOn";
+
+-- Scores recorded against instruments the catalogue does not offer. Everything
+-- the CFP forbids is already refused at write time, so what shows up here is
+-- the other case: unclassified instruments the professional uses anyway. That
+-- is not a violation and must not be treated as one — it is a signal that the
+-- catalogue is missing something she needs, and a candidate for the art. 13
+-- route (ask the CRP to submit it to the CCAP).
+--
+--   select i."Code", i."SatepsiStatus", count(*) as lancamentos,
+--          count(distinct a."PatientId") as pacientes,
+--          max(a."AppliedAt") as ultimo
+--     from "ScaleApplications" a
+--     join "Instruments" i on i."Id" = a."InstrumentId"
+--    where i."Enabled" = false
+--    group by i."Code", i."SatepsiStatus"
+--    order by 3 desc;
+
+-- Rows that should be impossible: an application recorded against an instrument
+-- the CFP forbids. The trigger refuses these, so a non-zero count means the
+-- guard was bypassed — a migration load with triggers disabled, or an
+-- instrument whose status changed AFTER the rows were written. The second is
+-- the likely one, and it is why "InstrumentSeries" exists as a second line.
+--
+--   select i."Code", i."SatepsiStatus", count(*)
+--     from "ScaleApplications" a
+--     join "Instruments" i on i."Id" = a."InstrumentId"
+--    where i."SatepsiStatus" in ('nao_avaliado','desfavoravel')
+--    group by 1, 2;
+
+-- Documents signed while the conformity check was failing, or with content the
+-- ruleset forbids (F-05). The check is advisory by default, so a signature can
+-- happen over a red flag — which is exactly the case worth reviewing.
+--
+--   select d."Kind", c."CheckedAt", c."MissingElements", c."ForbiddenFound"
+--     from "ConformityChecks" c
+--     join "ClinicalDocuments" d on d."Id" = c."DocumentId"
+--    where d."SignedAt" is not null
+--      and (c."Passed" = false or c."ForbiddenFound" <> '[]'::jsonb)
+--      and c."CheckedAt" = (select max(c2."CheckedAt") from "ConformityChecks" c2
+--                            where c2."DocumentId" = d."Id")
+--    order by c."CheckedAt" desc;
