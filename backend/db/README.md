@@ -230,11 +230,21 @@ científico é dever do profissional.
 
 ### O que está habilitado
 
-Um só, e não por falta de opções.
+Três, todos com pronunciamento do CFP na lista de Instrumentos Não Privativos.
 
 | Código | Itens · escore | SATEPSI | Licença | Exibe itens |
 | --- | --- | --- | --- | --- |
 | `PHQ-9` | 9 · 0–27 | não privativo (análise 07/05/2020) | livre | sim |
+| `MOM-D` | 19 · 0–57 | não privativo | proprietário | não |
+| `MOM-A` | 24 · 0–72 | não privativo | proprietário | não |
+
+Os dois inventários de *A Mente Vencendo o Humor* (Greenberger & Padesky) foram
+desenhados **para** aplicação seriada em TCC, que é o uso do Anamnys — enquanto o
+PHQ-9 é rastreio adaptado a isso. Guilford e o site oficial vedam reprodução em
+plataforma e uso comercial, então entram como escore digitado. Os autores
+declaram que **não existem normas nem pontos de corte**, o que aqui é vantagem: o
+esquema já se recusa a guardar faixa de gravidade, e o valor é a curva do próprio
+paciente.
 
 Os demais entram no banco desligados e **com a explicação escrita**, por três razões
 que a interface não deve confundir:
@@ -428,7 +438,23 @@ feito. Não protege o profissional; expõe.
 
 Se isso entrar um dia, entra como **registro do ato** — quem notificou, quando, a
 quem, com que fundamento —, não como assunto marcado numa nota. Mesmo caminho do
-plano de segurança.
+plano de segurança. É o `F-66`, e ele tem duas condições escritas no backlog.
+
+A primeira: **o dever não nasce do registro.** A Lei 10.778/2003 art. 1º é
+disparada pelo *atendimento* de caso com indícios de violência, não pela
+existência de uma linha no banco. Não anotar não desfaz o dever — desfaz a prova
+de que ele foi cumprido, o que prejudica justamente quem cumpriu. E a violência
+está descrita na prosa da nota de qualquer forma, porque a sessão precisa ser
+documentada: a inferência "sabia e não fez nada" está disponível a partir da
+prosa, com ou sem a funcionalidade. Por isso a linha registra o **ato**, e não o
+fato: ela só existe porque houve notificação, e a ausência dela não registra nem
+prova coisa alguma.
+
+A segunda: **não construir sem o acompanhamento do prazo.** A Lei 13.931/2019
+fixa 24 horas para a comunicação à autoridade policial. Um campo que aceita a
+notificação, não avisa do prazo e não mostra o que está vencendo parece apoio ao
+cumprimento e não é — silenciosamente incompleto, e com cara de funcionar. Mesma
+família do `pg_cron` no Neon e da etiqueta de risco descartada.
 
 `discriminacao` ficou. Testada contra os mesmos critérios, não compartilha
 nenhum: marcá-la não infere estado psicológico, a recorrência ao longo do
