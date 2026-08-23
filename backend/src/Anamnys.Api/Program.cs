@@ -3,6 +3,7 @@ using QuestPDF.Infrastructure;
 using Anamnys.Api.Jobs;
 using Anamnys.Application.Interfaces;
 using Anamnys.Infrastructure.Data;
+using Anamnys.Infrastructure.Jobs;
 using Anamnys.Infrastructure.Services;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -76,6 +77,7 @@ builder.Services.AddHangfireServer(opts =>
     opts.WorkerCount = 2; // limit concurrency — LLM is memory-intensive
 });
 builder.Services.AddScoped<PipelineJob>();
+builder.Services.AddScoped<DatabaseMaintenanceJob>();
 
 // ─── MediatR ───────────────────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg =>
@@ -208,5 +210,12 @@ using (var scope = app.Services.CreateScope())
     if (app.Environment.IsDevelopment())
         await Anamnys.Infrastructure.Data.DevDataSeeder.SeedAsync(db, startupLogger);
 }
+
+// ─── Recurring database maintenance ───────────────────────────────────────────
+// The four routines in src/backend/db/03_jobs.sql. Each exists because a
+// constraint could not express the rule; Hangfire is only the clock.
+// Registration checks the routines exist first and refuses to schedule jobs that
+// would fail hourly inside a background worker where nobody is watching.
+await app.Services.AddDatabaseMaintenanceJobsAsync();
 
 await app.RunAsync();
