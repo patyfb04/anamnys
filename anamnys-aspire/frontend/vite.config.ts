@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -11,6 +12,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     proxy: {
       // Proxy API calls to the server resource. Aspire injects SERVER_HTTP from
@@ -18,6 +24,12 @@ export default defineConfig({
       // ASP.NET dev certificate on a localhost-to-localhost hop.
       // `ws` is enabled for the SignalR hubs the app will add later.
       '/api': {
+        target: process.env.SERVER_HTTP,
+        changeOrigin: true,
+        ws: true,
+      },
+      // Transcription/progress SignalR hubs — same target, separate path prefix.
+      '/hubs': {
         target: process.env.SERVER_HTTP,
         changeOrigin: true,
         ws: true,

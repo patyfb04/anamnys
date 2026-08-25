@@ -1,33 +1,31 @@
-import { Link, Outlet, createRootRoute } from '@tanstack/react-router';
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools';
+import { useEffect, useState } from "react";
+import { Outlet, createRootRoute } from "@tanstack/react-router";
+import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { I18nextProvider } from "react-i18next";
+import i18n from "@/lib/i18n";
+import { useSettingsStore } from "@/lib/store/settingsStore";
+import { useAuthStore } from "@/lib/store/authStore";
 
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
-  return (
-    <Link
-      to={to}
-      className="rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
-      activeProps={{ className: 'bg-slate-900 text-white hover:bg-slate-900 hover:text-white' }}
-    >
-      {children}
-    </Link>
-  );
-}
-
+// Root document shell — equivalent of the Next app's RootLayout + Providers combined, since
+// there's only one root here (no separate html/body wrapper; index.html owns those).
 function RootLayout() {
+  const [queryClient] = useState(() => new QueryClient());
+  const loadLanguage = useSettingsStore((s) => s.loadLanguage);
+  const loadUser = useAuthStore((s) => s.loadUser);
+
+  useEffect(() => {
+    loadLanguage();
+    loadUser();
+  }, [loadLanguage, loadUser]);
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white">
-        <nav className="mx-auto flex max-w-4xl items-center gap-1 px-6 py-3">
-          <span className="mr-4 font-semibold tracking-tight">Anamnys</span>
-          <NavLink to="/">Home</NavLink>
-          <NavLink to="/weather">Weather</NavLink>
-        </nav>
-      </header>
-      <main className="mx-auto max-w-4xl px-6 py-10">
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>
         <Outlet />
-      </main>
-      <TanStackRouterDevtools position="bottom-right" />
-    </div>
+        <TanStackRouterDevtools position="bottom-right" />
+      </I18nextProvider>
+    </QueryClientProvider>
   );
 }
 
