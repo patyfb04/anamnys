@@ -4,25 +4,26 @@ Guidance for Claude Code working in this repository.
 
 ## What this directory is
 
-`anamnys-aspire/` is a **fresh, still-untracked `aspire init` scaffold** — not yet the real
-application. It contains the stock Aspire starter (a `WeatherForecast` minimal API and a
-blank Vite/React page). The actual product lives in two sibling directories of the same git
-repo:
+`anamnys-aspire/` is **the application** — a single Aspire-orchestrated solution, committed
+to git. All new work happens here.
 
 ```
 anamnys/                     <- git root (branch: develop)
-├── backend/                 <- REAL API: ASP.NET Core 10, Clean Architecture
-├── frontend/                <- REAL UI: Next.js 16 + React 19 + Tailwind 4
-└── anamnys-aspire/          <- THIS DIR: Aspire scaffold (untracked)
+├── backend/                 <- LEGACY reference only (do not extend)
+├── frontend/                <- LEGACY reference only (Next.js; do not extend)
+└── anamnys-aspire/          <- THIS DIR: the real project
     ├── anamnys-aspire.AppHost/   AppHost.cs — resource graph
-    ├── anamnys-aspire.Server/    template minimal API + Extensions.cs (service defaults)
-    └── frontend/                 template Vite app (NOT the real frontend)
+    ├── anamnys-aspire.Server/    minimal API + Extensions.cs (service defaults)
+    ├── frontend/                 Vite + React + TanStack Router SPA
+    └── design/specs/             design documents
 ```
 
-The intended trajectory is to wire this AppHost to orchestrate `../backend` and
-`../frontend`. Until that happens, **`anamnys-aspire/frontend` and `../frontend` are
-different apps** (Vite vs Next.js) — never confuse them. Same for the two `Server`/`Api`
-projects.
+`backend/` and `frontend/` are the original project structure. They are kept for reference
+while their functionality is **gradually migrated** into this directory. Do not add features
+to them. Their code is a source to port *from*, not a place to work.
+
+Note there are two `frontend/` directories. `anamnys-aspire/frontend` (Vite SPA) is the live
+one; `../frontend` (Next.js) is legacy. Never confuse them.
 
 ## The product
 
@@ -37,55 +38,58 @@ with a denial-risk score → provider reviews, signs, exports to PDF.
   (structuring) are .NET libraries, not sidecars. **Never** propose routing patient audio,
   transcripts, or notes to a cloud AI API (OpenAI, Azure OpenAI, Gemini, Anthropic) — doing
   so puts PHI outside the network boundary and requires a BAA.
-- Every controller extracts the provider id from the JWT `sub` claim and appends it to every
-  DB query. Provider-scoping is enforced at the **query** level, not just the route level.
-  Any new data-access code must preserve this.
+- **Everything self-hosted.** The same rule governs every dependency that touches PHI:
+  database, identity provider, object storage. Managed/hosted services are not an option
+  for PHI-bearing components without a signed BAA.
+- **Provider-scoping is enforced at the query level.** The authenticated user's id is
+  resolved server-side and appended to every database query, so a provider cannot read
+  another provider's patients or notes even with a valid session. This is the system's
+  primary access control — any new data-access code must preserve it.
 - Every note mutation appends an `AuditEntry` to the `AuditTrail` JSONB column (§164.312(b)).
 - Exported PDFs are ePHI: private bucket, access only via 1-hour presigned URLs.
-- Passwords are bcrypt (cost 11). Never log, store, or return plaintext.
+- **The application never stores credentials.** Keycloak owns passwords, hashing, reset
+  flows, and lockout. There is no password column in the application database.
+- **No PHI in tokens, logs, or URLs.** Tokens carry subject, roles, and scopes only.
 
-## Backend architecture (`../backend`)
+## Tech Stack
 
-Four projects, strict dependency direction (`Anamnys.sln`):
+Split into what is **wired up today** and what is **planned**. Do not write code against a
+planned package without adding the reference first.
 
-| Project | Role | Depends on |
-| --- | --- | --- |
-| `Anamnys.Domain` | Entities (`Note`, `Patient`, `Provider`), enums | nothing |
-| `Anamnys.Application` | Interfaces, CQRS commands, DTOs | Domain |
-| `Anamnys.Infrastructure` | EF Core `AppDbContext`, Whisper/LLaMA/Billing/S3 services | Application |
-| `Anamnys.Api` | Controllers, SignalR hubs, Hangfire jobs, QuestPDF | all |
+### Backend — present
 
-Infrastructure implements the interfaces Application declares. Keep I/O out of
-Domain/Application.
+- .NET 10, ASP.NET Core Minimal APIs, C# 14
+- Redis (Aspire-managed container) for output caching
+- OpenTelemetry via `Extensions.cs` service defaults
 
-### The pipeline
+### Backend — planned
 
-`POST /api/transcribe` saves audio, creates a `Note(Processing)`, enqueues a Hangfire
-`PipelineJob`, returns `202 {jobId}` immediately. The job runs 5 steps (transcribe →
-structure → entity extraction *(stub)* → billing → QA guard *(stub)*), pushing SignalR
-progress to the `jobId` group at each step, then sets `ReadyForReview`.
+- Entity Framework Core 10.0
+- PostgreSQL 18 — runs as an **Aspire-managed Docker container**, both locally and in
+  production. Not a hosted service (see HIPAA constraints).
+- Keycloak for identity — see `design/specs/2026-08-24-authentication-design.md`
+- FluentValidation for request validation
+- Scalar for OpenAPI documentation
+- xUnit + FluentAssertions for testing
 
-- **Hangfire is not optional plumbing** — it persists to PostgreSQL so a mid-transcription
-  crash retries rather than losing work, and it serializes LLM access.
-- **LLamaSharp is not thread-safe.** `LlamaStructuringService` guards inference with a
-  `SemaphoreSlim`. Do not parallelize inference or raise worker count expecting speedup.
-- Two hubs: `/hubs/progress` (job events, group-per-job) and `/hubs/transcription` (live
-  dictation, binary chunks buffered per-connection until `FinalizeStream`).
-- SignalR WebSocket upgrades cannot send an `Authorization` header, so `Program.cs` has an
-  `OnMessageReceived` handler reading the JWT from `?access_token=`. This is intentional —
-  don't "fix" it.
+### Frontend — present
 
-### Billing engine
+- React 19, Vite 8
+- TanStack Router (file-based routing)
+- Tailwind CSS 4
+- TypeScript **6.0.3** — see the TypeScript version note below
 
-`IBillingEngineStrategy` per country; `BillingEngineRouter` implements `IBillingEngine` and
-dispatches on `Provider.BillingSystem` (`UsCpt`, `CanadaOhip`, `BrazilTuss`, `EuropeGeneric`).
-**Adding a country = adding one strategy class.** No changes to the pipeline, controllers, or
-interface. Current code selection is keyword heuristics over structured note text —
-acknowledged as Phase 1.
+### Frontend — planned
 
-## Running things
+- TanStack Query
+- Shadcn UI components
 
-### Aspire (this directory)
+## Common Commands
+
+**Docker must be running** — the AppHost starts container-backed resources (Redis today,
+Postgres and Keycloak later).
+
+### Aspire (from this directory)
 
 ```bash
 aspire start        # background start — the form agents should use
@@ -94,61 +98,89 @@ aspire stop         # do this BEFORE any rebuild
 aspire doctor
 ```
 
-Use the Aspire CLI, not `dotnet run` on the AppHost. A running Aspire app holds file locks on
-`bin/`/`obj/`; `MSB3491` or `CS2012` during a build means "run `aspire stop` first", **not**
-that the project is broken.
+A running Aspire app holds file locks on `bin/` and `obj/`. An `MSB3491` or `CS2012` during
+a build means "run `aspire stop` first" — not that the project is broken.
 
-`aspire.config.json` points the CLI at the AppHost csproj. An `aspire` MCP server is wired up
-in `.mcp.json`, `.vscode/mcp.json`, and `opencode.jsonc` — prefer its tools (`list_resources`,
-`list_console_logs`, `list_traces`) over shelling out for orchestration state.
-
-**CLI version resolution:** the AppHost sets `<AspireUseCliBundle>true</AspireUseCliBundle>`,
-so the `aspire` launcher downloads a bundle matching the AppHost SDK version and runs that —
-CLI and packages stay in lockstep automatically (both 13.5.2 today). The Homebrew cask
-directory name (`Caskroom/aspire/13.4.6/`) is the launcher's install version and does **not**
-reflect what runs; trust `aspire --version`, not the path.
-
-`.agents/skills/` holds Microsoft's Aspire workflow skills (`aspire`, `aspireify`,
-`aspire-orchestration`, `aspire-deployment`, `aspire-monitoring`, `dotnet-inspect`,
-`playwright-cli`). Claude Code does **not** auto-load these — read the relevant `SKILL.md`
-directly when doing Aspire work, especially `aspireify/SKILL.md` before wiring the real apps
-into the AppHost.
-
-### Backend standalone (`../backend`)
+### Frontend (from `frontend/`)
 
 ```bash
-docker compose up minio minio-init -d     # only MinIO is uncommented; postgres/api are not
-export ConnectionStrings__Default="Host=localhost;Port=5432;Database=clinical_draft_dev;Username=postgres;Password=postgres"
-cd src/Anamnys.Api && dotnet run
+npm run dev     # vite
+npm run build   # tsc -b && vite build
+npm run lint    # eslint
 ```
 
-API `:5000` · Swagger `/swagger` · Hangfire dashboard `/jobs` · MinIO console `:9001`.
-PostgreSQL 16 must be running separately — its compose service is commented out.
+## Architecture
 
-Seed data: `scripts/seed_dev.sql` (5 providers, one per billing system; password `Dev1234!`).
+- Clean Architecture for the backend API.
+- The SPA is served by the .NET server. `AddViteApp` + `PublishWithContainerFiles` bakes the
+  built assets into the server's `wwwroot`, so there is **one container in production** and
+  the SPA is same-origin with the API. This is deliberate: it is the only frontend shape in
+  Aspire 13.5.2 with **zero experimental APIs**, it keeps PHI off any Node runtime, and
+  same-origin is what makes the cookie-based auth design work. Do not replace it with an
+  SSR framework without revisiting all three consequences.
+- Authentication uses a **Backend-for-Frontend**: the .NET server holds tokens, the browser
+  holds only an `HttpOnly` `SameSite=Strict` session cookie. Tokens never enter JavaScript.
 
-### Real frontend (`../frontend`)
+## Gotchas
 
-```bash
-npm run dev     # next dev
-npm run build
-npm run lint
-```
+- **`frontend/src/routeTree.gen.ts` is generated but MUST stay committed.** `npm run build`
+  runs `tsc -b` *before* Vite generates the route tree, so a clean checkout fails without
+  it. If it is ever missing, regenerate with a bare `npx vite build`.
+- **Aspire CLI version.** `AspireUseCliBundle` makes the launcher run a bundle matching the
+  AppHost SDK version. Trust `aspire --version`, never the Homebrew install path.
+- **TypeScript is held at 6.0.3, not the latest 7.0.2.** No released or canary
+  `typescript-eslint` supports TypeScript 7 (peer range is `>=4.8.4 <6.1.0`), so upgrading
+  breaks `npm run lint`. The `package.json` range is `~6.0.3` (patch-only) rather than
+  `^6.0.3` on purpose — a caret would let `npm install` pull 6.1+ and silently re-break
+  linting. Widen it only once typescript-eslint raises its peer range.
+- **`anamnys-aspire/frontend/obj*` is gitignored.** The esproj SDK emits a directory whose
+  name contains a literal backslash on macOS. Committing it would make `git clone` fail on
+  Windows, where `\` is an illegal filename character.
+- **Aspire's `WithRealmImport` (Keycloak) is development-only** and is silently dropped by
+  `aspire publish`/`deploy`. Production realm seeding needs a custom image.
 
-`frontend/AGENTS.md` (imported by `frontend/CLAUDE.md`) warns that **Next.js 16 has breaking
-changes vs. training data** — read `node_modules/next/dist/docs/` before writing Next code
-there. That block is regenerated by `next dev`; commit it rather than reverting it.
+## Workflow
 
-API layer lives in `src/api/` (axios client + per-domain modules), with `src/api-mock/` as a
-parallel mock implementation. Route groups: `(app)`, `(auth)`, `(marketing)`.
-State: Zustand + TanStack Query. SignalR via `@microsoft/signalr`. UI: shadcn + Base UI.
+- Branch naming: `feature/`, `bugfix/`, `hotfix/`
+- Commit format: `type: description` (feat, fix, refactor, test, docs, chore)
+- Always create a branch before changes
+- Run tests before committing
 
-## Conventions
+### Creating/Modifying API Endpoints
 
-- .NET 10 across every project; `ImplicitUsings` and `Nullable` enabled.
-- Config keys use the double-underscore env form (`ConnectionStrings__Default`,
-  `Jwt__Key`, `Storage__AccessKey`). See `backend/.env.example` — never commit real values.
-- AI model files (`.bin`, `.gguf`) live outside the repo under `models/` and are bind-mounted
-  or path-referenced via `Whisper:ModelPath` / `Llama:ModelPath`.
-- `mobile/` and `docs/` are gitignored at the repo root; a React Native client is referenced
-  throughout the backend README but is not in this tree.
+1. Plan the endpoint changes — new/updated methods, paths, request payloads
+2. Confirm proposed changes with the user
+3. Implement the endpoint
+4. Add/update the endpoint in `anamnys-aspire.Server/anamnys-aspire.Server.http`, documenting
+   the endpoint and its payloads
+5. Run the requests in that `.http` file against a running AppHost to verify
+
+## Code Style
+
+- General:
+  - Prefer writing clear code and use inline comments sparingly
+- C#:
+  - 4-space indent
+  - `PascalCase` for classes/methods
+  - `_camelCase` for private fields
+  - `camelCase` for local variables, parameters
+  - Primary constructors, including for DI
+  - File-scoped namespaces
+  - Always pass `CancellationToken` to async methods
+  - Use records for complex incoming request parameters
+  - Use auto-properties, and `field` if necessary
+  - No XML documentation comments
+- Tests:
+  - `<ClassName>Tests` for test class
+  - `<MethodName>_<Conditions>_<AssertedOutcome>` for test methods (never `Async` suffix)
+  - Arrange, Act, Assert pattern (comment each section in method)
+- TypeScript/JavaScript/CSS:
+  - 2-space indent (matches the existing code)
+  - Keep `*.test.ts` files in the same directory as the corresponding `*.ts` file
+
+### Patterns We DON'T Use (Never Suggest)
+
+- Repository pattern (use EF Core directly)
+- AutoMapper (write explicit mappings)
+- Exceptions for business logic errors
+- Stored procedures
