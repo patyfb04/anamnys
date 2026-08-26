@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# TanStack Router plugin scratch (route-tree temp copies)
+.tanstack/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

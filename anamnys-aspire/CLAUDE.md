@@ -75,14 +75,28 @@ planned package without adding the reference first.
 ### Frontend — present
 
 - React 19, Vite 8
-- TanStack Router (file-based routing)
-- Tailwind CSS 4
 - TypeScript **6.0.3** — see the TypeScript version note below
+- TanStack Router (file-based routing)
+- TanStack Query (server state and caching)
+- Tailwind CSS 4
+- Zustand (client state — UI and session, never tokens)
+- i18next / react-i18next
+- `@microsoft/signalr` for the progress and transcription hubs
 
-### Frontend — planned
+### Frontend — migrating away from
 
-- TanStack Query
-- Shadcn UI components
+Both are present in the tree today and both are contained to a single file, so replace
+them opportunistically rather than in a dedicated pass.
+
+- **`axios` → native `fetch`.** Confined entirely to `src/api/client.ts`; no `Axios*` type
+  escapes it, and the seven `src/api/*.ts` modules only consume the default instance. Note
+  TanStack Query is *not* an HTTP client — it is an async-state and caching layer — so the
+  replacement is Query plus native `fetch`, not Query alone. When rewriting `client.ts`,
+  **`credentials: 'include'` is mandatory** (it replaces axios's `withCredentials: true`);
+  omitting it silently breaks the HttpOnly cookie the BFF auth depends on. Preserve the
+  response interceptor's error normalisation too.
+- **`@base-ui/react` → shadcn/ui.** Used in exactly one file,
+  `src/components/ui/alert-dialog.tsx`. Prefer shadcn for any new component.
 
 ## Common Commands
 
@@ -129,10 +143,17 @@ npm run lint    # eslint
 - **Aspire CLI version.** `AspireUseCliBundle` makes the launcher run a bundle matching the
   AppHost SDK version. Trust `aspire --version`, never the Homebrew install path.
 - **TypeScript is held at 6.0.3, not the latest 7.0.2.** No released or canary
-  `typescript-eslint` supports TypeScript 7 (peer range is `>=4.8.4 <6.1.0`), so upgrading
-  breaks `npm run lint`. The `package.json` range is `~6.0.3` (patch-only) rather than
-  `^6.0.3` on purpose — a caret would let `npm install` pull 6.1+ and silently re-break
-  linting. Widen it only once typescript-eslint raises its peer range.
+  `typescript-eslint` supports TypeScript 7 — the newest peer range is
+  `>=4.8.4 <6.1.0` — so upgrading breaks `npm run lint`. Two pins keep this stable:
+  `typescript` is `~6.0.3` (patch-only, so `npm install` cannot pull 6.1+), and
+  `typescript-eslint` must stay `>=8.68.0`, the first release whose peer range admits
+  TypeScript 6 at all (8.48.x capped at `<6.0.0`). Revisit both together when
+  typescript-eslint ships TS 7 support.
+- **The `overrides` block in `frontend/package.json` is security-relevant, not cosmetic.**
+  It pins transitive dependencies away from known advisories (`js-yaml`,
+  `brace-expansion`, `nanoid`, `postcss`, `esbuild`). Pinning to an *exact* version means
+  the pin itself goes stale and starts holding the tree at a vulnerable version — check
+  `npm audit` after changing it, and bump the pins rather than removing them.
 - **`anamnys-aspire/frontend/obj*` is gitignored.** The esproj SDK emits a directory whose
   name contains a literal backslash on macOS. Committing it would make `git clone` fail on
   Windows, where `\` is an illegal filename character.
