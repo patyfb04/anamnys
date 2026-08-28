@@ -1,0 +1,29 @@
+{
+  "name": "@anamnys/shared",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./api/*": "./src/api/*.ts",
+    "./api-mock/*": "./src/api-mock/*.ts",
+    "./ui/*": "./src/ui/*.tsx",
+    "./components/*": "./src/components/*.tsx",
+    "./lib/*": "./src/lib/*.ts",
+    "./lib/i18n": "./src/lib/i18n/index.ts",
+    "./lib/store/*": "./src/lib/store/*.ts"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.7.0",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-router": "^1.170.32",
+    "axios": "^1.19.0",
+    "clsx": "^2.1.1",
+    "i18next": "^26.3.6",
+    "lucide-react": "^1.31.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-i18next": "^17.0.11",
+    "tailwind-merge": "^3.6.0",
+    "zustand": "^5.0.15"
+  }
+}

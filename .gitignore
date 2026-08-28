@@ -5,5 +5,12 @@ anamnys-aspire/anamnys-aspire.Server/obj/
 anamnys-aspire/anamnys-aspire.AppHost/bin/
 anamnys-aspire/anamnys-aspire.AppHost/obj/
 
-# esproj build output (dir name contains a literal backslash)
-anamnys-aspire/frontend/obj*
+# esproj build output (dir names can contain a literal backslash on macOS)
+anamnys-aspire/apps/*/obj*
+
+# workspace installs hoist to the repo root
+anamnys-aspire/node_modules/
+anamnys-aspire/apps/*/node_modules/
+anamnys-aspire/packages/*/node_modules/
+anamnys-aspire/apps/*/dist/
+anamnys-aspire/apps/*/.vite/
