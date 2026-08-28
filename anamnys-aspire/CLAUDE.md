@@ -4,26 +4,22 @@ Guidance for Claude Code working in this repository.
 
 ## What this directory is
 
-`anamnys-aspire/` is **the application** — a single Aspire-orchestrated solution, committed
-to git. All new work happens here.
+`anamnys-aspire/` is **the application** — a single Aspire-orchestrated solution and the
+only source tree. There is no other project directory.
 
 ```
 anamnys/                     <- git root (branch: develop)
-├── backend/                 <- LEGACY reference only (do not extend)
-├── frontend/                <- LEGACY reference only (Next.js; do not extend)
-└── anamnys-aspire/          <- THIS DIR: the real project
+└── anamnys-aspire/          <- THIS DIR: the whole project
     ├── anamnys-aspire.AppHost/   AppHost.cs — resource graph
     ├── anamnys-aspire.Server/    minimal API + Extensions.cs (service defaults)
     ├── frontend/                 Vite + React + TanStack Router SPA
     └── design/specs/             design documents
 ```
 
-`backend/` and `frontend/` are the original project structure. They are kept for reference
-while their functionality is **gradually migrated** into this directory. Do not add features
-to them. Their code is a source to port *from*, not a place to work.
-
-Note there are two `frontend/` directories. `anamnys-aspire/frontend` (Vite SPA) is the live
-one; `../frontend` (Next.js) is legacy. Never confuse them.
+An earlier `backend/` (ASP.NET Core) and `frontend/` (Next.js) pair existed at the git root
+and was **deleted in `aee5233`**. Do not look for them, cite them, or restore code from
+them. Anything worth keeping was already migrated here; anything not here is not part of
+the project.
 
 ## The product
 
@@ -33,6 +29,11 @@ LLaMA structures into a clinical note (SOAP/DAP) → billing engine derives CPT/
 with a denial-risk score → provider reviews, signs, exports to PDF.
 
 ### HIPAA constraints — treat as hard requirements
+
+These are binding product requirements, not observations about existing code. Most are
+not yet visible in the tree — the server is still close to the Aspire template — so do
+not read their absence as evidence they are optional or aspirational. They constrain
+every feature built from here.
 
 - **All AI inference runs in-process on the same server.** Whisper.net (STT) and LLamaSharp
   (structuring) are .NET libraries, not sidecars. **Never** propose routing patient audio,

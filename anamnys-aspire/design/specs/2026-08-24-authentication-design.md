@@ -211,8 +211,8 @@ diagnoses. Tokens reach logs and browser history.
    ground up with no accounts and no data. No credential migration, no Keycloak
    custom hash provider, no `ExternalSubject` backfill.
 2. **Marketing site.** Does it need auth at all, or does it just link to the app?
-3. **Mobile client.** The backend README references a React Native app. If it
-   ships, it needs its own client and cannot use the BFF cookie pattern — it
+3. **Mobile client.** A React Native client is part of the product intent. If it
+   ships, it needs its own OIDC client and cannot use the BFF cookie pattern — it
    would use Authorization Code + PKCE with tokens in secure device storage.
 
 ## 11. Risks
