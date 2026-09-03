@@ -14,3 +14,12 @@ anamnys-aspire/apps/*/node_modules/
 anamnys-aspire/packages/*/node_modules/
 anamnys-aspire/apps/*/dist/
 anamnys-aspire/apps/*/.vite/
+specs/
+*.txt
+.suo
+.user
+.userosscache
+.sln.docstates
+.vs/
+*.user
+*.userosscache

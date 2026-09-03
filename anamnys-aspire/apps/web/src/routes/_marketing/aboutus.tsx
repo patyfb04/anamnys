@@ -41,9 +41,11 @@ function AboutUsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-14">
-        <div className="relative rounded-radii-xl overflow-hidden shadow-lg aspect-2/3 md:aspect-auto md:h-full order-2 md:order-1">
-          <img src="/terapist.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-linear-to-t from-primary/80 via-primary/25 to-transparent" />
+        <div className="bg-white/70 border border-black/10 rounded-radii-xl p-2 shadow-2xl order-2 md:order-1 aspect-2/3 md:aspect-auto md:h-full">
+          <div className="relative rounded-radii-lg overflow-hidden w-full h-full">
+            <img src="/terapist.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-linear-to-t from-primary/80 via-primary/25 to-transparent" />
+          </div>
         </div>
 
         <div className={`order-1 md:order-2 ${BOX_CLASS}`}>
