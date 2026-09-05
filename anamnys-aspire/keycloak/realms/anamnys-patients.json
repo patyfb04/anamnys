@@ -1,5 +1,5 @@
 {
-  "realm": "anamnys-providers",
+  "realm": "anamnys-patients",
   "enabled": true,
   "displayName": "Anamnys",
   "loginTheme": "anamnys",
@@ -14,24 +14,20 @@
   "failureFactor": 5,
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
-  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(5) and forceExpiredPasswordChange(0)",
+  "passwordPolicy": "length(10) and notUsername and notEmail",
   "otpPolicyType": "totp",
   "otpPolicyAlgorithm": "HmacSHA256",
   "otpPolicyDigits": 6,
   "otpPolicyPeriod": 30,
   "accessTokenLifespan": 300,
-  "ssoSessionIdleTimeout": 1800,
-  "ssoSessionMaxLifespan": 36000,
+  "ssoSessionIdleTimeout": 900,
+  "ssoSessionMaxLifespan": 7200,
   "eventsEnabled": true,
   "eventsExpiration": 7776000,
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": true,
   "roles": {
-    "realm": [
-      { "name": "provider", "description": "Licensed clinician" },
-      { "name": "clinic-admin", "description": "Clinic administrator" },
-      { "name": "billing-staff", "description": "Billing staff" }
-    ]
+    "realm": [{ "name": "patient", "description": "Patient" }]
   },
   "clientScopes": [
     {
@@ -349,26 +345,6 @@
       "name": "notes:read",
       "protocol": "openid-connect",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
-    },
-    {
-      "name": "notes:write",
-      "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
-    },
-    {
-      "name": "notes:sign",
-      "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
-    },
-    {
-      "name": "billing:read",
-      "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
-    },
-    {
-      "name": "patients:read",
-      "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
     }
   ],
   "clients": [
@@ -382,23 +358,23 @@
       "serviceAccountsEnabled": false
     },
     {
-      "clientId": "anamnys-web",
-      "name": "Anamnys Provider BFF",
+      "clientId": "anamnys-patient-web",
+      "name": "Anamnys Patient BFF",
       "enabled": true,
       "publicClient": false,
-      "secret": "${ANAMNYS_PROVIDER_CLIENT_SECRET}",
+      "secret": "${ANAMNYS_PATIENT_CLIENT_SECRET}",
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["${ANAMNYS_APP_ORIGIN}/signin-oidc-provider"],
+      "redirectUris": ["${ANAMNYS_APP_ORIGIN}/signin-oidc-patient"],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/provider/"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/patient/"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
-      "optionalClientScopes": ["notes:read", "notes:write", "notes:sign", "billing:read", "patients:read"],
+      "optionalClientScopes": ["notes:read"],
       "protocolMappers": [
         {
           "name": "audience-anamnys-api",
