@@ -2,9 +2,33 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var cache = builder.AddRedis("cache");
 
+var providerClientSecret = builder.AddParameter("provider-client-secret", secret: true);
+
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume();
+
+var keycloakDb = postgres.AddDatabase("keycloakdb");
+var anamnysDb = postgres.AddDatabase("anamnysdb");
+
+// Fixed port, not a dynamic one: cookies and redirect URIs are bound to the
+// origin, so a port that moves between AppHost restarts invalidates every
+// session and every registered redirect URI.
+var keycloak = builder.AddKeycloak("keycloak", 8080)
+    .WithDockerfile("../keycloak")
+    .WithPostgres(keycloakDb)
+    .WithDataVolume()
+    .WithOtlpExporter()
+    .WithEnvironment("ANAMNYS_PROVIDER_CLIENT_SECRET", providerClientSecret)
+    .WaitFor(keycloakDb);
+
 var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     .WithReference(cache)
+    .WithReference(anamnysDb)
+    .WithReference(keycloak)
     .WaitFor(cache)
+    .WaitFor(anamnysDb)
+    .WaitFor(keycloak)
+    .WithEnvironment("ANAMNYS_PROVIDER_CLIENT_SECRET", providerClientSecret)
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
 

@@ -1,2 +1,1 @@
-# Keycloakify build output — produced by `npm run build-keycloak-theme`
-*.jar
+*
