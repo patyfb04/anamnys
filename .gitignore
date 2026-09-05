@@ -14,3 +14,7 @@ anamnys-aspire/apps/*/node_modules/
 anamnys-aspire/packages/*/node_modules/
 anamnys-aspire/apps/*/dist/
 anamnys-aspire/apps/*/.vite/
+
+# tsc -b build info, emitted at the project root when tsBuildInfoFile isn't
+# redirected elsewhere (apps/keycloak-theme's tsconfig.json)
+anamnys-aspire/apps/*/tsconfig.tsbuildinfo
