@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+/* Tailwind only scans files it knows about; Button/TextField live in packages/shared/src. */
+@source "../../../packages/shared/src";
+
+@theme {
+  --color-surface: #f9f9ff;
+  --color-surfaceDim: #d8dae2;
+  --color-surfaceBright: #f9f9ff;
+  --color-surfaceContainerLowest: #ffffff;
+  --color-surfaceContainerLow: #f2f3fc;
+  --color-surfaceContainer: #ecedf6;
+  --color-surfaceContainerHigh: #e6e8f0;
+  --color-surfaceContainerHighest: #e0e2eb;
+  --color-surfaceVariant: #e0e2eb;
+  --color-onSurface: #181c22;
+  --color-onSurfaceVariant: #484555;
+  --color-inverseSurface: #2d3037;
+  --color-inverseOnSurface: #eff0f9;
+  --color-outline: #787586;
+  --color-outlineVariant: #c9c4d7;
+  --color-background: #f9f9ff;
+  --color-onBackground: #181c22;
+
+  --color-primary: #5a3fd8;
+  --color-onPrimary: #ffffff;
+  --color-primaryContainer: #735bf2;
+  --color-onPrimaryContainer: #fffbff;
+  --color-primaryFixed: #e5deff;
+  --color-onPrimaryFixed: #1a0064;
+  --color-onPrimaryFixedVariant: #4421c2;
+
+  --color-secondary: #3e665d;
+  --color-onSecondary: #ffffff;
+  --color-secondaryContainer: #bee9dd;
+  --color-onSecondaryContainer: #426a61;
+  --color-secondaryFixed: #c1ebe0;
+  --color-secondaryFixedDim: #a5cfc4;
+  --color-onSecondaryFixed: #00201b;
+  --color-onSecondaryFixedVariant: #264e46;
+
+  --color-tertiary: #006762;
+  --color-onTertiary: #ffffff;
+  --color-tertiaryContainer: #23817b;
+  --color-onTertiaryContainer: #f1fffc;
+  --color-tertiaryFixed: #9cf2ea;
+  --color-tertiaryFixedDim: #80d5ce;
+  --color-onTertiaryFixed: #00201e;
+  --color-onTertiaryFixedVariant: #00504c;
+
+  --color-error: #ba1a1a;
+  --color-onError: #ffffff;
+  --color-errorContainer: #ffdad6;
+  --color-onErrorContainer: #93000a;
+
+  --color-pastelPink: #fce4ec;
+  --color-onPastelPink: #880e4f;
+  --color-pastelTeal: #e0f2f1;
+  --color-onPastelTeal: #004d40;
+  --color-pastelLavender: #ede7f6;
+  --color-onPastelLavender: #311b92;
+  --color-pastelMint: #e8f5e9;
+  --color-onPastelMint: #1b5e20;
+  --color-pastelBlue: #e3f2fd;
+  --color-onPastelBlue: #0d47a1;
+
+  --radius-radii-sm: 4px;
+  --radius-radii-DEFAULT: 8px;
+  --radius-radii-md: 12px;
+  --radius-radii-lg: 16px;
+  --radius-radii-xl: 24px;
+  --radius-radii-full: 9999px;
+
+  /* Loaded via index.html's Google Fonts <link> (no next/font runtime injection here). */
+  --font-manrope: "Manrope", sans-serif;
+  --font-public-sans: "Public Sans", sans-serif;
+}
+
+@layer components {
+  .text-headline-lg {
+    font-family: var(--font-manrope);
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -0.4px;
+  }
+  .text-headline-md {
+    font-family: var(--font-manrope);
+    font-weight: 600;
+    font-size: 24px;
+    line-height: 32px;
+  }
+  .text-headline-sm {
+    font-family: var(--font-manrope);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 28px;
+  }
+  .text-body-lg {
+    font-family: var(--font-public-sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 24px;
+  }
+  .text-body-md {
+    font-family: var(--font-public-sans);
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .text-label-lg {
+    font-family: var(--font-public-sans);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: 0.1px;
+  }
+  .text-label-md {
+    font-family: var(--font-public-sans);
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.5px;
+  }
+  .text-label-sm {
+    font-family: var(--font-public-sans);
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.6px;
+  }
+}
+
+body {
+  background-color: #f9f9ff;
+  color: #181c22;
+}
