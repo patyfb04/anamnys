@@ -1,9 +1,14 @@
+using Anamnys.Server.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
 builder.AddServiceDefaults();
 builder.AddRedisClientBuilder("cache")
     .WithOutputCache();
+
+builder.AddNpgsqlDbContext<AnamnysDbContext>("anamnysdb");
+builder.Services.AddHostedService<DatabaseInitializer>();
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
