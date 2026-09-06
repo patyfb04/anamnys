@@ -18,7 +18,11 @@ RUN apk add --no-cache jq
 COPY realms/ /in/
 ARG INCLUDE_DEV_SEED
 COPY strip-dev-seed.jq /strip-dev-seed.jq
-RUN mkdir -p /out && for f in /in/*.json; do \
+# set -e (default in `sh -c`, but not implied inside a for-loop without it)
+# so a jq failure on any one file aborts the build instead of only affecting
+# the loop's last-iteration exit status — a truncated/empty realm file must
+# never make it into the image silently.
+RUN set -e; mkdir -p /out && for f in /in/*.json; do \
       if [ "$INCLUDE_DEV_SEED" = "true" ]; then \
         cp "$f" "/out/$(basename "$f")"; \
       else \

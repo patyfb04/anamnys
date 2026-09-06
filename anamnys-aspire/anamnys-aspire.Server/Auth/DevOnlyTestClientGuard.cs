@@ -171,6 +171,19 @@ public static class DevOnlyTestClientGuard
                         "This must never exist outside Development. Remove it from the realm before starting " +
                         "the server in this environment.");
                 }
+
+                // "+" is Keycloak's own wildcard ("same origins as redirectUris") and is
+                // fine to leave alone; only a literal localhost entry is a problem.
+                var localhostWebOrigin = client.WebOrigins?
+                    .FirstOrDefault(origin => origin != "+" && origin.Contains("localhost", StringComparison.OrdinalIgnoreCase));
+                if (localhostWebOrigin is not null)
+                {
+                    throw new InvalidOperationException(
+                        $"Client '{client.ClientId}' in realm '{realm}' has a localhost web origin " +
+                        $"('{localhostWebOrigin}'), registered for a SPA's local Vite dev-server proxy. " +
+                        "This must never exist outside Development. Remove it from the realm before starting " +
+                        "the server in this environment.");
+                }
             }
         }
     }
@@ -186,5 +199,6 @@ public static class DevOnlyTestClientGuard
 
     private sealed record AdminClientDetail(
         [property: JsonPropertyName("clientId")] string ClientId,
-        [property: JsonPropertyName("redirectUris")] List<string>? RedirectUris);
+        [property: JsonPropertyName("redirectUris")] List<string>? RedirectUris,
+        [property: JsonPropertyName("webOrigins")] List<string>? WebOrigins);
 }
