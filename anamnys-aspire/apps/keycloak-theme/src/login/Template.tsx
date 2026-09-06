@@ -44,9 +44,7 @@ export function Template({ kcContext, i18n, headline, subhead, children }: Props
               <div className="absolute inset-x-0 bottom-0 h-[55%] bg-primary/30" />
               <div className="absolute left-4 right-4 bottom-4 flex items-center gap-2 bg-white/85 border border-white/50 rounded-radii-md px-3 py-2.5">
                 <ShieldCheck size={16} style={{ color: branding.accent }} />
-                <span className="text-label-md text-onSurface normal-case">
-                  {msg('loginTitleHtml', branding.productName)}
-                </span>
+                <span className="text-label-md text-onSurface normal-case">{msg('secureBadge')}</span>
               </div>
             </div>
           </div>
@@ -58,6 +56,8 @@ export function Template({ kcContext, i18n, headline, subhead, children }: Props
           </div>
         </div>
       </div>
+
+      <p className="text-center text-body-md text-onSurfaceVariant/70 pb-8">{msg('footerCopyright')}</p>
     </div>
   );
 }
