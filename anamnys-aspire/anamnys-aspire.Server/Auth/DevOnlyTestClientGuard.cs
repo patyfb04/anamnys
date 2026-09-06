@@ -18,6 +18,30 @@ public static class DevOnlyTestClientGuard
         (Realms.Owners, "anamnys-test-owner"),
     ];
 
+    // The seeded local login used to prove the dev auth flow end-to-end
+    // without an admin-API mutation. It is stripped from the realm JSON at
+    // Docker build time (keycloak/strip-dev-seed.jq) unless INCLUDE_DEV_SEED
+    // is set, which AppHost.cs only does in Development — this check is
+    // defence in depth for if that strip ever regresses, not the primary
+    // control, because Keycloak imports and activates this account before
+    // the server ever runs this gate (see ForbiddenLocalhostOrigins below).
+    private static readonly (string Realm, string Username)[] ForbiddenUsers =
+    [
+        (Realms.Providers, "dev.provider"),
+    ];
+
+    // Every realm whose clients might carry a localhost:* dev origin
+    // (registered so each SPA's Vite proxy can complete the OIDC redirect
+    // against its own dev-server port). Same defence-in-depth caveat as
+    // ForbiddenUsers: Keycloak has already loaded these origins into a
+    // running realm by the time this check can run.
+    private static readonly string[] RealmsToCheckForLocalhostOrigins =
+    [
+        Realms.Providers,
+        Realms.Patients,
+        Realms.Owners,
+    ];
+
     public static async Task EnsureNoDevOnlyTestClientsExistAsync(
         bool isDevelopment,
         string? adminUsername,
@@ -105,6 +129,50 @@ public static class DevOnlyTestClientGuard
                     "from the realm before starting the server in this environment.");
             }
         }
+
+        foreach (var (realm, username) in ForbiddenUsers)
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Get, $"admin/realms/{realm}/users?username={username}&exact=true");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await keycloakClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var users = await response.Content.ReadFromJsonAsync<List<AdminUserSummary>>(cancellationToken);
+            if (users is { Count: > 0 })
+            {
+                throw new InvalidOperationException(
+                    $"Dev-only Keycloak user '{username}' exists in realm '{realm}'. This is an ordinary, " +
+                    "interactively-loginable account seeded only to prove the dev auth flow, and must never " +
+                    "exist outside Development. Remove it from the realm before starting the server in this " +
+                    "environment.");
+            }
+        }
+
+        foreach (var realm in RealmsToCheckForLocalhostOrigins)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"admin/realms/{realm}/clients");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+            using var response = await keycloakClient.SendAsync(request, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var clients = await response.Content.ReadFromJsonAsync<List<AdminClientDetail>>(cancellationToken);
+            foreach (var client in clients ?? [])
+            {
+                var localhostRedirectUri = client.RedirectUris?
+                    .FirstOrDefault(uri => uri.Contains("localhost", StringComparison.OrdinalIgnoreCase));
+                if (localhostRedirectUri is not null)
+                {
+                    throw new InvalidOperationException(
+                        $"Client '{client.ClientId}' in realm '{realm}' has a localhost redirect URI " +
+                        $"('{localhostRedirectUri}'), registered for a SPA's local Vite dev-server proxy. " +
+                        "This must never exist outside Development. Remove it from the realm before starting " +
+                        "the server in this environment.");
+                }
+            }
+        }
     }
 
     private sealed record AdminTokenResponse(
@@ -112,4 +180,11 @@ public static class DevOnlyTestClientGuard
 
     private sealed record AdminClientSummary(
         [property: JsonPropertyName("clientId")] string ClientId);
+
+    private sealed record AdminUserSummary(
+        [property: JsonPropertyName("username")] string Username);
+
+    private sealed record AdminClientDetail(
+        [property: JsonPropertyName("clientId")] string ClientId,
+        [property: JsonPropertyName("redirectUris")] List<string>? RedirectUris);
 }
