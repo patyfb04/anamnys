@@ -28,7 +28,7 @@ public class OwnerSessionCookieTests
     private static readonly Uri AdminBaseAddress = new("http://localhost:5276/");
 
     [Fact]
-    public async Task OwnerLogin_SessionCookie_CarriesNoTokenMaterialAndStaysSmall()
+    public async Task OwnerLogin_SessionCookie_CarriesNoTokenMaterialAndIsScopedToItsOwnScheme()
     {
         // Arrange — a hand-rolled cookie jar and manual redirect-following,
         // not CookieContainer + HttpClientHandler.AllowAutoRedirect. Two
@@ -134,6 +134,40 @@ public class OwnerSessionCookieTests
             "keep the actual access and refresh tokens server-side");
         sessionCookieValue!.Length.Should().BeLessThan(
             500, "a few hundred bytes at most: the cookie is a ticket-store key, not the serialized ticket itself");
+
+        // Positive control for the two assertions below: this same cookie, under
+        // its own name, is a working credential on the owners-only group. Without
+        // this, a 401 from either replay proves nothing — a broken login flow
+        // produces exactly the same 401.
+        using var adminProbe = new HttpRequestMessage(HttpMethod.Get, "/api/admin/probe");
+        ApplyCookies(jar, adminProbe);
+        using var adminProbeResponse = await client.SendAsync(adminProbe, TestContext.Current.CancellationToken);
+        adminProbeResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK, "the owner session cookie must authenticate on the owners-only group");
+
+        // Cookie-scheme isolation, which spec §10 states in terms of cookies and
+        // which SchemeIsolationTests cannot cover — it only ever presents bearer
+        // tokens. Replay the real owners ticket under the providers cookie name:
+        // the providers cookie handler must reject it, so /api/phi/probe answers
+        // 401 (no scheme authenticated), never 200 and never 403. This rests on
+        // the cookie handler's data protector including the scheme name in its
+        // purpose chain — an ASP.NET implementation detail that nothing else here
+        // asserts.
+        using var replayedAsProvider = new HttpRequestMessage(HttpMethod.Get, "/api/phi/probe");
+        replayedAsProvider.Headers.Add("Cookie", $"__Host-anamnys-provider={sessionCookieValue}");
+        using var replayResponse = await client.SendAsync(replayedAsProvider, TestContext.Current.CancellationToken);
+        replayResponse.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized,
+            "an owners-realm ticket replayed under the providers cookie name must not authenticate on PHI");
+
+        // And the untouched owners cookie is equally not a PHI credential: the
+        // owners realm is absent from the /api/phi group on purpose, so this is
+        // 401 (no scheme authenticated it), not 403.
+        using var ownerOnPhi = new HttpRequestMessage(HttpMethod.Get, "/api/phi/probe");
+        ApplyCookies(jar, ownerOnPhi);
+        using var ownerOnPhiResponse = await client.SendAsync(ownerOnPhi, TestContext.Current.CancellationToken);
+        ownerOnPhiResponse.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized, "an owners cookie is not an authenticated principal on the PHI group at all");
     }
 
     private static async Task<HttpResponseMessage> SendFollowingRedirectsAsync(

@@ -67,20 +67,29 @@ app.UseOutputCache();
 // absent from this list on purpose: an owner credential is not an
 // authenticated principal here at all, so it fails with 401 rather than 403.
 // See design/specs/2026-09-05-keycloak-implementation-design.md §2 and §4.
+//
+// Cookie schemes only. The three bearer schemes stay registered (see
+// AuthenticationSetup) but are deliberately not mounted on any group yet:
+// FirstLoginProvisioner runs on the OIDC handler, so AnamnysClaims.LocalId is
+// minted on the cookie path alone, and CurrentUser.LocalId — the one
+// sanctioned way to resolve a local row id, per spec §5 — throws for a bearer
+// principal. Nothing calls these routes with a bearer token today, so mounting
+// them buys nothing and guarantees a 500 for the first PHI endpoint that uses
+// the documented identity path. When the spec §10.3 mobile client ships, add
+// the bearer schemes back here *and* mint LocalId on JwtBearerEvents
+// .OnTokenValidated in the same change.
 var phi = app.MapGroup("/api/phi")
     .RequireAuthorization(policy => policy
         .AddAuthenticationSchemes(
             AuthSchemes.ProviderCookie,
-            AuthSchemes.PatientCookie,
-            AuthSchemes.ProviderBearer,
-            AuthSchemes.PatientBearer)
+            AuthSchemes.PatientCookie)
         .RequireAuthenticatedUser());
 
 phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 
 var admin = app.MapGroup("/api/admin")
     .RequireAuthorization(policy => policy
-        .AddAuthenticationSchemes(AuthSchemes.OwnerCookie, AuthSchemes.OwnerBearer)
+        .AddAuthenticationSchemes(AuthSchemes.OwnerCookie)
         .RequireAuthenticatedUser());
 
 admin.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));

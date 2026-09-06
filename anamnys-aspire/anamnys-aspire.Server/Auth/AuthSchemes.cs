@@ -22,8 +22,15 @@ public static class AuthSchemes
     // A credential from a realm not in the list is not an authenticated
     // principal on that endpoint at all, so the request fails with 401 rather
     // than 403 — a missing scheme, not a failed policy.
-    public const string ProviderSchemes = $"{ProviderCookie},{ProviderBearer}";
-    public const string PatientSchemes = $"{PatientCookie},{PatientBearer}";
-    public const string PhiSchemes = $"{ProviderCookie},{PatientCookie},{ProviderBearer},{PatientBearer}";
-    public const string AdminSchemes = $"{OwnerCookie},{OwnerBearer}";
+    //
+    // Cookie schemes only, matching the groups in Program.cs. The bearer
+    // schemes are registered but not mounted: LocalId is minted on the OIDC
+    // handler alone, so CurrentUser.LocalId throws for a bearer principal.
+    // They come back — here and in Program.cs — together with provisioning on
+    // JwtBearerEvents.OnTokenValidated, when the spec §10.3 mobile client
+    // ships.
+    public const string ProviderSchemes = ProviderCookie;
+    public const string PatientSchemes = PatientCookie;
+    public const string PhiSchemes = $"{ProviderCookie},{PatientCookie}";
+    public const string AdminSchemes = OwnerCookie;
 }

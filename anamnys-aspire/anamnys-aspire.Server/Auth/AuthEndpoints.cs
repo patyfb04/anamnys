@@ -100,10 +100,33 @@ public static class AuthEndpoints
                 [oidcScheme]))
             .AllowAnonymous();
 
-        app.MapPost($"/auth/{segment}/logout", () =>
-            Results.SignOut(
-                new AuthenticationProperties { RedirectUri = appPath },
-                [cookieScheme, oidcScheme]))
+        // Also a full-page navigation (a form POST from the SPA, not an XHR):
+        // the OIDC leg of this sign-out answers with a 302 to Keycloak's
+        // end_session_endpoint, which is cross-origin and carries no CORS
+        // headers, so an XHR can only fail on it. When it fails, the __Host-
+        // cookie is still cleared and the UI looks signed out while the
+        // Keycloak SSO session survives — the next person to click "Log in"
+        // on that browser is silently re-authenticated as the previous user.
+        app.MapPost($"/auth/{segment}/logout", async (HttpContext httpContext) =>
+        {
+            // OpenIdConnectHandler.HandleSignOutAsync takes id_token_hint only
+            // from the AuthenticationProperties handed to SignOut. Without it
+            // Keycloak gets a logout request it cannot tie to a session and
+            // (from 18 onwards) either prompts for confirmation or ignores it,
+            // so the SSO session outlives the cookie. Read it here, before the
+            // cookie leg runs: that leg removes the ticket from Redis, after
+            // which the tokens are gone.
+            var authenticateResult = await httpContext.AuthenticateAsync(cookieScheme);
+            var idToken = authenticateResult.Properties?.GetTokenValue("id_token");
+
+            var properties = new AuthenticationProperties { RedirectUri = appPath };
+            if (!string.IsNullOrEmpty(idToken))
+            {
+                properties.StoreTokens([new AuthenticationToken { Name = "id_token", Value = idToken }]);
+            }
+
+            return Results.SignOut(properties, [cookieScheme, oidcScheme]);
+        })
             .RequireAuthorization(policy => policy
                 .AddAuthenticationSchemes(cookieScheme)
                 .RequireAuthenticatedUser());

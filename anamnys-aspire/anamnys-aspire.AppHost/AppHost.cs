@@ -39,13 +39,27 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
 // session and every registered redirect URI.
 var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keycloakAdminPassword)
     .WithDockerfile("../keycloak")
-    // The dev-only seeded login and localhost:* redirect origins (see
-    // keycloak/strip-dev-seed.jq) are stripped at build time unless this is
-    // true. This is the ONLY gate on that content: keycloak/Dockerfile has no
-    // environment check of its own, and Aspire uses this same Dockerfile for
-    // `aspire publish`/`deploy`, so an ungated default would ship the
-    // credential to every environment identically.
-    .WithBuildArg("INCLUDE_DEV_SEED", builder.Environment.IsDevelopment())
+    // The dev-only seeded logins, the anamnys-test-* clients and the
+    // localhost:* redirect origins (see keycloak/strip-dev-seed.jq) are
+    // stripped at build time unless this is true. This is the ONLY gate on
+    // that content: keycloak/Dockerfile has no environment check of its own,
+    // and Aspire uses this same Dockerfile for `aspire publish`/`deploy`, so
+    // an ungated default would ship the credential to every environment
+    // identically.
+    //
+    // IsRunMode is load-bearing and must not be "simplified" away.
+    // builder.Environment is this AppHost *process's* hosting environment, and
+    // Properties/launchSettings.json pins ASPNETCORE_ENVIRONMENT/
+    // DOTNET_ENVIRONMENT to Development in both profiles — so on any developer
+    // machine IsDevelopment() is true no matter what is being built, and
+    // `aspire publish` would bake the dev seed into the published image.
+    // ExecutionContext.IsRunMode is the publish/run discriminator: it is false
+    // for `aspire publish`/`aspire deploy` regardless of the process
+    // environment. Both conditions together mean the seed ships only into an
+    // image built for a local `aspire run`.
+    .WithBuildArg(
+        "INCLUDE_DEV_SEED",
+        builder.ExecutionContext.IsRunMode && builder.Environment.IsDevelopment())
     .WithPostgres(keycloakDb)
     .WithDataVolume()
     .WithOtlpExporter()

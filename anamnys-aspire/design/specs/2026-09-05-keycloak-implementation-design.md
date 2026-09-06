@@ -433,7 +433,7 @@ Extends the prior design §8 rather than replacing it.
 |---|---|---|
 | Access control | §164.312(a)(1) | Three realms, three issuers; endpoint groups name accepted schemes, so a wrong-realm credential yields 401 before any policy runs; query-level provider scoping through `ExternalSubject` |
 | Minimum necessary | §164.502(b) | Owners realm has no standing PHI access and a disjoint scope vocabulary |
-| Person/entity authentication | §164.312(d) | MFA required in providers and owners realms (TOTP/WebAuthn), available in patients; enrolment is a Keycloak required action, reachable because login stays a redirect |
+| Person/entity authentication | §164.312(d) | **Not yet enforced.** All three realms configure OTP policy (`otpPolicy*`) only — mechanics, not a requirement: no realm makes MFA a required action or conditions a browser flow on it. MFA enforcement for the providers and owners realms is planned for phase 4 (§12). Enrolment will be a Keycloak required action, reachable because login stays a redirect |
 | Audit controls | §164.312(b) | Keycloak event logging persisted and exported (default retention is short and **must** be configured); every break-glass read appends `AccessLogs` |
 | Emergency access | §164.312(a)(2)(ii) | Time-boxed, two-person, ticket-referenced break-glass grants over an enumerated read-only endpoint group |
 | Transmission security | §164.312(e) | HTTPS throughout; `RequireHttpsMetadata = true` outside development with explicit `Authority` |

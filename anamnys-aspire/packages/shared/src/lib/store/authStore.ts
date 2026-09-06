@@ -10,7 +10,7 @@ interface AuthState {
   error: string | null;
 
   login: (realm: Realm, returnUrl?: string) => void;
-  logout: (realm: Realm) => Promise<void>;
+  logout: (realm: Realm) => void;
   loadUser: () => Promise<void>;
   clearError: () => void;
 }
@@ -31,9 +31,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     window.location.assign(`/auth/${realm}/login${query}`);
   },
 
-  logout: async (realm) => {
-    await authApi.logout(realm);
-    set({ user: null, error: null });
+  // Also a full-page navigation, not a fetch — see authApi.logout. Nothing is
+  // set() afterwards on purpose: the document is on its way to Keycloak and
+  // back to the app's landing path, so there is no state left to clear, and
+  // clearing it would only make an XHR-shaped logout look like it worked.
+  logout: (realm) => {
+    authApi.logout(realm);
   },
 
   loadUser: async () => {

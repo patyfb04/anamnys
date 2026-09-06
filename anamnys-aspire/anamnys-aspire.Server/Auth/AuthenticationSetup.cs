@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
@@ -198,8 +199,41 @@ public static class AuthenticationSetup
                 // leak into browser history, Referer headers, or access logs.
                 options.Events.OnRemoteFailure = context =>
                 {
+                    // Logged here because the redirect deliberately carries no
+                    // detail: without this the loop a rejected provisioning
+                    // used to produce was invisible on both ends. The
+                    // exception itself is safe to log — FirstLoginProvisioner
+                    // messages name a subject id at most, never a claim value.
+                    var logger = context.HttpContext.RequestServices
+                        .GetRequiredService<ILoggerFactory>()
+                        .CreateLogger("Anamnys.Server.Auth.RemoteFailure");
+                    logger.LogWarning(
+                        context.Failure,
+                        "OIDC remote failure on scheme {Scheme} for realm {Realm}; redirecting to {Path} with authError.",
+                        wiring.OidcScheme,
+                        wiring.Realm,
+                        wiring.SignedOutPath);
+
                     context.HandleResponse();
                     context.Response.Redirect($"{wiring.SignedOutPath}?authError=true");
+                    return Task.CompletedTask;
+                };
+
+                // id_token_hint is what ties the logout request to the
+                // Keycloak session; without it the __Host- cookie clears but
+                // the SSO session survives and the next login on that browser
+                // is silently re-authenticated as the previous user. The value
+                // is put into these properties by AuthEndpoints' logout
+                // endpoint, which reads it before the cookie leg of the
+                // sign-out drops the ticket from Redis.
+                options.Events.OnRedirectToIdentityProviderForSignOut = context =>
+                {
+                    var idToken = context.Properties.GetTokenValue("id_token");
+                    if (!string.IsNullOrEmpty(idToken))
+                    {
+                        context.ProtocolMessage.IdTokenHint = idToken;
+                    }
+
                     return Task.CompletedTask;
                 };
             });

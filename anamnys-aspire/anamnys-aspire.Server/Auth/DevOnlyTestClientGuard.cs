@@ -18,16 +18,21 @@ public static class DevOnlyTestClientGuard
         (Realms.Owners, "anamnys-test-owner"),
     ];
 
-    // The seeded local login used to prove the dev auth flow end-to-end
-    // without an admin-API mutation. It is stripped from the realm JSON at
+    // The seeded local logins used to prove the dev auth flow end-to-end
+    // without an admin-API mutation. They are stripped from the realm JSON at
     // Docker build time (keycloak/strip-dev-seed.jq) unless INCLUDE_DEV_SEED
-    // is set, which AppHost.cs only does in Development — this check is
-    // defence in depth for if that strip ever regresses, not the primary
-    // control, because Keycloak imports and activates this account before
-    // the server ever runs this gate (see ForbiddenLocalhostOrigins below).
+    // is set, which AppHost.cs only does for a local `aspire run` in
+    // Development — this check is defence in depth for if that strip ever
+    // regresses, not the primary control, because Keycloak imports and
+    // activates these accounts before the server ever runs this gate (see
+    // RealmsToCheckForLocalhostOrigins below). Both realms that seed a user
+    // are listed: the owners realm's dev.owner has full business reach, so
+    // omitting it left the weaker half of this defence on the realm that
+    // needed it most.
     private static readonly (string Realm, string Username)[] ForbiddenUsers =
     [
         (Realms.Providers, "dev.provider"),
+        (Realms.Owners, "dev.owner"),
     ];
 
     // Every realm whose clients might carry a localhost:* dev origin

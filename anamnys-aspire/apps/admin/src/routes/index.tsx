@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
+import { hasAuthError } from "@anamnys/shared/lib/authError";
+import AuthErrorNotice from "@anamnys/shared/ui/AuthErrorNotice";
 
 export const Route = createFileRoute("/")({
   component: AdminHome,
@@ -8,14 +10,20 @@ export const Route = createFileRoute("/")({
 
 function AdminHome() {
   const { user, isLoading, login, loadUser } = useAuthStore();
+  const authError = hasAuthError();
 
   useEffect(() => {
     void loadUser();
   }, [loadUser]);
 
   useEffect(() => {
-    if (!isLoading && !user) login("owner", window.location.pathname);
-  }, [isLoading, user, login]);
+    // Guarded on authError: a provisioning refusal (an owners-realm token with
+    // none of the staff roles, a disabled account) would otherwise re-challenge
+    // immediately, succeed at Keycloak, and fail here again, forever.
+    if (!authError && !isLoading && !user) login("owner", window.location.pathname);
+  }, [authError, isLoading, user, login]);
+
+  if (authError) return <AuthErrorNotice />;
 
   if (isLoading || !user) return null;
 
