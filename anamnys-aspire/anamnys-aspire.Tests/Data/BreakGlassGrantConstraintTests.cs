@@ -15,7 +15,10 @@ public class BreakGlassGrantConstraintTests
             .CreateAsync<Projects.anamnys_aspire_AppHost>(TestContext.Current.CancellationToken);
         await using var app = await appHost.BuildAsync(TestContext.Current.CancellationToken);
         await app.StartAsync(TestContext.Current.CancellationToken);
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("server", TestContext.Current.CancellationToken);
+
+        using var healthTimeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        healthTimeout.CancelAfter(TimeSpan.FromSeconds(60));
+        await app.ResourceNotifications.WaitForResourceHealthyAsync("server", healthTimeout.Token);
 
         var connectionString = await app.GetConnectionStringAsync("anamnysdb", TestContext.Current.CancellationToken);
         await using var connection = new NpgsqlConnection(connectionString);
