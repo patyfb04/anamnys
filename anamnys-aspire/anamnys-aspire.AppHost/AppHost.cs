@@ -94,8 +94,14 @@ var patient = builder.AddViteApp("patient", "../apps/patient")
     .WaitFor(server)
     .WithHttpEndpoint(port: 5274, targetPort: 5274, isProxied: false);
 
+var admin = builder.AddViteApp("admin", "../apps/admin")
+    .WithReference(server)
+    .WaitFor(server)
+    .WithHttpEndpoint(port: 5276, targetPort: 5276, isProxied: false);
+
 server.PublishWithContainerFiles(web, "wwwroot");
 server.PublishWithContainerFiles(provider, "wwwroot/provider");
 server.PublishWithContainerFiles(patient, "wwwroot/patient");
+server.PublishWithContainerFiles(admin, "wwwroot/admin");
 
 builder.Build().Run();

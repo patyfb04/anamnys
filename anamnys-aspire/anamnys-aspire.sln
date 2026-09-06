@@ -15,6 +15,10 @@ Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "patient", "apps\patient\pat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "anamnys-aspire.Tests", "anamnys-aspire.Tests\anamnys-aspire.Tests.csproj", "{5A20D9CB-67AE-45C1-BECA-6CBCCD3DEEB9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{1787FE1D-075E-9E68-7218-25F1BD1BBEAB}"
+EndProject
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "admin", "apps\admin\admin.esproj", "{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -85,9 +89,18 @@ Global
 		{5A20D9CB-67AE-45C1-BECA-6CBCCD3DEEB9}.Release|x64.Build.0 = Release|Any CPU
 		{5A20D9CB-67AE-45C1-BECA-6CBCCD3DEEB9}.Release|x86.ActiveCfg = Release|Any CPU
 		{5A20D9CB-67AE-45C1-BECA-6CBCCD3DEEB9}.Release|x86.Build.0 = Release|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C} = {1787FE1D-075E-9E68-7218-25F1BD1BBEAB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {096C0DED-E084-4D37-B983-1DCF2B74EEA5}
