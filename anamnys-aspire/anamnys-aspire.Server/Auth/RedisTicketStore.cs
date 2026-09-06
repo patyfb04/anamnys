@@ -1,3 +1,5 @@
+using System.IO;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -10,7 +12,8 @@ namespace Anamnys.Server.Auth;
 // well clear of the 4KB limit once realm roles are in the token.
 public sealed class RedisTicketStore(
     IConnectionMultiplexer redis,
-    IDataProtectionProvider dataProtectionProvider) : ITicketStore
+    IDataProtectionProvider dataProtectionProvider,
+    ILogger<RedisTicketStore> logger) : ITicketStore
 {
     private const string KeyPrefix = "auth:ticket:";
     private readonly IDataProtector _protector = dataProtectionProvider.CreateProtector("Anamnys.TicketStore");
@@ -53,10 +56,14 @@ public sealed class RedisTicketStore(
             var bytes = _protector.Unprotect((byte[])value!);
             return TicketSerializer.Default.Deserialize(bytes);
         }
-        catch (System.Security.Cryptography.CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException or FormatException or ArgumentException or EndOfStreamException or IOException)
         {
-            // Key rotation or a tampered value. Treat as no session rather than
-            // failing the request — the caller is challenged and logs in again.
+            // Key rotation, a tampered value, or a malformed payload —
+            // TicketSerializer.Deserialize can throw any of these on bytes
+            // that decrypt successfully but don't parse as a ticket. Treat all
+            // of them as no session rather than failing the request with a
+            // 500 — the caller is challenged and logs in again.
+            logger.LogWarning(ex, "Failed to retrieve auth ticket {Key}; treating as no session.", key);
             return null;
         }
     }

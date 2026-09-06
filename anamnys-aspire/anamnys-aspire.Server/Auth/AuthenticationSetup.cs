@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
@@ -47,7 +48,7 @@ public static class AuthenticationSetup
         // container the app actually runs on — the same singleton Aspire's
         // AddRedisClientBuilder("cache") registers — with no extra connection
         // and no intermediate provider.
-        builder.Services.AddDataProtection()
+        var dataProtectionBuilder = builder.Services.AddDataProtection()
             .SetApplicationName("anamnys");
 
         builder.Services.AddOptions<KeyManagementOptions>()
@@ -57,6 +58,38 @@ public static class AuthenticationSetup
                     () => redis.GetDatabase(),
                     "anamnys:dataprotection-keys");
             });
+
+        // Keys stored in Redis are readable by anything with read access to
+        // Redis unless they are themselves encrypted at rest. Those keys
+        // decrypt every AuthenticationTicket in RedisTicketStore, which holds
+        // Keycloak access AND refresh tokens for all three PHI realms — so an
+        // unencrypted key store turns a Redis exposure into a full PHI
+        // credential compromise. In Development we accept the "No XML
+        // encryptor configured" warning; everywhere else, missing key
+        // protection is a startup failure, not a silent gap.
+        var certificateThumbprint = builder.Configuration["DataProtection:CertificateThumbprint"];
+        if (!string.IsNullOrEmpty(certificateThumbprint))
+        {
+            using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
+            store.Open(OpenFlags.ReadOnly);
+            var certificate = store.Certificates
+                .Find(X509FindType.FindByThumbprint, certificateThumbprint, validOnly: false)
+                .OfType<X509Certificate2>()
+                .FirstOrDefault()
+                ?? throw new InvalidOperationException(
+                    $"DataProtection:CertificateThumbprint '{certificateThumbprint}' was configured but no matching certificate was found in the CurrentUser/My store.");
+
+            dataProtectionBuilder.ProtectKeysWithCertificate(certificate);
+        }
+        else if (!builder.Environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                "DataProtection:CertificateThumbprint is required outside Development. Without it, " +
+                "DataProtection keys are persisted to Redis unencrypted, and those keys decrypt every " +
+                "stored ticket's access and refresh tokens across all three PHI realms. Configure a " +
+                "certificate (or an equivalent explicit key-protection mechanism) before starting the " +
+                "app in this environment.");
+        }
 
         var authentication = builder.Services.AddAuthentication();
 
