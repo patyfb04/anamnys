@@ -50,11 +50,17 @@ server.WithReference(keycloak).WaitFor(keycloak);
 
 // Lets the server's outside-Development startup gate (DevOnlyTestClientGuard)
 // query Keycloak's admin API for the dev-only test service-account clients.
-// In a real non-Development deployment these would come from that
-// environment's own secrets, not from this local dev orchestrator.
+// KEYCLOAK_ADMIN_BASE_ADDRESS is a plain endpoint reference (resolved to a
+// real URL by Aspire), not the "https+http://keycloak" service-discovery
+// pseudo-scheme the rest of the app uses — that scheme only resolves under
+// Aspire orchestration, and the gate must not depend on it. In a real
+// non-Development deployment not orchestrated by Aspire, all three of these
+// come from that environment's own configuration, not from this dev
+// orchestrator.
 server
     .WithEnvironment("KEYCLOAK_ADMIN_USERNAME", keycloakAdminUsername)
-    .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword);
+    .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword)
+    .WithEnvironment("KEYCLOAK_ADMIN_BASE_ADDRESS", keycloak.GetEndpoint("http"));
 
 // Three SPAs, one server. Each is published into a sub-path of the server's
 // wwwroot so all three stay same-origin with the API — which is what lets the

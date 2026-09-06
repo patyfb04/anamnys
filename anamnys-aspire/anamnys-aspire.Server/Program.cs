@@ -36,7 +36,7 @@ using (var gateTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
         app.Environment.IsDevelopment(),
         app.Configuration["KEYCLOAK_ADMIN_USERNAME"],
         app.Configuration["KEYCLOAK_ADMIN_PASSWORD"],
-        app.Services.GetRequiredService<IHttpClientFactory>().CreateClient("keycloak"),
+        app.Configuration["KEYCLOAK_ADMIN_BASE_ADDRESS"],
         gateTimeout.Token);
 }
 

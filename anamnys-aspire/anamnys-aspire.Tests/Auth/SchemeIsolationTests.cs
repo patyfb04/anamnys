@@ -3,8 +3,8 @@ using FluentAssertions;
 
 namespace Anamnys.Tests.Auth;
 
-[Collection(SchemeIsolationCollection.Name)]
-public class SchemeIsolationTests(SchemeIsolationFixture fixture)
+[Collection(SharedAppHostCollection.Name)]
+public class SchemeIsolationTests(SharedAppHostFixture fixture)
 {
     [Fact]
     public async Task PhiEndpoint_WithNoCredential_Returns401()
@@ -65,5 +65,43 @@ public class SchemeIsolationTests(SchemeIsolationFixture fixture)
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // Positive controls. Without these, all four tests above pass just as
+    // well if OIDC metadata retrieval breaks for every realm, the
+    // audience-anamnys-api mapper is removed, or someone deletes every scheme
+    // from the phi/admin groups — all three produce a blanket 401 that looks
+    // identical to correct wrong-realm rejection. These prove a matching
+    // scheme on the same route actually accepts a token of this shape.
+    [Fact]
+    public async Task PhiEndpoint_WithProviderRealmBearerToken_ReturnsOk()
+    {
+        // Arrange
+        var client = fixture.CreateServerClient();
+        var token = await KeycloakTestTokens.GetProviderAccessTokenAsync(
+            fixture.KeycloakBaseAddress, TestContext.Current.CancellationToken);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Act
+        var response = await client.GetAsync("/api/phi/probe", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task AdminEndpoint_WithOwnerRealmBearerToken_ReturnsOk()
+    {
+        // Arrange
+        var client = fixture.CreateServerClient();
+        var token = await KeycloakTestTokens.GetOwnerAccessTokenAsync(
+            fixture.KeycloakBaseAddress, TestContext.Current.CancellationToken);
+        client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        // Act
+        var response = await client.GetAsync("/api/admin/probe", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

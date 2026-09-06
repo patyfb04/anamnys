@@ -1,16 +1,20 @@
 using System.Net.Sockets;
+using Anamnys.Tests.Auth;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 
-namespace Anamnys.Tests.Auth;
+namespace Anamnys.Tests;
 
-// One AppHost, shared across every test in the SchemeIsolation collection,
-// instead of one per test: starting the whole distributed application four-
-// plus times over just to hit two probe endpoints made the suite needlessly
-// slow. Each test still gets its own HttpClient via CreateServerClient(), so
-// a header set by one test (e.g. Authorization) can never leak into another.
-public sealed class SchemeIsolationFixture : IAsyncLifetime
+// One AppHost, shared across every test class in the SharedAppHost collection
+// (Auth's scheme-isolation/guard tests and Data's break-glass constraint
+// test), instead of one per test class. Two independent AppHosts each doing
+// postgres.WithDataVolume() against the same named volume corrupted Postgres
+// with "lock file postmaster.pid is empty" — that is the actual defect behind
+// the original "serialize the whole suite" workaround. One shared AppHost per
+// run removes the race outright, so xunit's default collection parallelism
+// can stay on.
+public sealed class SharedAppHostFixture : IAsyncLifetime
 {
     private DistributedApplication? _app;
 
@@ -27,19 +31,22 @@ public sealed class SchemeIsolationFixture : IAsyncLifetime
 
     public HttpClient CreateServerClient() => _app!.CreateHttpClient("server");
 
+    public ValueTask<string?> GetConnectionStringAsync(string name, CancellationToken cancellationToken) =>
+        _app!.GetConnectionStringAsync(name, cancellationToken);
+
     public async ValueTask InitializeAsync()
     {
         var appHost = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.anamnys_aspire_AppHost>();
+            .CreateAsync<Projects.anamnys_aspire_AppHost>(TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();
-        KeycloakAdminUsername = await keycloakResource.AdminUserNameParameter!.GetValueAsync(CancellationToken.None)
+        KeycloakAdminUsername = await keycloakResource.AdminUserNameParameter!.GetValueAsync(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Keycloak admin username parameter had no value.");
-        KeycloakAdminPassword = await keycloakResource.AdminPasswordParameter!.GetValueAsync(CancellationToken.None)
+        KeycloakAdminPassword = await keycloakResource.AdminPasswordParameter!.GetValueAsync(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Keycloak admin password parameter had no value.");
 
-        _app = await appHost.BuildAsync();
-        await _app.StartAsync();
+        _app = await appHost.BuildAsync(TestContext.Current.CancellationToken);
+        await _app.StartAsync(TestContext.Current.CancellationToken);
 
         // The keycloak resource only registers "http" and "management"
         // endpoints under Aspire.Hosting.Testing — there is no separate
@@ -54,17 +61,19 @@ public sealed class SchemeIsolationFixture : IAsyncLifetime
         KeycloakBaseAddress = _app.CreateHttpClient("keycloak", "http").BaseAddress
             ?? throw new InvalidOperationException("Keycloak's http endpoint resolved to no base address.");
 
-        // Each wait gets its own bounded timeout — sharing one
+        // Each wait gets its own bounded, linked timeout — sharing one
         // CancellationTokenSource meant the server wait could exhaust the
         // whole budget (image build/pull included) and leave the Keycloak
         // poll below with a single try before cancellation.
-        using (var serverHealthTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(120)))
+        using (var serverHealthTimeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken))
         {
+            serverHealthTimeout.CancelAfter(TimeSpan.FromSeconds(120));
             await _app.ResourceNotifications.WaitForResourceHealthyAsync("server", serverHealthTimeout.Token);
         }
 
-        using (var keycloakReadyTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(90)))
+        using (var keycloakReadyTimeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken))
         {
+            keycloakReadyTimeout.CancelAfter(TimeSpan.FromSeconds(90));
             await WaitForKeycloakHttpReadyAsync(KeycloakBaseAddress, keycloakReadyTimeout.Token);
         }
     }
@@ -79,7 +88,7 @@ public sealed class SchemeIsolationFixture : IAsyncLifetime
 
     private static async Task WaitForKeycloakHttpReadyAsync(Uri keycloakBaseAddress, CancellationToken cancellationToken)
     {
-        using var client = InsecureKeycloakHttpClient.Create(keycloakBaseAddress);
+        using var client = KeycloakTestHttpClient.Create(keycloakBaseAddress);
         Exception? lastFailure = null;
 
         try
@@ -106,14 +115,14 @@ public sealed class SchemeIsolationFixture : IAsyncLifetime
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw new TimeoutException(
-                $"Keycloak's https endpoint at {keycloakBaseAddress} never became reachable within the timeout.",
+                $"Keycloak's http endpoint at {keycloakBaseAddress} never became reachable within the timeout.",
                 lastFailure);
         }
     }
 }
 
 [CollectionDefinition(Name)]
-public sealed class SchemeIsolationCollection : ICollectionFixture<SchemeIsolationFixture>
+public sealed class SharedAppHostCollection : ICollectionFixture<SharedAppHostFixture>
 {
-    public const string Name = "SchemeIsolation";
+    public const string Name = "SharedAppHost";
 }

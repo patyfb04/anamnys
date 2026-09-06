@@ -19,7 +19,7 @@ internal static class KeycloakTestTokens
     private static async Task<string> GetAsync(
         Uri keycloakBaseAddress, string realm, string clientId, CancellationToken cancellationToken)
     {
-        using var client = InsecureKeycloakHttpClient.Create(keycloakBaseAddress);
+        using var client = KeycloakTestHttpClient.Create(keycloakBaseAddress);
         using var response = await client.PostAsync(
             $"realms/{realm}/protocol/openid-connect/token",
             new FormUrlEncodedContent(new Dictionary<string, string>

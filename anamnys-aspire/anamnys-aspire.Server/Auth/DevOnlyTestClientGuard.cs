@@ -22,7 +22,7 @@ public static class DevOnlyTestClientGuard
         bool isDevelopment,
         string? adminUsername,
         string? adminPassword,
-        HttpClient keycloakClient,
+        string? keycloakAdminBaseAddress,
         CancellationToken cancellationToken)
     {
         if (isDevelopment)
@@ -37,6 +37,27 @@ public static class DevOnlyTestClientGuard
                 "anamnys-test-owner) are absent: KEYCLOAK_ADMIN_USERNAME/KEYCLOAK_ADMIN_PASSWORD are not " +
                 "configured outside Development. Refusing to start rather than skip this check.");
         }
+
+        // Deliberately not the "keycloak" named HttpClient the rest of the app
+        // uses: that client's BaseAddress is the Aspire service-discovery
+        // pseudo-scheme "https+http://keycloak", which only resolves under
+        // Aspire orchestration (Services__keycloak__* configuration). Outside
+        // that, every request against it throws, and this gate would then
+        // refuse to start in every environment regardless of whether the
+        // test clients exist. KEYCLOAK_ADMIN_BASE_ADDRESS is a plain,
+        // explicit setting instead, so a missing one fails with a message
+        // naming exactly what to configure.
+        if (string.IsNullOrEmpty(keycloakAdminBaseAddress) ||
+            !Uri.TryCreate(keycloakAdminBaseAddress, UriKind.Absolute, out var baseAddress))
+        {
+            throw new InvalidOperationException(
+                "Cannot verify that the dev-only Keycloak test clients are absent: KEYCLOAK_ADMIN_BASE_ADDRESS " +
+                "is not configured as an absolute URL outside Development. Configure it to Keycloak's own " +
+                "base address (e.g. https://keycloak.internal:8443/) before starting the server here. " +
+                "Refusing to start rather than skip this check.");
+        }
+
+        using var keycloakClient = new HttpClient { BaseAddress = baseAddress };
 
         string accessToken;
         try
