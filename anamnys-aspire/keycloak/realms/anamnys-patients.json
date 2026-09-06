@@ -330,6 +330,21 @@
           }
         },
         {
+          "name": "realm roles flat",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        },
+        {
           "name": "audience resolve",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-resolve-mapper",
@@ -371,7 +386,7 @@
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/patient/"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/patient/##${ANAMNYS_APP_ORIGIN}/signin-oidc-patient-signout"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": ["notes:read"],

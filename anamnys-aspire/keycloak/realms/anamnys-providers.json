@@ -14,7 +14,7 @@
   "failureFactor": 5,
   "waitIncrementSeconds": 60,
   "maxFailureWaitSeconds": 900,
-  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(5) and forceExpiredPasswordChange(0)",
+  "passwordPolicy": "length(12) and notUsername and notEmail and passwordHistory(5)",
   "otpPolicyType": "totp",
   "otpPolicyAlgorithm": "HmacSHA256",
   "otpPolicyDigits": 6,
@@ -334,6 +334,21 @@
           }
         },
         {
+          "name": "realm roles flat",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "foo",
+            "introspection.token.claim": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true"
+          }
+        },
+        {
           "name": "audience resolve",
           "protocol": "openid-connect",
           "protocolMapper": "oidc-audience-resolve-mapper",
@@ -395,7 +410,7 @@
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/provider/"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/provider/##${ANAMNYS_APP_ORIGIN}/signin-oidc-provider-signout"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": ["notes:read", "notes:write", "notes:sign", "billing:read", "patients:read"],

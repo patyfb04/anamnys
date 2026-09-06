@@ -186,6 +186,22 @@ public static class AuthenticationSetup
                     var identity = (ClaimsIdentity)context.Principal!.Identity!;
                     identity.AddClaim(new Claim(AnamnysClaims.LocalId, localId.ToString()));
                 };
+
+                // An exception thrown above (an uninvited patient, an owners-
+                // realm token with no recognised role, a disabled account) is
+                // the most likely real failure, and without this it surfaces
+                // as a bare 500 ProblemDetails after a fully successful
+                // Keycloak login — incomprehensible to the user and no more
+                // informative to us. RemoteFailure catches it before it gets
+                // that far. The redirect carries no exception detail: only a
+                // generic marker, never the message, which could otherwise
+                // leak into browser history, Referer headers, or access logs.
+                options.Events.OnRemoteFailure = context =>
+                {
+                    context.HandleResponse();
+                    context.Response.Redirect($"{wiring.SignedOutPath}?authError=true");
+                    return Task.CompletedTask;
+                };
             });
 
             authentication.AddKeycloakJwtBearer("keycloak", wiring.Realm, wiring.BearerScheme, options =>

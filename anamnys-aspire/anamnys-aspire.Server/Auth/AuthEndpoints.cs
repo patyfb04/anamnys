@@ -123,6 +123,15 @@ public static class AuthEndpoints
             return fallback;
         }
 
+        // Embedded tab/CR/LF (e.g. "/\t/evil.com") is the residual class some
+        // URL parsers strip back to "//evil.com" after the checks below have
+        // already passed it — reject any control character outright before
+        // looking at the rest of the shape.
+        if (returnUrl.Any(char.IsControl))
+        {
+            return fallback;
+        }
+
         if (returnUrl[0] != '/')
         {
             return fallback;
