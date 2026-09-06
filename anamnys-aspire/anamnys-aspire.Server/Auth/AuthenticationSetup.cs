@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -34,6 +35,7 @@ public static class AuthenticationSetup
     {
         builder.Services.AddSingleton<TokenRefresher>();
         builder.Services.AddSingleton<ITicketStore, RedisTicketStore>();
+        builder.Services.AddScoped<FirstLoginProvisioner>();
 
         // Shared DataProtection keys, so ticket-store payloads and cookies stay
         // readable across restarts and replicas.
@@ -165,6 +167,24 @@ public static class AuthenticationSetup
                     RoleClaimType = "roles",
                     ValidateIssuer = true,
                     ValidateAudience = true,
+                };
+
+                // Stamps the local row id onto the principal before it ever
+                // reaches the cookie. Every downstream provider-scoped query
+                // reads CurrentUser.LocalId, never a client-supplied id, and
+                // this is the one place that claim gets minted.
+                options.Events.OnTokenValidated = async context =>
+                {
+                    var provisioner = context.HttpContext.RequestServices
+                        .GetRequiredService<FirstLoginProvisioner>();
+
+                    var localId = await provisioner.ProvisionAsync(
+                        context.Principal!,
+                        wiring.Realm,
+                        context.HttpContext.RequestAborted);
+
+                    var identity = (ClaimsIdentity)context.Principal!.Identity!;
+                    identity.AddClaim(new Claim(AnamnysClaims.LocalId, localId.ToString()));
                 };
             });
 

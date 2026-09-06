@@ -63,6 +63,8 @@ api.MapGet("weatherforecast", () =>
 .CacheOutput(p => p.Expire(TimeSpan.FromSeconds(5)))
 .WithName("GetWeatherForecast");
 
+app.MapAuthEndpoints();
+
 app.MapDefaultEndpoints();
 
 app.UseFileServer();
