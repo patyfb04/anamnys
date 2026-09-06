@@ -1,4 +1,6 @@
+using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +11,8 @@ builder.AddRedisClientBuilder("cache")
 
 builder.AddNpgsqlDbContext<AnamnysDbContext>("anamnysdb");
 builder.Services.AddHostedService<DatabaseInitializer>();
+
+builder.AddAnamnysAuthentication();
 
 // Add services to the container.
 builder.Services.AddProblemDetails();
@@ -21,9 +25,22 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    var schemeProvider = app.Services.GetRequiredService<IAuthenticationSchemeProvider>();
+    var registeredSchemes = (await schemeProvider.GetAllSchemesAsync())
+        .Select(scheme => scheme.Name)
+        .OrderBy(name => name, StringComparer.Ordinal)
+        .ToArray();
+    app.Logger.LogInformation(
+        "Registered authentication schemes ({Count}): {Schemes}",
+        registeredSchemes.Length,
+        string.Join(", ", registeredSchemes));
 }
 
 app.UseOutputCache();
