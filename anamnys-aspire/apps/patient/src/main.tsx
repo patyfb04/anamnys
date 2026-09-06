@@ -4,7 +4,9 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import './index.css';
 import { routeTree } from './routeTree.gen';
 
-const router = createRouter({ routeTree });
+// import.meta.env.BASE_URL mirrors vite.config.ts's `base` ("/patient/") — see the same
+// fix in apps/provider/src/main.tsx for why this is required rather than cosmetic.
+const router = createRouter({ routeTree, basepath: import.meta.env.BASE_URL });
 
 // Gives `<Link to="...">` and the router hooks full type inference over the
 // generated route tree.

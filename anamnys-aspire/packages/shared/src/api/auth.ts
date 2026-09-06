@@ -1,21 +1,12 @@
 import api from "@anamnys/shared/api/client";
-import type { LoginRequest, RegisterRequest, LoginResponse, AuthUser } from "@anamnys/shared/lib/types";
+import type { AuthUser } from "@anamnys/shared/lib/types";
 
+// Login is not here on purpose. It is a full-page navigation to the BFF, which
+// answers with a 302 to Keycloak — an XHR cannot follow that usefully.
 export const authApi = {
-  login: async (req: LoginRequest): Promise<LoginResponse> => {
-    const { data } = await api.post<LoginResponse>("/auth/login", req);
-    return data;
-  },
-  register: async (req: RegisterRequest): Promise<LoginResponse> => {
-    const { data } = await api.post<LoginResponse>("/auth/register", req);
-    return data;
-  },
-  completeTwoFactorLogin: async (challengeToken: string, code: string): Promise<LoginResponse> => {
-    const { data } = await api.post<LoginResponse>("/auth/login/2fa", { challengeToken, code });
-    return data;
-  },
-  logout: async (): Promise<void> => {
-    await api.post("/auth/logout").catch(() => undefined);
+  logout: async (realm: "provider" | "patient" | "owner"): Promise<void> => {
+    // /auth/{realm}/logout is not under /api, unlike everything else this client calls.
+    await api.post(`/auth/${realm}/logout`, undefined, { baseURL: "/" }).catch(() => undefined);
   },
   me: async (): Promise<AuthUser> => {
     const { data } = await api.get<AuthUser>("/auth/me");

@@ -33,7 +33,7 @@ export default function AccountMenu() {
             <button
               onClick={() => {
                 setOpen(false);
-                logout();
+                logout("provider");
               }}
               className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-error hover:bg-surfaceContainerLow"
             >

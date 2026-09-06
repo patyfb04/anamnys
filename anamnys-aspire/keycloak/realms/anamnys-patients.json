@@ -382,11 +382,14 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["${ANAMNYS_APP_ORIGIN}/signin-oidc-patient"],
+      "redirectUris": [
+        "${ANAMNYS_APP_ORIGIN}/signin-oidc-patient",
+        "http://localhost:5274/signin-oidc-patient"
+      ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/patient/##${ANAMNYS_APP_ORIGIN}/signin-oidc-patient-signout"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/patient/##${ANAMNYS_APP_ORIGIN}/signin-oidc-patient-signout##http://localhost:5274/patient/##http://localhost:5274/signin-oidc-patient-signout"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": ["notes:read"],

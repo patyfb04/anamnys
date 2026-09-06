@@ -389,11 +389,14 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["${ANAMNYS_APP_ORIGIN}/signin-oidc-owner"],
+      "redirectUris": [
+        "${ANAMNYS_APP_ORIGIN}/signin-oidc-owner",
+        "http://localhost:5275/signin-oidc-owner"
+      ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/admin/##${ANAMNYS_APP_ORIGIN}/signin-oidc-owner-signout"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/admin/##${ANAMNYS_APP_ORIGIN}/signin-oidc-owner-signout##http://localhost:5275/admin/##http://localhost:5275/signin-oidc-owner-signout"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": ["tenancy:read", "tenancy:write", "billing:read", "billing:write", "plans:write", "audit:read", "ops:read", "breakglass:request"],

@@ -66,17 +66,24 @@ server
 // wwwroot so all three stay same-origin with the API — which is what lets the
 // BFF cookie auth work without CORS. The sub-paths must match the `base` option
 // in each app's vite.config.ts.
+// Each dev-server port is pinned (not left to Aspire's usual random assignment):
+// the server builds its OIDC redirect_uri from the Host header of whatever origin
+// reaches it through that app's vite.config.ts proxy, and that origin has to stay
+// stable across restarts to remain a registered redirect URI in Keycloak.
 var web = builder.AddViteApp("web", "../apps/web")
     .WithReference(server)
-    .WaitFor(server);
+    .WaitFor(server)
+    .WithHttpEndpoint(port: 5275, targetPort: 5275, isProxied: false);
 
 var provider = builder.AddViteApp("provider", "../apps/provider")
     .WithReference(server)
-    .WaitFor(server);
+    .WaitFor(server)
+    .WithHttpEndpoint(port: 5273, targetPort: 5273, isProxied: false);
 
 var patient = builder.AddViteApp("patient", "../apps/patient")
     .WithReference(server)
-    .WaitFor(server);
+    .WaitFor(server)
+    .WithHttpEndpoint(port: 5274, targetPort: 5274, isProxied: false);
 
 server.PublishWithContainerFiles(web, "wwwroot");
 server.PublishWithContainerFiles(provider, "wwwroot/provider");

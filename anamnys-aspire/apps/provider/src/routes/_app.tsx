@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
 import TopBar from "@anamnys/shared/ui/TopBar";
 import AppTabBar from "@anamnys/shared/ui/AppTabBar";
@@ -10,12 +10,13 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const navigate = useNavigate();
-  const { user, isLoading } = useAuthStore();
+  const { user, isLoading, login } = useAuthStore();
 
   useEffect(() => {
-    if (!isLoading && !user) navigate({ to: "/login" });
-  }, [isLoading, user, navigate]);
+    // Not navigate({ to: "/login" }) — there is no login route in this app
+    // any more. The BFF redirects to Keycloak, which renders the theme.
+    if (!isLoading && !user) login("provider", window.location.pathname);
+  }, [isLoading, user, login]);
 
   if (isLoading || !user) return null;
 

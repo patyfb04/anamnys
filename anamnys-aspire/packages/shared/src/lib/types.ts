@@ -109,48 +109,14 @@ export type PipelineStep =
 
 // ─── Auth types ────────────────────────────────────────────────────────────────
 
+// Mirrors MeResponse from the server. There is deliberately no token field:
+// tokens live in the server-side ticket store and never reach JavaScript.
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  specialty: Specialty;
-  token: string;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-  specialty: Specialty;
-}
-
-// Envelope returned by /auth/login, /auth/register, and /auth/login/2fa. Exactly one of
-// (challengeToken, user) is set: requiresTwoFactor=true means the password step succeeded and
-// the client must call completeTwoFactorLogin with the challengeToken + a code.
-export interface LoginResponse {
-  requiresTwoFactor: boolean;
-  challengeToken?: string | null;
-  user?: AuthUser | null;
-}
-
-// ─── Account / 2FA types ───────────────────────────────────────────────────────
-
-export interface TwoFactorStatus {
-  enabled: boolean;
-}
-
-export interface TwoFactorSetup {
-  secret: string;
-  otpauthUri: string;
-}
-
-export interface TwoFactorVerifyResult {
-  recoveryCodes: string[];
+  realm: string;
+  roles: string[];
 }
 
 // ─── API response wrapper ──────────────────────────────────────────────────────

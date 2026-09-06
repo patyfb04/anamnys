@@ -33,6 +33,20 @@
       { "name": "billing-staff", "description": "Billing staff" }
     ]
   },
+  "users": [
+    {
+      "username": "dev.provider",
+      "email": "dev.provider@anamnys.local",
+      "firstName": "Dev",
+      "lastName": "Provider",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": ["provider"],
+      "credentials": [
+        { "type": "password", "value": "DevProvider!2026", "temporary": false }
+      ]
+    }
+  ],
   "clientScopes": [
     {
       "name": "profile",
@@ -406,11 +420,14 @@
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["${ANAMNYS_APP_ORIGIN}/signin-oidc-provider"],
+      "redirectUris": [
+        "${ANAMNYS_APP_ORIGIN}/signin-oidc-provider",
+        "http://localhost:5273/signin-oidc-provider"
+      ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/provider/##${ANAMNYS_APP_ORIGIN}/signin-oidc-provider-signout"
+        "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/provider/##${ANAMNYS_APP_ORIGIN}/signin-oidc-provider-signout##http://localhost:5273/provider/##http://localhost:5273/signin-oidc-provider-signout"
       },
       "defaultClientScopes": ["profile", "email", "roles"],
       "optionalClientScopes": ["notes:read", "notes:write", "notes:sign", "billing:read", "patients:read"],
