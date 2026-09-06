@@ -1,4 +1,4 @@
-CREATE SCHEMA "public";
+CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE TABLE "AccessLogs" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"ProviderId" uuid NOT NULL,
@@ -41,9 +41,11 @@ CREATE TABLE "Appointments" (
 	"CancelledBy" text,
 	"CancellationReason" text,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"Slot" tstzrange GENERATED ALWAYS AS (CASE WHEN "Status" <> 'cancelled' THEN tstzrange("StartsAt", "EndsAt", '[)') END) STORED,
 	CONSTRAINT "Appointments_Cancel_ck" CHECK ((("Status" = 'cancelled'::text) = ("CancelledAt" IS NOT NULL))),
 	CONSTRAINT "Appointments_CancelledBy_ck" CHECK ((("CancelledBy" IS NULL) OR ("CancelledBy" = ANY (ARRAY['provider'::text, 'patient'::text, 'system'::text])))),
 	CONSTRAINT "Appointments_CreatedBy_ck" CHECK (("CreatedBy" = ANY (ARRAY['provider'::text, 'patient'::text]))),
+	CONSTRAINT "Appointments_no_overlap" UNIQUE ("ProviderId", "Slot" WITHOUT OVERLAPS),
 	CONSTRAINT "Appointments_Price_ck" CHECK ((("PriceCentsSnapshot" IS NULL) OR ("PriceCentsSnapshot" >= 0))),
 	CONSTRAINT "Appointments_Range_ck" CHECK (("EndsAt" > "StartsAt")),
 	CONSTRAINT "Appointments_Status_ck" CHECK (("Status" = ANY (ARRAY['scheduled'::text, 'confirmed'::text, 'attended'::text, 'cancelled'::text, 'no_show'::text])))
@@ -130,7 +132,9 @@ CREATE TABLE "BookingHolds" (
 	"ConvertedAppointmentId" uuid,
 	"ReleasedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"Slot" tstzrange GENERATED ALWAYS AS (CASE WHEN "ReleasedAt" IS NULL THEN tstzrange("StartsAt", "EndsAt", '[)') END) STORED,
 	CONSTRAINT "BookingHolds_CreatedBy_ck" CHECK (("CreatedBy" = ANY (ARRAY['provider'::text, 'patient'::text]))),
+	CONSTRAINT "BookingHolds_no_overlap" UNIQUE ("ProviderId", "Slot" WITHOUT OVERLAPS),
 	CONSTRAINT "BookingHolds_Range_ck" CHECK (("EndsAt" > "StartsAt"))
 );
 CREATE TABLE "BookingPolicies" (
@@ -144,6 +148,19 @@ CREATE TABLE "BookingPolicies" (
 	"AllowNewPatients" boolean DEFAULT false NOT NULL,
 	"RequiresConfirmation" boolean DEFAULT true NOT NULL,
 	CONSTRAINT "BookingPolicies_Windows_ck" CHECK ((("MinLeadHours" >= 0) AND ("MaxHorizonDays" > 0) AND ("CancelLeadHours" >= 0) AND ("RescheduleLeadHours" >= 0) AND ("MaxOpenAppointments" > 0)))
+);
+CREATE TABLE "BreakGlassGrants" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"StaffId" uuid NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"TicketRef" text NOT NULL,
+	"Reason" text NOT NULL,
+	"AuthorizedBy" uuid NOT NULL,
+	"AuthorizedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ExpiresAt" timestamp with time zone NOT NULL,
+	"RevokedAt" timestamp with time zone,
+	CONSTRAINT "BreakGlassGrants_TwoPerson_ck" CHECK (("AuthorizedBy" <> "StaffId")),
+	CONSTRAINT "BreakGlassGrants_Window_ck" CHECK (("ExpiresAt" > "AuthorizedAt"))
 );
 CREATE TABLE "CalendarConnections" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -444,27 +461,12 @@ CREATE TABLE "PatientAccounts" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"PatientId" uuid NOT NULL CONSTRAINT "PatientAccounts_PatientId_key" UNIQUE,
 	"Email" text NOT NULL CONSTRAINT "PatientAccounts_Email_key" UNIQUE,
+	"ExternalSubject" uuid CONSTRAINT "PatientAccounts_ExternalSubject_unique" UNIQUE,
 	"Phone" text,
-	"AuthMethod" text DEFAULT 'magic_link' NOT NULL,
-	"EmailVerifiedAt" timestamp with time zone,
 	"LastLoginAt" timestamp with time zone,
-	"FailedAttempts" integer DEFAULT 0 NOT NULL,
-	"LockedUntil" timestamp with time zone,
 	"TermsAcceptedAt" timestamp with time zone,
 	"DisabledAt" timestamp with time zone,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "PatientAccounts_AuthMethod_ck" CHECK (("AuthMethod" = ANY (ARRAY['magic_link'::text, 'otp'::text, 'password'::text])))
-);
-CREATE TABLE "PatientAuthTokens" (
-	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"AccountId" uuid NOT NULL,
-	"TokenHash" text NOT NULL CONSTRAINT "PatientAuthTokens_TokenHash_key" UNIQUE,
-	"Purpose" text NOT NULL,
-	"ExpiresAt" timestamp with time zone NOT NULL,
-	"UsedAt" timestamp with time zone,
-	"CreatedIp" inet,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "PatientAuthTokens_Purpose_ck" CHECK (("Purpose" = ANY (ARRAY['login'::text, 'verify_email'::text, 'cancel_appointment'::text])))
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "PatientQuotes" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -558,15 +560,13 @@ CREATE TABLE "ProviderProfiles" (
 CREATE TABLE "Providers" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"Email" text NOT NULL CONSTRAINT "Providers_Email_unique" UNIQUE,
+	"ExternalSubject" uuid NOT NULL CONSTRAINT "Providers_ExternalSubject_unique" UNIQUE,
 	"Name" text NOT NULL,
-	"PasswordHash" text NOT NULL,
 	"CrpNumber" text,
 	"CrpRegion" text,
 	"Specialty" text DEFAULT 'MentalHealth' NOT NULL,
 	"PreferredNoteFormat" text DEFAULT 'DAP' NOT NULL,
 	"BillingSystem" integer DEFAULT 2 NOT NULL,
-	"TwoFactorEnabled" boolean DEFAULT false NOT NULL,
-	"TwoFactorSecretEncrypted" text,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "Providers_Crp_ck" CHECK ((("CrpNumber" IS NULL) = ("CrpRegion" IS NULL))),
@@ -587,13 +587,6 @@ CREATE TABLE "RecordingConsents" (
 	"AssentRecordedAt" timestamp with time zone,
 	CONSTRAINT "RecordingConsents_Signed_ck" CHECK ((("State" <> 'SIGNED'::text) OR (("SignedAt" IS NOT NULL) AND ("SignatureEvidence" IS NOT NULL)))),
 	CONSTRAINT "RecordingConsents_State_ck" CHECK (("State" = ANY (ARRAY['NOT_REQUESTED'::text, 'SENT'::text, 'SIGNED'::text, 'REVOKED'::text, 'EXPIRED'::text])))
-);
-CREATE TABLE "RecoveryCodes" (
-	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"ProviderId" uuid NOT NULL,
-	"CodeHash" text NOT NULL,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	"UsedAt" timestamp with time zone
 );
 CREATE TABLE "Reminders" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -710,6 +703,17 @@ CREATE TABLE "SpeechMarkers" (
 	"PatientBaseline" numeric,
 	"MeasuredAt" timestamp with time zone DEFAULT now() NOT NULL
 );
+CREATE TABLE "Staff" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"ExternalSubject" uuid NOT NULL CONSTRAINT "Staff_ExternalSubject_unique" UNIQUE,
+	"Email" text NOT NULL CONSTRAINT "Staff_Email_unique" UNIQUE,
+	"Name" text NOT NULL,
+	"Role" text NOT NULL,
+	"DisabledAt" timestamp with time zone,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "Staff_Role_ck" CHECK (("Role" = ANY (ARRAY['owner'::text, 'support'::text, 'ops'::text])))
+);
 CREATE TABLE "Subscriptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"ProviderId" uuid NOT NULL CONSTRAINT "Subscriptions_ProviderId_key" UNIQUE,
@@ -800,172 +804,71 @@ CREATE TABLE "WebhookEvents" (
 	"ProcessedAt" timestamp with time zone,
 	"Payload" jsonb NOT NULL
 );
-CREATE UNIQUE INDEX "AccessLogs_pkey" ON "AccessLogs" ("Id");
 CREATE INDEX "AccessLogs_ProviderId_At_idx" ON "AccessLogs" ("ProviderId","At");
-CREATE UNIQUE INDEX "AccountExports_pkey" ON "AccountExports" ("Id");
 CREATE INDEX "AccountExports_ProviderId_idx" ON "AccountExports" ("ProviderId","RequestedAt");
 CREATE INDEX "Appointments_ExternalEventId_idx" ON "Appointments" ("ExternalEventId");
-CREATE INDEX "Appointments_no_overlap" ON "Appointments" USING gist ("ProviderId","tstzrange("StartsAt", "EndsAt", '[)'::text)");
 CREATE INDEX "Appointments_Patient_Starts_idx" ON "Appointments" ("PatientId","StartsAt");
-CREATE UNIQUE INDEX "Appointments_pkey" ON "Appointments" ("Id");
 CREATE INDEX "Appointments_Provider_Starts_idx" ON "Appointments" ("ProviderId","StartsAt");
-CREATE UNIQUE INDEX "AppointmentSeries_pkey" ON "AppointmentSeries" ("Id");
 CREATE INDEX "AppointmentSeries_ProviderId_idx" ON "AppointmentSeries" ("ProviderId");
-CREATE UNIQUE INDEX "AudioDestructionLogs_pkey" ON "AudioDestructionLogs" ("Id");
 CREATE INDEX "AudioDestructionLogs_SessionId_idx" ON "AudioDestructionLogs" ("SessionId");
 CREATE INDEX "AuditEntries_At_idx" ON "AuditEntries" ("At");
 CREATE INDEX "AuditEntries_DocumentId_At_idx" ON "AuditEntries" ("DocumentId","At");
 CREATE INDEX "AuditEntries_NoteId_At_idx" ON "AuditEntries" ("NoteId","At");
-CREATE UNIQUE INDEX "AuditEntries_pkey" ON "AuditEntries" ("Id");
-CREATE UNIQUE INDEX "AvailabilityExceptions_pkey" ON "AvailabilityExceptions" ("Id");
 CREATE INDEX "AvailabilityExceptions_Provider_Range_idx" ON "AvailabilityExceptions" ("ProviderId","StartsAt","EndsAt");
-CREATE UNIQUE INDEX "AvailabilityRules_pkey" ON "AvailabilityRules" ("Id");
 CREATE INDEX "AvailabilityRules_Provider_idx" ON "AvailabilityRules" ("ProviderId","Weekday");
 CREATE INDEX "BillingCodes_NoteId_idx" ON "BillingCodes" ("NoteId");
-CREATE UNIQUE INDEX "BillingCodes_pkey" ON "BillingCodes" ("Id");
 CREATE INDEX "BillingCodes_ProcedureCode_idx" ON "BillingCodes" ("ProcedureCode");
 CREATE INDEX "BookingHolds_ExpiresAt_idx" ON "BookingHolds" ("ExpiresAt");
-CREATE INDEX "BookingHolds_no_overlap" ON "BookingHolds" USING gist ("ProviderId","tstzrange("StartsAt", "EndsAt", '[)'::text)");
-CREATE UNIQUE INDEX "BookingHolds_pkey" ON "BookingHolds" ("Id");
 CREATE INDEX "BookingHolds_Provider_Starts_idx" ON "BookingHolds" ("ProviderId","StartsAt");
-CREATE UNIQUE INDEX "BookingPolicies_pkey" ON "BookingPolicies" ("Id");
-CREATE UNIQUE INDEX "BookingPolicies_ProviderId_key" ON "BookingPolicies" ("ProviderId");
+CREATE INDEX "BreakGlassGrants_StaffId_idx" ON "BreakGlassGrants" ("StaffId");
+CREATE INDEX "BreakGlassGrants_ProviderId_idx" ON "BreakGlassGrants" ("ProviderId");
+CREATE INDEX "BreakGlassGrants_ExpiresAt_idx" ON "BreakGlassGrants" ("ExpiresAt");
 CREATE INDEX "CalendarConnections_ChannelExpiresAt_idx" ON "CalendarConnections" ("ChannelExpiresAt");
-CREATE UNIQUE INDEX "CalendarConnections_pkey" ON "CalendarConnections" ("Id");
-CREATE UNIQUE INDEX "CalendarConnections_ProviderId_key" ON "CalendarConnections" ("ProviderId");
 CREATE INDEX "ClinicalDocuments_PatientId_idx" ON "ClinicalDocuments" ("PatientId");
-CREATE UNIQUE INDEX "ClinicalDocuments_pkey" ON "ClinicalDocuments" ("Id");
 CREATE INDEX "ClinicalDocuments_RetentionUntil_idx" ON "ClinicalDocuments" ("RetentionUntil");
 CREATE INDEX "ConformityChecks_DocumentId_idx" ON "ConformityChecks" ("DocumentId");
-CREATE UNIQUE INDEX "ConformityChecks_pkey" ON "ConformityChecks" ("Id");
-CREATE UNIQUE INDEX "ConformityRulesets_Kind_Version_key" ON "ConformityRulesets" ("DocumentKind","Version");
-CREATE UNIQUE INDEX "ConformityRulesets_pkey" ON "ConformityRulesets" ("Id");
 CREATE INDEX "ConsentEvents_ConsentId_At_idx" ON "ConsentEvents" ("ConsentId","At");
-CREATE UNIQUE INDEX "ConsentEvents_pkey" ON "ConsentEvents" ("Id");
 CREATE INDEX "ContactMessages_CreatedAt_idx" ON "ContactMessages" ("CreatedAt");
-CREATE UNIQUE INDEX "ContactMessages_pkey" ON "ContactMessages" ("Id");
 CREATE INDEX "DenialFlags_GuideId_idx" ON "DenialFlags" ("GuideId");
-CREATE UNIQUE INDEX "DenialFlags_pkey" ON "DenialFlags" ("Id");
-CREATE UNIQUE INDEX "Denials_pkey" ON "Denials" ("Id");
 CREATE INDEX "Denials_ReasonCode_idx" ON "Denials" ("ReasonCode");
 CREATE INDEX "DisclosureAuthorizations_DocumentId_idx" ON "DisclosureAuthorizations" ("DocumentId");
-CREATE UNIQUE INDEX "DisclosureAuthorizations_pkey" ON "DisclosureAuthorizations" ("Id");
 CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
-CREATE UNIQUE INDEX "DisposalRecords_pkey" ON "DisposalRecords" ("Id");
-CREATE UNIQUE INDEX "DocumentHashes_Document_Sequence_key" ON "DocumentHashes" ("DocumentId","Sequence");
-CREATE UNIQUE INDEX "DocumentHashes_pkey" ON "DocumentHashes" ("Id");
 CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
-CREATE UNIQUE INDEX "Dossiers_pkey" ON "Dossiers" ("Id");
-CREATE UNIQUE INDEX "ExcerptRefs_pkey" ON "ExcerptRefs" ("Id");
 CREATE INDEX "ExcerptRefs_Source_idx" ON "ExcerptRefs" ("SourceType","SourceId");
-CREATE UNIQUE INDEX "ExternalDocuments_ObjectKey_key" ON "ExternalDocuments" ("ObjectKey");
 CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientId");
-CREATE UNIQUE INDEX "ExternalDocuments_pkey" ON "ExternalDocuments" ("Id");
 CREATE INDEX "ExtractedFacts_DocumentId_idx" ON "ExtractedFacts" ("ExternalDocumentId");
-CREATE UNIQUE INDEX "ExtractedFacts_pkey" ON "ExtractedFacts" ("Id");
-CREATE UNIQUE INDEX "FocusAreas_Code_key" ON "FocusAreas" ("Code");
-CREATE UNIQUE INDEX "FocusAreas_pkey" ON "FocusAreas" ("Id");
 CREATE INDEX "FollowUpItems_PatientId_idx" ON "FollowUpItems" ("PatientId");
-CREATE UNIQUE INDEX "FollowUpItems_pkey" ON "FollowUpItems" ("Id");
-CREATE UNIQUE INDEX "Instruments_Code_key" ON "Instruments" ("Code");
-CREATE UNIQUE INDEX "Instruments_pkey" ON "Instruments" ("Id");
-CREATE UNIQUE INDEX "InsurerAuthorizations_pkey" ON "InsurerAuthorizations" ("Id");
 CREATE INDEX "InsurerAuthorizations_ValidUntil_idx" ON "InsurerAuthorizations" ("ValidUntil");
-CREATE UNIQUE INDEX "Insurers_pkey" ON "Insurers" ("Id");
-CREATE UNIQUE INDEX "Insurers_Provider_Name_key" ON "Insurers" ("ProviderId","Name");
-CREATE UNIQUE INDEX "IntakeQuestions_pkey" ON "IntakeQuestions" ("Id");
-CREATE UNIQUE INDEX "IntakeQuestions_Template_Key_key" ON "IntakeQuestions" ("TemplateId","Key");
 CREATE INDEX "IntakeResponses_PatientId_idx" ON "IntakeResponses" ("PatientId");
-CREATE UNIQUE INDEX "IntakeResponses_pkey" ON "IntakeResponses" ("Id");
-CREATE UNIQUE INDEX "IntakeTemplates_pkey" ON "IntakeTemplates" ("Id");
-CREATE UNIQUE INDEX "IntakeTemplates_Provider_Name_Version_key" ON "IntakeTemplates" ("ProviderId","Name","Version");
 CREATE INDEX "MedicationEntries_Patient_Started_idx" ON "MedicationEntries" ("PatientId","StartedOn");
-CREATE UNIQUE INDEX "MedicationEntries_pkey" ON "MedicationEntries" ("Id");
 CREATE INDEX "Notes_PatientId_idx" ON "Notes" ("PatientId");
-CREATE UNIQUE INDEX "Notes_pkey" ON "Notes" ("Id");
 CREATE INDEX "Notes_ProviderId_idx" ON "Notes" ("ProviderId");
 CREATE INDEX "Notes_Status_idx" ON "Notes" ("Status");
 CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
-CREATE UNIQUE INDEX "NoteSections_NoteId_Key_key" ON "NoteSections" ("NoteId","Key");
-CREATE UNIQUE INDEX "NoteSections_pkey" ON "NoteSections" ("Id");
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
-CREATE UNIQUE INDEX "Notifications_pkey" ON "Notifications" ("Id");
-CREATE UNIQUE INDEX "PatientAccounts_Email_key" ON "PatientAccounts" ("Email");
-CREATE UNIQUE INDEX "PatientAccounts_PatientId_key" ON "PatientAccounts" ("PatientId");
-CREATE UNIQUE INDEX "PatientAccounts_pkey" ON "PatientAccounts" ("Id");
-CREATE INDEX "PatientAuthTokens_ExpiresAt_idx" ON "PatientAuthTokens" ("ExpiresAt");
-CREATE UNIQUE INDEX "PatientAuthTokens_pkey" ON "PatientAuthTokens" ("Id");
-CREATE UNIQUE INDEX "PatientAuthTokens_TokenHash_key" ON "PatientAuthTokens" ("TokenHash");
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
-CREATE UNIQUE INDEX "PatientQuotes_pkey" ON "PatientQuotes" ("Id");
-CREATE UNIQUE INDEX "Patients_Id_ProviderId_key" ON "Patients" ("Id","ProviderId");
-CREATE UNIQUE INDEX "Patients_pkey" ON "Patients" ("Id");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
-CREATE UNIQUE INDEX "PlanFeatures_pkey" ON "PlanFeatures" ("PlanId","FeatureKey");
-CREATE UNIQUE INDEX "PlanObjectives_pkey" ON "PlanObjectives" ("Id");
 CREATE INDEX "PlanObjectives_PlanId_idx" ON "PlanObjectives" ("PlanId");
-CREATE UNIQUE INDEX "Plans_Code_Version_key" ON "Plans" ("Code","Version");
-CREATE UNIQUE INDEX "Plans_pkey" ON "Plans" ("Id");
-CREATE UNIQUE INDEX "ProfileListingEvents_pkey" ON "ProfileListingEvents" ("Id");
 CREATE INDEX "ProfileListingEvents_ProfileId_At_idx" ON "ProfileListingEvents" ("ProfileId","At");
 CREATE INDEX "ProviderFocusAreas_FocusAreaId_idx" ON "ProviderFocusAreas" ("FocusAreaId");
-CREATE UNIQUE INDEX "ProviderFocusAreas_pkey" ON "ProviderFocusAreas" ("ProfileId","FocusAreaId");
-CREATE UNIQUE INDEX "ProviderInstrumentOptIns_key" ON "ProviderInstrumentOptIns" ("ProviderId","InstrumentId");
-CREATE UNIQUE INDEX "ProviderInstrumentOptIns_pkey" ON "ProviderInstrumentOptIns" ("Id");
 CREATE INDEX "ProviderProfiles_listed_idx" ON "ProviderProfiles" ("City","State");
-CREATE UNIQUE INDEX "ProviderProfiles_pkey" ON "ProviderProfiles" ("Id");
-CREATE UNIQUE INDEX "ProviderProfiles_ProviderId_key" ON "ProviderProfiles" ("ProviderId");
-CREATE UNIQUE INDEX "ProviderProfiles_Slug_key" ON "ProviderProfiles" ("Slug");
-CREATE UNIQUE INDEX "Providers_Email_unique" ON "Providers" ("Email");
 CREATE UNIQUE INDEX "Providers_Id_key" ON "Providers" ("Id");
-CREATE UNIQUE INDEX "Providers_pkey" ON "Providers" ("Id");
 CREATE INDEX "RecordingConsents_PatientId_idx" ON "RecordingConsents" ("PatientId");
-CREATE UNIQUE INDEX "RecordingConsents_pkey" ON "RecordingConsents" ("Id");
-CREATE UNIQUE INDEX "RecoveryCodes_pkey" ON "RecoveryCodes" ("Id");
-CREATE INDEX "RecoveryCodes_ProviderId_idx" ON "RecoveryCodes" ("ProviderId");
 CREATE INDEX "Reminders_due_idx" ON "Reminders" ("ScheduledFor");
-CREATE UNIQUE INDEX "Reminders_pkey" ON "Reminders" ("Id");
-CREATE UNIQUE INDEX "RetentionRules_pkey" ON "RetentionRules" ("Id");
-CREATE UNIQUE INDEX "RetentionRules_Provider_Kind_key" ON "RetentionRules" ("ProviderId","RecordKind");
-CREATE UNIQUE INDEX "RoomSessions_AppointmentId_key" ON "RoomSessions" ("AppointmentId");
-CREATE UNIQUE INDEX "RoomSessions_pkey" ON "RoomSessions" ("Id");
 CREATE INDEX "ScaleApplications_Patient_Applied_idx" ON "ScaleApplications" ("PatientId","InstrumentId","AppliedAt");
-CREATE UNIQUE INDEX "ScaleApplications_pkey" ON "ScaleApplications" ("Id");
-CREATE UNIQUE INDEX "ServiceOfferings_pkey" ON "ServiceOfferings" ("Id");
 CREATE INDEX "ServiceOfferings_Provider_idx" ON "ServiceOfferings" ("ProviderId");
 CREATE INDEX "Sessions_PatientId_Start_idx" ON "Sessions" ("PatientId","ScheduledStart");
-CREATE UNIQUE INDEX "Sessions_pkey" ON "Sessions" ("Id");
 CREATE INDEX "Sessions_ProviderId_Start_idx" ON "Sessions" ("ProviderId","ScheduledStart");
-CREATE UNIQUE INDEX "ShareAccesses_pkey" ON "ShareAccesses" ("Id");
 CREATE INDEX "ShareAccesses_ShareLinkId_At_idx" ON "ShareAccesses" ("ShareLinkId","At");
 CREATE INDEX "ShareLinks_DocumentId_idx" ON "ShareLinks" ("DocumentId");
-CREATE UNIQUE INDEX "ShareLinks_pkey" ON "ShareLinks" ("Id");
-CREATE UNIQUE INDEX "ShareLinks_TokenHash_key" ON "ShareLinks" ("TokenHash");
-CREATE UNIQUE INDEX "SpecialistTitles_pkey" ON "SpecialistTitles" ("Id");
-CREATE UNIQUE INDEX "SpecialistTitles_Provider_Title_key" ON "SpecialistTitles" ("ProviderId","Title");
-CREATE UNIQUE INDEX "SpeechMarkers_pkey" ON "SpeechMarkers" ("Id");
 CREATE INDEX "SpeechMarkers_SessionId_idx" ON "SpeechMarkers" ("SessionId");
 CREATE INDEX "Subscriptions_PaddleSubscriptionId_idx" ON "Subscriptions" ("PaddleSubscriptionId");
-CREATE UNIQUE INDEX "Subscriptions_pkey" ON "Subscriptions" ("Id");
-CREATE UNIQUE INDEX "Subscriptions_ProviderId_key" ON "Subscriptions" ("ProviderId");
 CREATE INDEX "ThemeTags_NoteId_idx" ON "ThemeTags" ("NoteId");
-CREATE UNIQUE INDEX "ThemeTags_pkey" ON "ThemeTags" ("Id");
 CREATE INDEX "ThemeTags_TermId_idx" ON "ThemeTags" ("TermId");
-CREATE UNIQUE INDEX "ThemeTerms_pkey" ON "ThemeTerms" ("Id");
-CREATE UNIQUE INDEX "ThemeTerms_Vocab_Code_key" ON "ThemeTerms" ("VocabularyId","Code");
 CREATE INDEX "ThemeTerms_VocabularyId_idx" ON "ThemeTerms" ("VocabularyId");
-CREATE UNIQUE INDEX "ThemeVocabularies_pkey" ON "ThemeVocabularies" ("Id");
-CREATE UNIQUE INDEX "ThemeVocabularies_Version_key" ON "ThemeVocabularies" ("Version");
 CREATE INDEX "TissGuides_InsurerId_idx" ON "TissGuides" ("InsurerId");
 CREATE INDEX "TissGuides_NoteId_idx" ON "TissGuides" ("NoteId");
-CREATE UNIQUE INDEX "TissGuides_pkey" ON "TissGuides" ("Id");
-CREATE UNIQUE INDEX "Transcripts_pkey" ON "Transcripts" ("Id");
-CREATE UNIQUE INDEX "Transcripts_SessionId_key" ON "Transcripts" ("SessionId");
 CREATE INDEX "TreatmentPlans_PatientId_idx" ON "TreatmentPlans" ("PatientId");
-CREATE UNIQUE INDEX "TreatmentPlans_pkey" ON "TreatmentPlans" ("Id");
-CREATE UNIQUE INDEX "UsageCounters_pkey" ON "UsageCounters" ("ProviderId","Period");
-CREATE UNIQUE INDEX "WebhookEvents_ExternalEventId_key" ON "WebhookEvents" ("ExternalEventId");
-CREATE UNIQUE INDEX "WebhookEvents_pkey" ON "WebhookEvents" ("Id");
 CREATE INDEX "WebhookEvents_unprocessed_idx" ON "WebhookEvents" ("ReceivedAt");
 ALTER TABLE "AccessLogs" ADD CONSTRAINT "AccessLogs_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "AccountExports" ADD CONSTRAINT "AccountExports_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
@@ -986,6 +889,9 @@ ALTER TABLE "BookingHolds" ADD CONSTRAINT "BookingHolds_ConvertedAppointmentId_f
 ALTER TABLE "BookingHolds" ADD CONSTRAINT "BookingHolds_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "BookingHolds" ADD CONSTRAINT "BookingHolds_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "BookingPolicies" ADD CONSTRAINT "BookingPolicies_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
+ALTER TABLE "BreakGlassGrants" ADD CONSTRAINT "BreakGlassGrants_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
+ALTER TABLE "BreakGlassGrants" ADD CONSTRAINT "BreakGlassGrants_StaffId_fkey" FOREIGN KEY ("StaffId") REFERENCES "Staff"("Id") ON DELETE RESTRICT;
+ALTER TABLE "BreakGlassGrants" ADD CONSTRAINT "BreakGlassGrants_AuthorizedBy_fkey" FOREIGN KEY ("AuthorizedBy") REFERENCES "Staff"("Id") ON DELETE RESTRICT;
 ALTER TABLE "CalendarConnections" ADD CONSTRAINT "CalendarConnections_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE SET NULL;
 ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
@@ -1023,7 +929,6 @@ ALTER TABLE "Notes" ADD CONSTRAINT "Notes_Session_fk" FOREIGN KEY ("SessionId") 
 ALTER TABLE "NoteSections" ADD CONSTRAINT "NoteSections_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE CASCADE;
 ALTER TABLE "Notifications" ADD CONSTRAINT "Notifications_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientAccounts" ADD CONSTRAINT "PatientAccounts_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
-ALTER TABLE "PatientAuthTokens" ADD CONSTRAINT "PatientAuthTokens_AccountId_fkey" FOREIGN KEY ("AccountId") REFERENCES "PatientAccounts"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_TermId_fkey" FOREIGN KEY ("TermId") REFERENCES "ThemeTerms"("Id") ON DELETE SET NULL;
@@ -1040,7 +945,6 @@ ALTER TABLE "ProviderInstrumentOptIns" ADD CONSTRAINT "ProviderInstrumentOptIns_
 ALTER TABLE "ProviderProfiles" ADD CONSTRAINT "ProviderProfiles_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "RecordingConsents" ADD CONSTRAINT "RecordingConsents_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "RecordingConsents" ADD CONSTRAINT "RecordingConsents_TreatmentPlanId_fkey" FOREIGN KEY ("TreatmentPlanId") REFERENCES "TreatmentPlans"("Id") ON DELETE SET NULL;
-ALTER TABLE "RecoveryCodes" ADD CONSTRAINT "RecoveryCodes_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "Reminders" ADD CONSTRAINT "Reminders_AppointmentId_fkey" FOREIGN KEY ("AppointmentId") REFERENCES "Appointments"("Id") ON DELETE CASCADE;
 ALTER TABLE "RetentionRules" ADD CONSTRAINT "RetentionRules_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "RoomSessions" ADD CONSTRAINT "RoomSessions_AppointmentId_fkey" FOREIGN KEY ("AppointmentId") REFERENCES "Appointments"("Id") ON DELETE CASCADE;
@@ -1070,4 +974,4 @@ ALTER TABLE "Transcripts" ADD CONSTRAINT "Transcripts_NoteId_fkey" FOREIGN KEY (
 ALTER TABLE "Transcripts" ADD CONSTRAINT "Transcripts_SessionId_fkey" FOREIGN KEY ("SessionId") REFERENCES "Sessions"("Id") ON DELETE CASCADE;
 ALTER TABLE "TreatmentPlans" ADD CONSTRAINT "TreatmentPlans_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "UsageCounters" ADD CONSTRAINT "UsageCounters_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
-CREATE VIEW "InstrumentSeries" TABLESPACE public AS (SELECT a."Id", a."PatientId", a."SessionId", a."InstrumentId", a."Score", a."AppliedAt", a."AppliedBy", a."RawAnswers", a."CreatedAt", i."Code" AS "InstrumentCode", i."SatepsiStatus" FROM "ScaleApplications" a JOIN "Instruments" i ON i."Id" = a."InstrumentId" WHERE i."SatepsiStatus" = ANY (ARRAY['nao_privativo'::text, 'favoravel'::text]));
+CREATE VIEW "InstrumentSeries" AS (SELECT a."Id", a."PatientId", a."SessionId", a."InstrumentId", a."Score", a."AppliedAt", a."AppliedBy", a."RawAnswers", a."CreatedAt", i."Code" AS "InstrumentCode", i."SatepsiStatus" FROM "ScaleApplications" a JOIN "Instruments" i ON i."Id" = a."InstrumentId" WHERE i."SatepsiStatus" = ANY (ARRAY['nao_privativo'::text, 'favoravel'::text]));
