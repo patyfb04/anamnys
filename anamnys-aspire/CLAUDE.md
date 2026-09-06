@@ -194,8 +194,8 @@ npm run lint    # eslint — root runs this across all workspaces
   nothing until both volumes are removed. The failure is silent: Keycloak starts healthy,
   just with the *old* realm. Recover with `aspire stop`, then `docker volume rm` on the
   Keycloak data volume and the Postgres data volume — remove them one at a time; passing
-  both names to a single `docker volume rm` invocation has been observed to fail on this
-  daemon — then `aspire start`.
+  both names to a single `docker volume rm` invocation may fail on some Docker daemons —
+  then `aspire start`.
 - **`INCLUDE_DEV_SEED` is the only gate stopping dev credentials from reaching
   production.** `keycloak/Dockerfile` runs a `jq` filter (`strip-dev-seed.jq`) that removes
   the `users` array and every `localhost` redirect/logout/web-origin entry from each realm
@@ -229,11 +229,12 @@ npm run lint    # eslint — root runs this across all workspaces
   must be encrypted at rest outside dev) and `KEYCLOAK_ADMIN_BASE_ADDRESS` (needed so the
   startup guard can query Keycloak's admin API for the dev-only test clients and refuse to
   boot if they still exist). Missing either throws `InvalidOperationException` at startup.
-- **`Parameters:keycloak-admin-username` and `keycloak-admin-password` must exist as user
-  secrets in `anamnys-aspire.AppHost`,** or the AppHost will not start on a fresh clone —
-  they are not defaulted the way `AddKeycloak`'s own bootstrap would default them, because
-  the server's outside-Development startup gate needs a stable, resolvable admin
-  credential.
+- **`Parameters:keycloak-admin-password` must exist as a user secret in
+  `anamnys-aspire.AppHost`,** or the AppHost will not start on a fresh clone — it is
+  declared `secret: true` with no default, unlike `keycloak-admin-username`, which
+  defaults to `"admin"` in `AppHost.cs` and needs no secret at all. Both are set
+  explicitly (rather than left to `AddKeycloak`'s own bootstrap defaults) because the
+  server's outside-Development startup gate needs a stable, resolvable admin credential.
 - **`anamnys-db-script.sql` had five pre-existing defects that meant it had never once
   successfully replayed against a fresh PostgreSQL:** a `CREATE SCHEMA "public"` (already
   exists on a fresh database and errors), 69 redundant `_pkey` indexes, 28 redundant
