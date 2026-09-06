@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Microsoft.AspNetCore.Authentication;
@@ -22,6 +23,23 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Fails closed outside Development if either dev-only Keycloak service-account
+// client (anamnys-test-provider, anamnys-test-owner) still exists in its realm.
+// Those clients carry a literal, publicly-known secret because the real BFF
+// clients disable the password grant — fine for local development, and a PHI
+// exposure everywhere else. Mirrors the fail-closed philosophy of the
+// DataProtection certificate gate in AuthenticationSetup: if the check itself
+// cannot run outside Development, that is also a startup failure, not a pass.
+using (var gateTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+{
+    await DevOnlyTestClientGuard.EnsureNoDevOnlyTestClientsExistAsync(
+        app.Environment.IsDevelopment(),
+        app.Configuration["KEYCLOAK_ADMIN_USERNAME"],
+        app.Configuration["KEYCLOAK_ADMIN_PASSWORD"],
+        app.Services.GetRequiredService<IHttpClientFactory>().CreateClient("keycloak"),
+        gateTimeout.Token);
+}
+
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();
 
@@ -45,23 +63,27 @@ if (app.Environment.IsDevelopment())
 
 app.UseOutputCache();
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
+// PHI lives behind provider and patient credentials only. The owners realm is
+// absent from this list on purpose: an owner credential is not an
+// authenticated principal here at all, so it fails with 401 rather than 403.
+// See design/specs/2026-09-05-keycloak-implementation-design.md §2 and §4.
+var phi = app.MapGroup("/api/phi")
+    .RequireAuthorization(policy => policy
+        .AddAuthenticationSchemes(
+            AuthSchemes.ProviderCookie,
+            AuthSchemes.PatientCookie,
+            AuthSchemes.ProviderBearer,
+            AuthSchemes.PatientBearer)
+        .RequireAuthenticatedUser());
 
-var api = app.MapGroup("/api");
-api.MapGet("weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.CacheOutput(p => p.Expire(TimeSpan.FromSeconds(5)))
-.WithName("GetWeatherForecast");
+phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
+
+var admin = app.MapGroup("/api/admin")
+    .RequireAuthorization(policy => policy
+        .AddAuthenticationSchemes(AuthSchemes.OwnerCookie, AuthSchemes.OwnerBearer)
+        .RequireAuthenticatedUser());
+
+admin.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 
 app.MapAuthEndpoints();
 
@@ -70,8 +92,3 @@ app.MapDefaultEndpoints();
 app.UseFileServer();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

@@ -6,6 +6,12 @@ var providerClientSecret = builder.AddParameter("provider-client-secret", secret
 var patientClientSecret = builder.AddParameter("patient-client-secret", secret: true);
 var ownerClientSecret = builder.AddParameter("owner-client-secret", secret: true);
 
+// Explicit, rather than left to AddKeycloak's own bootstrap defaults, so the
+// server's outside-Development startup gate (DevOnlyTestClientGuard) has a
+// stable, resolvable admin credential to query Keycloak's admin API with.
+var keycloakAdminUsername = builder.AddParameter("keycloak-admin-username", "admin");
+var keycloakAdminPassword = builder.AddParameter("keycloak-admin-password", secret: true);
+
 var postgres = builder.AddPostgres("postgres")
     .WithDataVolume();
 
@@ -29,7 +35,7 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
 // Fixed port, not a dynamic one: cookies and redirect URIs are bound to the
 // origin, so a port that moves between AppHost restarts invalidates every
 // session and every registered redirect URI.
-var keycloak = builder.AddKeycloak("keycloak", 8080)
+var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keycloakAdminPassword)
     .WithDockerfile("../keycloak")
     .WithPostgres(keycloakDb)
     .WithDataVolume()
@@ -41,6 +47,14 @@ var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WaitFor(keycloakDb);
 
 server.WithReference(keycloak).WaitFor(keycloak);
+
+// Lets the server's outside-Development startup gate (DevOnlyTestClientGuard)
+// query Keycloak's admin API for the dev-only test service-account clients.
+// In a real non-Development deployment these would come from that
+// environment's own secrets, not from this local dev orchestrator.
+server
+    .WithEnvironment("KEYCLOAK_ADMIN_USERNAME", keycloakAdminUsername)
+    .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword);
 
 // Three SPAs, one server. Each is published into a sub-path of the server's
 // wwwroot so all three stay same-origin with the API — which is what lets the

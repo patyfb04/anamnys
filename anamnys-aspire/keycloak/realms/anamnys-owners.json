@@ -409,6 +409,28 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "anamnys-test-owner",
+      "name": "Integration test service account (development only)",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "test-only-not-a-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience-anamnys-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "anamnys-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
     }
   ]
 }
