@@ -21,10 +21,21 @@ export default defineConfig({
     },
   },
   server: {
+    // Fixed, not Vite's auto-picked default: the OIDC redirect_uri the server builds for
+    // this realm is derived from the Host header of the request that reaches it, so the
+    // dev origin has to be stable across restarts to stay registered in Keycloak.
+    port: 5275,
+    strictPort: true,
     proxy: {
       // Aspire injects SERVER_HTTP from the AppHost's WithReference(server).
       // Plain HTTP avoids negotiating the ASP.NET dev certificate on a
       // localhost-to-localhost hop. `ws` covers the SignalR hubs.
+      //
+      // No /auth or /signin-oidc-* entries here: this app is the public
+      // marketing site with no login flow of its own (it only calls
+      // /api/auth/me to reflect session state in the header). The owners
+      // realm's dev origin lives on apps/admin (port 5276), the SPA that
+      // actually authenticates against it.
       '/api': { target: process.env.SERVER_HTTP, changeOrigin: true, ws: true },
       '/hubs': { target: process.env.SERVER_HTTP, changeOrigin: true, ws: true },
     },

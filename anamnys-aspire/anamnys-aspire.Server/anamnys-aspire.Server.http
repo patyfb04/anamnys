@@ -1,1 +1,37 @@
 @Server_HostAddress = http://localhost:5346
+
+### Begin provider login (open in a browser — this returns a 302 to Keycloak)
+GET {{Server_HostAddress}}/auth/provider/login
+
+###
+
+### Begin patient login (open in a browser — this returns a 302 to Keycloak)
+GET {{Server_HostAddress}}/auth/patient/login
+
+###
+
+### Begin owner login (open in a browser — this returns a 302 to Keycloak)
+GET {{Server_HostAddress}}/auth/owner/login
+
+###
+
+### Current session (requires the __Host-anamnys-provider, __Host-anamnys-patient
+### or __Host-anamnys-owner cookie — send from a browser session, not this file)
+GET {{Server_HostAddress}}/api/auth/me
+
+###
+
+### End the provider session
+POST {{Server_HostAddress}}/auth/provider/logout
+
+###
+
+### End the patient session
+POST {{Server_HostAddress}}/auth/patient/logout
+
+###
+
+### End the owner session
+POST {{Server_HostAddress}}/auth/owner/logout
+
+###

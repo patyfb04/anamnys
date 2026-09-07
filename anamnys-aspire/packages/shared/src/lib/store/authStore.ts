@@ -1,84 +1,42 @@
 import { create } from "zustand";
-import type { AuthUser, Specialty } from "@anamnys/shared/lib/types";
+import type { AuthUser } from "@anamnys/shared/lib/types";
 import { authApi } from "@anamnys/shared/api/auth";
+
+type Realm = "provider" | "patient" | "owner";
 
 interface AuthState {
   user: AuthUser | null;
   isLoading: boolean;
-  isSubmitting: boolean;
   error: string | null;
-  pendingTwoFactor: { challengeToken: string } | null;
 
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, specialty: Specialty) => Promise<void>;
-  completeTwoFactorLogin: (code: string) => Promise<void>;
-  cancelTwoFactor: () => void;
-  logout: () => Promise<void>;
+  login: (realm: Realm, returnUrl?: string) => void;
+  logout: (realm: Realm) => void;
   loadUser: () => Promise<void>;
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  // Starts true (not false, unlike the source app's native-navigator version) — the (app)
-  // layout's client-side auth gate (Task 12) checks `!isLoading && !user` in a useEffect that
-  // fires before Providers' loadUser()-calling effect (child effects fire before ancestor
-  // effects on initial mount). Defaulting to false would make that gate redirect a genuinely
-  // authenticated user to /login for one frame on every fresh page load, before the session
-  // check even starts.
+  // Starts true: the (app) layout's auth gate checks `!isLoading && !user` in a
+  // useEffect that fires before the ancestor effect calling loadUser(), because
+  // child effects run first on initial mount. Defaulting to false would bounce a
+  // genuinely authenticated user to login for one frame on every page load.
   isLoading: true,
-  isSubmitting: false,
   error: null,
-  pendingTwoFactor: null,
 
-  login: async (email, password) => {
-    set({ isSubmitting: true, error: null });
-    try {
-      const res = await authApi.login({ email, password });
-      if (res.requiresTwoFactor && res.challengeToken) {
-        set({ pendingTwoFactor: { challengeToken: res.challengeToken }, isSubmitting: false });
-      } else {
-        set({ user: res.user ?? null, isSubmitting: false });
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Login failed.";
-      set({ error: message, isSubmitting: false });
-    }
+  // A full-page navigation, not a fetch. The BFF answers with a 302 to Keycloak
+  // and the whole document has to follow it.
+  login: (realm, returnUrl) => {
+    const query = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : "";
+    window.location.assign(`/auth/${realm}/login${query}`);
   },
 
-  register: async (email, password, name, specialty) => {
-    set({ isSubmitting: true, error: null });
-    try {
-      const res = await authApi.register({ email, password, name, specialty });
-      if (res.requiresTwoFactor && res.challengeToken) {
-        set({ pendingTwoFactor: { challengeToken: res.challengeToken }, isSubmitting: false });
-      } else {
-        set({ user: res.user ?? null, isSubmitting: false });
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Registration failed.";
-      set({ error: message, isSubmitting: false });
-    }
-  },
-
-  completeTwoFactorLogin: async (code) => {
-    const challenge = get().pendingTwoFactor;
-    if (!challenge) return;
-    set({ isSubmitting: true, error: null });
-    try {
-      const res = await authApi.completeTwoFactorLogin(challenge.challengeToken, code);
-      set({ user: res.user ?? null, pendingTwoFactor: null, isSubmitting: false });
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Invalid code.";
-      set({ error: message, isSubmitting: false });
-    }
-  },
-
-  cancelTwoFactor: () => set({ pendingTwoFactor: null, error: null }),
-
-  logout: async () => {
-    await authApi.logout();
-    set({ user: null, error: null, pendingTwoFactor: null });
+  // Also a full-page navigation, not a fetch — see authApi.logout. Nothing is
+  // set() afterwards on purpose: the document is on its way to Keycloak and
+  // back to the app's landing path, so there is no state left to clear, and
+  // clearing it would only make an XHR-shaped logout look like it worked.
+  logout: (realm) => {
+    authApi.logout(realm);
   },
 
   loadUser: async () => {

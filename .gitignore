@@ -4,6 +4,8 @@ anamnys-aspire/anamnys-aspire.Server/bin/
 anamnys-aspire/anamnys-aspire.Server/obj/
 anamnys-aspire/anamnys-aspire.AppHost/bin/
 anamnys-aspire/anamnys-aspire.AppHost/obj/
+anamnys-aspire/anamnys-aspire.Tests/bin/
+anamnys-aspire/anamnys-aspire.Tests/obj/
 
 # esproj build output (dir names can contain a literal backslash on macOS)
 anamnys-aspire/apps/*/obj*
@@ -23,3 +25,7 @@ specs/
 .vs/
 *.user
 *.userosscache
+
+# tsc -b build info, emitted at the project root when tsBuildInfoFile isn't
+# redirected elsewhere (apps/keycloak-theme's tsconfig.json)
+anamnys-aspire/apps/*/tsconfig.tsbuildinfo
