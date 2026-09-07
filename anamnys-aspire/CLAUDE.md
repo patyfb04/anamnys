@@ -111,8 +111,57 @@ them opportunistically rather than in a dedicated pass.
 
 ## Common Commands
 
-**Docker must be running** — the AppHost starts container-backed resources (Redis today,
-Postgres and Keycloak later).
+**Docker must be running** — the AppHost starts container-backed resources: Redis,
+Postgres, and Keycloak. **Apache Maven must also be installed** — `keycloakify build`
+shells out to it to package the login theme.
+
+### First-time setup on a new machine
+
+Four AppHost parameters are declared `secret: true` with no default, so they have no
+value until you set one. User secrets live in `~/.microsoft/usersecrets/<UserSecretsId>/`
+and are deliberately never committed, so **every developer sets their own on every
+machine** — a working checkout on someone else's laptop does not carry them across.
+
+Without them, `aspire run` stops and asks you to resolve the parameters.
+
+`dotnet user-secrets` reads `<UserSecretsId>` from the `.csproj` in the current
+directory, so it must run against the AppHost project — `anamnys-aspire.AppHost/`,
+the inner directory, not the `anamnys-aspire/` solution directory above it. Passing
+`--project` avoids depending on where you are:
+
+```bash
+# from anamnys-aspire/ (the solution directory)
+P=anamnys-aspire.AppHost
+dotnet user-secrets --project $P set "Parameters:provider-client-secret"  "$(openssl rand -hex 32)"
+dotnet user-secrets --project $P set "Parameters:patient-client-secret"   "$(openssl rand -hex 32)"
+dotnet user-secrets --project $P set "Parameters:owner-client-secret"     "$(openssl rand -hex 32)"
+dotnet user-secrets --project $P set "Parameters:keycloak-admin-password" "$(openssl rand -hex 32)"
+
+# check what landed (values are shown, so not in a shared terminal)
+dotnet user-secrets --project $P list
+```
+
+**Do not copy these values from a teammate.** Each of the three client secrets is read in
+exactly two places that must agree *with each other on one machine* and nowhere else:
+Keycloak substitutes it into the realm JSON as `${ANAMNYS_*_CLIENT_SECRET}` at import, and
+the server uses it for the token exchange. Nothing shared or deployed depends on your
+value, so generating your own is both sufficient and safer than passing credentials around.
+
+`Parameters:keycloak-admin-username` needs nothing — it defaults to `"admin"` in
+`AppHost.cs`. `postgres-password`, `keycloak-password` and `cache-password` are generated
+by Aspire on first run.
+
+**If you have already run the AppHost once before setting these**, wipe the data volumes
+before your next start. Realm import only runs when the realm does not exist, so Keycloak
+still holds the client secrets from that earlier run and will reject the new ones — and it
+fails as an opaque client-authentication error, not as anything naming the mismatch:
+
+```bash
+aspire stop
+docker volume ls | grep -E 'keycloak-data|postgres-data'
+docker volume rm <keycloak-data>    # one at a time; passing both names can fail
+docker volume rm <postgres-data>
+```
 
 ### Aspire (from this directory)
 
@@ -230,7 +279,9 @@ npm run lint    # eslint — root runs this across all workspaces
   startup guard can query Keycloak's admin API for the dev-only test clients and refuse to
   boot if they still exist). Missing either throws `InvalidOperationException` at startup.
 - **`Parameters:keycloak-admin-password` must exist as a user secret in
-  `anamnys-aspire.AppHost`,** or the AppHost will not start on a fresh clone — it is
+  `anamnys-aspire.AppHost`** — it is one of four such parameters; see "First-time setup
+  on a new machine" above for the full set and the volume caveat. Without it the AppHost
+  will not start on a fresh clone, because it is
   declared `secret: true` with no default, unlike `keycloak-admin-username`, which
   defaults to `"admin"` in `AppHost.cs` and needs no secret at all. Both are set
   explicitly (rather than left to `AddKeycloak`'s own bootstrap defaults) because the
