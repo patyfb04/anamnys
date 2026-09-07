@@ -28,3 +28,4 @@ anamnys-aspire/apps/*/.vite/
 # redirected elsewhere (apps/keycloak-theme's tsconfig.json)
 anamnys-aspire/apps/*/tsconfig.tsbuildinfo
 specs/*
+*.txt
