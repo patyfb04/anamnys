@@ -28,3 +28,4 @@ anamnys-aspire/apps/*/.vite/
 # tsc -b build info, emitted at the project root when tsBuildInfoFile isn't
 # redirected elsewhere (apps/keycloak-theme's tsconfig.json)
 anamnys-aspire/apps/*/tsconfig.tsbuildinfo
+specs/*
