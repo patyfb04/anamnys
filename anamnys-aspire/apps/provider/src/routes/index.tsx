@@ -5,6 +5,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 // /login when there is no session.
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    throw redirect({ to: "/patients" });
+    throw redirect({ to: "/dashboard" });
   },
 });

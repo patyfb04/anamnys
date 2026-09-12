@@ -2,6 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
+  LayoutDashboard,
   Users,
   Calendar,
   Mic,
@@ -26,6 +27,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", Icon: LayoutDashboard, labelKey: "nav.dashboard", matchPrefix: "/dashboard" },
   { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
   { href: "/calendar", Icon: Calendar, labelKey: "nav.calendar", matchPrefix: "/calendar", feature: "calendar" },
   { href: "/live-session", Icon: Mic, labelKey: "nav.liveSession", matchPrefix: "/live-session", feature: "liveSession" },

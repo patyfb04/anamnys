@@ -182,9 +182,9 @@ function WelcomePage() {
           </FadeInOnScroll>
 
           <div className="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-3 mb-8">
-            <a href={appUrls.providerRegister} className="sm:min-w-[220px]">
+            <Link to={appUrls.getStarted} className="sm:min-w-[220px]">
               <Button title={t("welcome.startTrial")} rounded="md" />
-            </a>
+            </Link>
             <Link
               to="/demo"
               className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surfaceContainerLowest border border-outlineVariant rounded-radii-md py-3.5 px-7 hover:bg-surfaceContainerLow transition-colors"
@@ -263,12 +263,12 @@ function WelcomePage() {
               {t("welcome.ctaBody")}
             </p>
             <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
-              <a
-                href={appUrls.providerRegister}
+              <Link
+                to={appUrls.getStarted}
                 className="bg-onPrimary text-primary rounded-radii-md py-3.5 px-10 text-label-lg text-[15px] text-center hover:opacity-90 transition-opacity"
               >
                 {t("welcome.ctaGetStarted")}
-              </a>
+              </Link>
             </div>
           </FadeInOnScroll>
         </div>

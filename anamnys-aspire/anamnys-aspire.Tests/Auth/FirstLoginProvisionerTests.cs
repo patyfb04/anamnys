@@ -22,6 +22,8 @@ public class FirstLoginProvisionerTests
         string email,
         string name,
         bool emailVerified = true,
+        string? crpNumber = null,
+        string? crpRegion = null,
         params string[] roles)
     {
         var claims = new List<Claim>
@@ -31,6 +33,14 @@ public class FirstLoginProvisionerTests
             new("name", name),
             new("email_verified", emailVerified ? "true" : "false"),
         };
+        if (crpNumber is not null)
+        {
+            claims.Add(new Claim("crpNumber", crpNumber));
+        }
+        if (crpRegion is not null)
+        {
+            claims.Add(new Claim("crpRegion", crpRegion));
+        }
         claims.AddRange(roles.Select(role => new Claim("roles", role)));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
     }
@@ -54,6 +64,48 @@ public class FirstLoginProvisionerTests
         row.Id.Should().Be(localId);
         row.ExternalSubject.Should().Be(subject);
         row.Email.Should().Be("clinician@example.com");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenProviderRegisters_PersistsCrpNumberAndRegionFromClaims()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db);
+        var subject = Guid.NewGuid();
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "clinician@example.com", "A Clinician", crpNumber: "123456", crpRegion: "06"),
+            Realms.Providers,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Providers.SingleAsync(TestContext.Current.CancellationToken);
+        row.CrpNumber.Should().Be("123456");
+        row.CrpRegion.Should().Be("06");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenProviderTokenCarriesNoCrpClaims_LeavesBothNull()
+    {
+        // Arrange — a provider that authenticated before self-registration shipped
+        // (or logged in via a token that simply carries neither claim) must not throw;
+        // the Providers_Crp_ck constraint accepts both-null.
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db);
+        var subject = Guid.NewGuid();
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "clinician@example.com", "A Clinician"),
+            Realms.Providers,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Providers.SingleAsync(TestContext.Current.CancellationToken);
+        row.CrpNumber.Should().BeNull();
+        row.CrpRegion.Should().BeNull();
     }
 
     [Fact]

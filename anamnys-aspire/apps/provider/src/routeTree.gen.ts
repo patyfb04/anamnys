@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppNotesNoteIdRouteImport } from './routes/_app/notes/$noteId'
 import { Route as AppPatientsIndexRouteImport } from './routes/_app/patients/index'
 import { Route as AppPatientsNewRouteImport } from './routes/_app/patients/new'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppNotesNoteIdRoute = AppNotesNoteIdRouteImport.update({
   id: '/notes/$noteId',
@@ -75,6 +81,7 @@ const AppPatientsPatientIdNotesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/dashboard': typeof AppDashboardRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
   '/patients/new': typeof AppPatientsNewRoute
   '/settings/account': typeof AppSettingsAccountRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/dashboard': typeof AppDashboardRoute
   '/notes/$noteId': typeof AppNotesNoteIdRoute
   '/patients/new': typeof AppPatientsNewRoute
   '/settings/account': typeof AppSettingsAccountRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/_app/dashboard': typeof AppDashboardRoute
   '/_app/notes/$noteId': typeof AppNotesNoteIdRoute
   '/_app/patients/new': typeof AppPatientsNewRoute
   '/_app/settings/account': typeof AppSettingsAccountRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/dashboard'
     | '/notes/$noteId'
     | '/patients/new'
     | '/settings/account'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/dashboard'
     | '/notes/$noteId'
     | '/patients/new'
     | '/settings/account'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/_app/dashboard'
     | '/_app/notes/$noteId'
     | '/_app/patients/new'
     | '/_app/settings/account'
@@ -165,6 +177,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/notes/$noteId': {
       id: '/_app/notes/$noteId'
@@ -226,6 +245,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppDashboardRoute: typeof AppDashboardRoute
   AppNotesNoteIdRoute: typeof AppNotesNoteIdRoute
   AppPatientsNewRoute: typeof AppPatientsNewRoute
   AppSettingsAccountRoute: typeof AppSettingsAccountRoute
@@ -237,6 +257,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppDashboardRoute: AppDashboardRoute,
   AppNotesNoteIdRoute: AppNotesNoteIdRoute,
   AppPatientsNewRoute: AppPatientsNewRoute,
   AppSettingsAccountRoute: AppSettingsAccountRoute,

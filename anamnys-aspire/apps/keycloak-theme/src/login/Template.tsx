@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { brandingFor } from './branding';
+import signUpImage from '../assets/sign-up.jpg';
 import type { KcContext } from './KcContext';
 import type { I18n } from './i18n';
 
@@ -39,8 +40,8 @@ export function Template({ kcContext, i18n, headline, subhead, children }: Props
           <div className="hidden md:flex md:flex-[5] flex-col">
             <h1 className="text-headline-lg text-[30px] text-onSurface mb-2.5">{headline}</h1>
             <p className="text-body-lg text-onSurfaceVariant mb-6 max-w-[360px]">{subhead}</p>
-            <div className="rounded-radii-lg overflow-hidden bg-surfaceContainerHigh shadow-xl relative flex-1 min-h-[240px]">
-              <img src="/sign-up.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="rounded-radii-lg overflow-hidden bg-surfaceContainerHigh shadow-xl relative flex-1 min-h-[240px] border-8 border-white">
+              <img src={signUpImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 h-[55%] bg-primary/30" />
               <div className="absolute left-4 right-4 bottom-4 flex items-center gap-2 bg-white/85 border border-white/50 rounded-radii-md px-3 py-2.5">
                 <ShieldCheck size={16} style={{ color: branding.accent }} />
@@ -50,7 +51,7 @@ export function Template({ kcContext, i18n, headline, subhead, children }: Props
           </div>
 
           <div className="flex-1 md:flex-[7]">
-            <div className="bg-surfaceContainerLowest rounded-radii-xl border border-surfaceContainerHighest p-4 md:p-6 shadow-xl">
+            <div className="bg-surfaceContainerLowest rounded-radii-xl border border-primary p-4 md:p-6 shadow-xl">
               {children}
             </div>
           </div>
