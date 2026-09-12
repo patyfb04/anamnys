@@ -67,6 +67,30 @@ var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keyc
     .WithEnvironment("ANAMNYS_PATIENT_CLIENT_SECRET", patientClientSecret)
     .WithEnvironment("ANAMNYS_OWNER_CLIENT_SECRET", ownerClientSecret)
     .WithEnvironment("ANAMNYS_APP_ORIGIN", server.GetEndpoint("http"))
+    // AddKeycloak only registers "http" (container :8080) and "management" (container
+    // :9000) as Aspire-tracked endpoints — Keycloak's own realm/auth HTTPS listener on
+    // container :8443 (see the container's own startup log: "Listening on: http://
+    // 0.0.0.0:8080 and https://0.0.0.0:8443") isn't modeled at all. Reaching it matters:
+    // "http" isn't published to the host at all (only reachable from a bare host process,
+    // like this server project, through Aspire DCP's synthetic tunnel proxy), and that
+    // tunnel has proven unreliable for anything beyond a trivial request against this
+    // Keycloak image (mislabelled scheme, a corrupted TLS frame, then a response that
+    // truncates mid-body for the full discovery document) — see
+    // AuthenticationSetup.cs's keycloakAuthorityBase comment.
+    //
+    // WithHttpsEndpoint(targetPort: 8443, name: "https") looks like the fix — it makes
+    // Docker publish :8443 directly, bypassing that tunnel entirely — but declaring it
+    // reproducibly breaks the container's own Postgres connection at startup (it fails to
+    // resolve postgres.dev.internal, even though postgres.dev.internal resolves fine for
+    // every other resource and postgres is already up by the time Keycloak starts).
+    // Something about how Aspire wires up an extra endpoint on this resource disturbs its
+    // dependency/network timing — not yet understood, and not worth blocking this feature
+    // on. WithContainerRuntimeArgs bypasses Aspire's endpoint bookkeeping completely: it's
+    // a raw `docker run -p`, so Aspire never learns this port exists and the code path
+    // above that breaks the container's startup never runs. Fixed 8443:8443, matching the
+    // fixed-port convention the four SPA dev servers already use, since nothing here
+    // tracks or reports back a dynamically-assigned one.
+    .WithContainerRuntimeArgs("-p", "8443:8443")
     .WaitFor(keycloakDb);
 
 server.WithReference(keycloak).WaitFor(keycloak);
@@ -83,7 +107,16 @@ server.WithReference(keycloak).WaitFor(keycloak);
 server
     .WithEnvironment("KEYCLOAK_ADMIN_USERNAME", keycloakAdminUsername)
     .WithEnvironment("KEYCLOAK_ADMIN_PASSWORD", keycloakAdminPassword)
-    .WithEnvironment("KEYCLOAK_ADMIN_BASE_ADDRESS", keycloak.GetEndpoint("http"));
+    .WithEnvironment("KEYCLOAK_ADMIN_BASE_ADDRESS", keycloak.GetEndpoint("http"))
+    // The OIDC/JwtBearer backchannel (AuthenticationSetup.cs) needs its own address,
+    // separate from KEYCLOAK_ADMIN_BASE_ADDRESS above: that "http" endpoint isn't actually
+    // published by Docker, so reaching it from a bare host process goes through DCP's
+    // synthetic tunnel proxy, which has proven unreliable for anything past a trivial
+    // request. "localhost:8443" (the raw `-p 8443:8443` published above — see that
+    // comment for why it's a raw docker arg and not a named Aspire endpoint) doesn't have
+    // that problem: Docker publishes it directly to a real, fixed host port, so this is a
+    // plain string, not something Aspire resolves.
+    .WithEnvironment("KEYCLOAK_PUBLIC_HTTPS_ADDRESS", "https://localhost:8443");
 
 // Three SPAs, one server. Each is published into a sub-path of the server's
 // wwwroot so all three stay same-origin with the API — which is what lets the

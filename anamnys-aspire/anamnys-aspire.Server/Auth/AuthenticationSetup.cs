@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Authentication;
@@ -96,6 +97,18 @@ public static class AuthenticationSetup
 
         var authentication = builder.Services.AddAuthentication();
 
+        // The OIDC/JwtBearer backchannel talks to Keycloak's "https" endpoint
+        // (KEYCLOAK_PUBLIC_HTTPS_ADDRESS — see AppHost.cs), not the "http" one
+        // (KEYCLOAK_ADMIN_BASE_ADDRESS, used only by the admin guard above). The "http"
+        // endpoint isn't actually published by Docker, so reaching it from this bare host
+        // process routes through Aspire DCP's synthetic tunnel proxy, which has proven
+        // unreliable here in three different ways (mislabelled scheme, a corrupted TLS
+        // frame, and a response that truncates mid-body). "https" is genuinely published
+        // by Docker to a real host port, so it reaches Keycloak directly with no tunnel in
+        // the path — it just means real TLS against Keycloak's self-signed dev-mode
+        // certificate, which BackchannelHttpHandler below accepts in Development only.
+        var keycloakAuthorityBase = builder.Configuration["KEYCLOAK_PUBLIC_HTTPS_ADDRESS"];
+
         foreach (var wiring in Wirings)
         {
             var clientSecret = builder.Configuration[wiring.ClientSecretConfigKey]
@@ -156,6 +169,22 @@ public static class AuthenticationSetup
                 options.SignedOutRedirectUri = wiring.SignedOutPath;
                 options.MapInboundClaims = false;
                 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+                // AddKeycloakOpenIdConnect defaults Authority to the "https+http://keycloak"
+                // service-discovery pseudo-scheme — see the keycloakAuthorityBase comment
+                // above for why this points at the "https" endpoint explicitly instead.
+                options.Authority = $"{keycloakAuthorityBase}/realms/{wiring.Realm}";
+
+                // Keycloak's dev-mode "https" endpoint serves a self-signed certificate,
+                // which nothing on this machine trusts. Only Development bypasses
+                // validation; every other environment keeps full certificate checking.
+                if (builder.Environment.IsDevelopment())
+                {
+                    options.BackchannelHttpHandler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                    };
+                }
 
                 options.Scope.Clear();
                 options.Scope.Add("openid");
@@ -226,6 +255,27 @@ public static class AuthenticationSetup
                 // is put into these properties by AuthEndpoints' logout
                 // endpoint, which reads it before the cookie leg of the
                 // sign-out drops the ticket from Redis.
+                // Comecar's registration entry point reuses the ordinary login
+                // challenge (see AuthEndpoints.cs's /register route) with one
+                // difference: Keycloak exposes its registration form at a sibling
+                // URL to the login form, .../protocol/openid-connect/registrations
+                // instead of .../auth, accepting the exact same query parameters
+                // (client_id, redirect_uri, response_type, scope, state, nonce, PKCE
+                // challenge). Rewriting IssuerAddress here — after the framework has
+                // already built it from discovery, before the redirect is issued —
+                // is the standard way to reach it; there is no separate "action" the
+                // OIDC handler itself understands.
+                options.Events.OnRedirectToIdentityProvider = context =>
+                {
+                    if (context.Properties.Items.TryGetValue("kc_action", out var action) && action == "register")
+                    {
+                        context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress
+                            .Replace("/protocol/openid-connect/auth", "/protocol/openid-connect/registrations");
+                    }
+
+                    return Task.CompletedTask;
+                };
+
                 options.Events.OnRedirectToIdentityProviderForSignOut = context =>
                 {
                     var idToken = context.Properties.GetTokenValue("id_token");
@@ -242,6 +292,21 @@ public static class AuthenticationSetup
             {
                 options.Audience = "anamnys-api";
                 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+                // Same reasoning as the OIDC handler above — see the keycloakAuthorityBase
+                // comment. This scheme's ConfigurationManager would hit the same problem on
+                // its first discovery fetch, even though nothing mounts this scheme on a
+                // route yet.
+                options.Authority = $"{keycloakAuthorityBase}/realms/{wiring.Realm}";
+
+                if (builder.Environment.IsDevelopment())
+                {
+                    options.BackchannelHttpHandler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+                    };
+                }
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     NameClaimType = "preferred_username",
