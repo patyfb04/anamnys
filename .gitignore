@@ -29,3 +29,4 @@ anamnys-aspire/apps/*/.vite/
 anamnys-aspire/apps/*/tsconfig.tsbuildinfo
 specs/*
 *.txt
+**/src/routeTree.gen.ts
