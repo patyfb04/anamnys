@@ -67,12 +67,12 @@ export default function MarketingHeader({
           >
             {t("welcome.signIn")}
           </a>
-          <a
-            href={appUrls.providerRegister}
+          <Link
+            to={appUrls.getStarted}
             className="bg-primaryFixed text-onPrimaryFixedVariant rounded-radii-md px-4 py-2 text-label-lg text-[13px] hover:opacity-80 transition-opacity"
           >
             {t("welcome.getStarted")}
-          </a>
+          </Link>
         </div>
       </div>
     </header>

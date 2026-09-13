@@ -15,6 +15,7 @@ import { Route as MarketingAboutusRouteImport } from './routes/_marketing/aboutu
 import { Route as MarketingContactSupportRouteImport } from './routes/_marketing/contact-support'
 import { Route as MarketingDemoRouteImport } from './routes/_marketing/demo'
 import { Route as MarketingFaqRouteImport } from './routes/_marketing/faq'
+import { Route as MarketingGetStartedRouteImport } from './routes/_marketing/get-started'
 import { Route as MarketingPricingRouteImport } from './routes/_marketing/pricing'
 import { Route as MarketingPrivacyPolicyRouteImport } from './routes/_marketing/privacy-policy'
 import { Route as MarketingProductRouteImport } from './routes/_marketing/product'
@@ -50,6 +51,11 @@ const MarketingFaqRoute = MarketingFaqRouteImport.update({
   path: '/faq',
   getParentRoute: () => MarketingRoute,
 } as any)
+const MarketingGetStartedRoute = MarketingGetStartedRouteImport.update({
+  id: '/get-started',
+  path: '/get-started',
+  getParentRoute: () => MarketingRoute,
+} as any)
 const MarketingPricingRoute = MarketingPricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/contact-support': typeof MarketingContactSupportRoute
   '/demo': typeof MarketingDemoRoute
   '/faq': typeof MarketingFaqRoute
+  '/get-started': typeof MarketingGetStartedRoute
   '/pricing': typeof MarketingPricingRoute
   '/privacy-policy': typeof MarketingPrivacyPolicyRoute
   '/product': typeof MarketingProductRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/contact-support': typeof MarketingContactSupportRoute
   '/demo': typeof MarketingDemoRoute
   '/faq': typeof MarketingFaqRoute
+  '/get-started': typeof MarketingGetStartedRoute
   '/pricing': typeof MarketingPricingRoute
   '/privacy-policy': typeof MarketingPrivacyPolicyRoute
   '/product': typeof MarketingProductRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/_marketing/contact-support': typeof MarketingContactSupportRoute
   '/_marketing/demo': typeof MarketingDemoRoute
   '/_marketing/faq': typeof MarketingFaqRoute
+  '/_marketing/get-started': typeof MarketingGetStartedRoute
   '/_marketing/pricing': typeof MarketingPricingRoute
   '/_marketing/privacy-policy': typeof MarketingPrivacyPolicyRoute
   '/_marketing/product': typeof MarketingProductRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/demo'
     | '/faq'
+    | '/get-started'
     | '/pricing'
     | '/privacy-policy'
     | '/product'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/demo'
     | '/faq'
+    | '/get-started'
     | '/pricing'
     | '/privacy-policy'
     | '/product'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/_marketing/contact-support'
     | '/_marketing/demo'
     | '/_marketing/faq'
+    | '/_marketing/get-started'
     | '/_marketing/pricing'
     | '/_marketing/privacy-policy'
     | '/_marketing/product'
@@ -203,6 +215,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingFaqRouteImport
       parentRoute: typeof MarketingRoute
     }
+    '/_marketing/get-started': {
+      id: '/_marketing/get-started'
+      path: '/get-started'
+      fullPath: '/get-started'
+      preLoaderRoute: typeof MarketingGetStartedRouteImport
+      parentRoute: typeof MarketingRoute
+    }
     '/_marketing/pricing': {
       id: '/_marketing/pricing'
       path: '/pricing'
@@ -246,6 +265,7 @@ interface MarketingRouteChildren {
   MarketingContactSupportRoute: typeof MarketingContactSupportRoute
   MarketingDemoRoute: typeof MarketingDemoRoute
   MarketingFaqRoute: typeof MarketingFaqRoute
+  MarketingGetStartedRoute: typeof MarketingGetStartedRoute
   MarketingPricingRoute: typeof MarketingPricingRoute
   MarketingPrivacyPolicyRoute: typeof MarketingPrivacyPolicyRoute
   MarketingProductRoute: typeof MarketingProductRoute
@@ -258,6 +278,7 @@ const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingContactSupportRoute: MarketingContactSupportRoute,
   MarketingDemoRoute: MarketingDemoRoute,
   MarketingFaqRoute: MarketingFaqRoute,
+  MarketingGetStartedRoute: MarketingGetStartedRoute,
   MarketingPricingRoute: MarketingPricingRoute,
   MarketingPrivacyPolicyRoute: MarketingPrivacyPolicyRoute,
   MarketingProductRoute: MarketingProductRoute,

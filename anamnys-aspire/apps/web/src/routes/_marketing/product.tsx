@@ -92,12 +92,12 @@ function ProductPage() {
           {t("product.hero.subtitle")}
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a
-            href={appUrls.providerRegister}
+          <Link
+            to={appUrls.getStarted}
             className="w-full sm:w-auto text-center bg-primary text-onPrimary rounded-radii-md py-3 px-8 text-label-lg hover:opacity-90 transition-opacity shadow-sm"
           >
             {t("product.hero.ctaPrimary")}
-          </a>
+          </Link>
           <Link
             to="/demo"
             className="w-full sm:w-auto text-center border border-outlineVariant rounded-radii-md py-3 px-8 text-label-lg text-onSurface hover:bg-surfaceContainerLow transition-colors"
@@ -333,12 +333,12 @@ function ProductPage() {
           {t("product.finalCta.body")}
         </p>
         <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-3">
-          <a
-            href={appUrls.providerRegister}
+          <Link
+            to={appUrls.getStarted}
             className="bg-onPrimary text-primary rounded-radii-md py-3.5 px-10 text-label-lg text-[15px] text-center hover:opacity-90 transition-opacity"
           >
             {t("product.finalCta.ctaPrimary")}
-          </a>
+          </Link>
         </div>
       </div>
     </div>
