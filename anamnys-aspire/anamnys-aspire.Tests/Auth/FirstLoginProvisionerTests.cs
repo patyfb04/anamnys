@@ -140,12 +140,11 @@ public class FirstLoginProvisionerTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        // The InMemory provider enforces neither the NOT NULL on
-        // PatientAccounts.PatientId nor the FK to Patients, so this suite
-        // cannot catch an insert structurally the way Postgres would — the
-        // explicit zero-row assertion below is the only guard.
+        // The InMemory provider enforces neither the NOT NULL on FirstName/LastName nor
+        // any Postgres constraint, so this suite cannot catch an insert structurally the
+        // way Postgres would — the explicit zero-row assertion below is the only guard.
         await act.Should().ThrowAsync<InvalidOperationException>();
-        (await db.PatientAccounts.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
     [Fact]
@@ -153,14 +152,13 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var unclaimed = new PatientAccount
+        var unclaimed = new Patient
         {
             Id = Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
             Email = "patient@example.com",
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        db.PatientAccounts.Add(unclaimed);
+        db.Patients.Add(unclaimed);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db);
 
@@ -172,7 +170,7 @@ public class FirstLoginProvisionerTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
-        var row = await db.PatientAccounts.SingleAsync(TestContext.Current.CancellationToken);
+        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
         row.ExternalSubject.Should().BeNull();
     }
 
@@ -181,14 +179,13 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var unclaimed = new PatientAccount
+        var unclaimed = new Patient
         {
             Id = Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
             Email = "Patient@Example.com",
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        db.PatientAccounts.Add(unclaimed);
+        db.Patients.Add(unclaimed);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db);
         var subject = Guid.NewGuid();
@@ -201,7 +198,7 @@ public class FirstLoginProvisionerTests
 
         // Assert
         localId.Should().Be(unclaimed.Id);
-        var row = await db.PatientAccounts.SingleAsync(TestContext.Current.CancellationToken);
+        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
         row.ExternalSubject.Should().Be(subject);
     }
 
@@ -211,16 +208,15 @@ public class FirstLoginProvisionerTests
         // Arrange
         await using var db = NewContext();
         var subject = Guid.NewGuid();
-        var disabled = new PatientAccount
+        var disabled = new Patient
         {
             Id = Guid.NewGuid(),
-            PatientId = Guid.NewGuid(),
             Email = "patient@example.com",
             ExternalSubject = subject,
             DisabledAt = DateTimeOffset.UtcNow,
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        db.PatientAccounts.Add(disabled);
+        db.Patients.Add(disabled);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db);
 

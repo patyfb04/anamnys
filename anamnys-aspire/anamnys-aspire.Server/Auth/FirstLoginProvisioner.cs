@@ -153,17 +153,17 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
         return staff.Id;
     }
 
-    // Patients are never created here. A PatientAccount exists only because a
-    // provider created the Patient row and invited them, so a login with no
-    // matching account is an error, not a signal to create one.
+    // Patients are never created here yet — that's Task 3. A Patients row exists only
+    // because a provider already created it and invited that patient, so a login with no
+    // matching row is an error, not a signal to create one.
     private async Task<Guid> ResolvePatientAsync(
         ClaimsPrincipal principal,
         Guid subject,
         string email,
         CancellationToken cancellationToken)
     {
-        var bySubject = await db.PatientAccounts
-            .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken);
+        var bySubject = await db.Patients
+            .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
         if (bySubject is not null)
         {
             return bySubject.DisabledAt is null
@@ -171,10 +171,10 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
                 : throw new InvalidOperationException("This patient account is disabled.");
         }
 
-        // Binding an unclaimed PatientAccount to whichever subject presents
-        // its email is only safe if Keycloak itself has verified that email
-        // belongs to this subject — otherwise any account with a known email
-        // and an unverified address at the same IdP can claim it.
+        // Binding an unclaimed Patients row to whichever subject presents its email is
+        // only safe if Keycloak itself has verified that email belongs to this subject —
+        // otherwise any account with a known email and an unverified address at the same
+        // IdP could claim it.
         var emailVerified = string.Equals(
             principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
         if (!emailVerified)
@@ -183,9 +183,9 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
         }
 
         var normalizedEmail = email.Trim().ToUpperInvariant();
-        var byEmail = await db.PatientAccounts
+        var byEmail = await db.Patients
             .SingleOrDefaultAsync(
-                a => a.ExternalSubject == null && a.Email.ToUpper() == normalizedEmail,
+                p => p.ExternalSubject == null && p.Email != null && p.Email.ToUpper() == normalizedEmail,
                 cancellationToken)
             ?? throw new InvalidOperationException("No patient account matches this login.");
 
@@ -202,14 +202,13 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
         }
         catch (DbUpdateException)
         {
-            // Someone else claimed the same unclaimed row (or the same
-            // subject logged in twice concurrently) between our read and our
-            // write. Re-read by subject: if it is now bound, that is success;
-            // otherwise this login genuinely lost the race for an unclaimed
-            // account and should fail rather than silently retry the bind.
+            // Someone else claimed the same unclaimed row (or the same subject logged in
+            // twice concurrently) between our read and our write. Re-read by subject: if
+            // it is now bound, that is success; otherwise this login genuinely lost the
+            // race for an unclaimed row and should fail rather than silently retry.
             db.Entry(byEmail).State = EntityState.Detached;
-            var afterRace = await db.PatientAccounts
-                .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken)
+            var afterRace = await db.Patients
+                .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken)
                 ?? throw new InvalidOperationException("No patient account matches this login.");
 
             return afterRace.DisabledAt is null
