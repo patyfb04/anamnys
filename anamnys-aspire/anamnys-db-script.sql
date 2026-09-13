@@ -457,17 +457,6 @@ CREATE TABLE "Notifications" (
 	CONSTRAINT "Notifications_Channel_ck" CHECK (("Channel" = ANY (ARRAY['email'::text, 'push'::text, 'in_app'::text]))),
 	CONSTRAINT "Notifications_Status_ck" CHECK (("DeliveryStatus" = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text, 'cancelled'::text])))
 );
-CREATE TABLE "PatientAccounts" (
-	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"PatientId" uuid NOT NULL CONSTRAINT "PatientAccounts_PatientId_key" UNIQUE,
-	"Email" text NOT NULL CONSTRAINT "PatientAccounts_Email_key" UNIQUE,
-	"ExternalSubject" uuid CONSTRAINT "PatientAccounts_ExternalSubject_unique" UNIQUE,
-	"Phone" text,
-	"LastLoginAt" timestamp with time zone,
-	"TermsAcceptedAt" timestamp with time zone,
-	"DisabledAt" timestamp with time zone,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL
-);
 CREATE TABLE "PatientQuotes" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"NoteId" uuid NOT NULL,
@@ -478,12 +467,18 @@ CREATE TABLE "PatientQuotes" (
 );
 CREATE TABLE "Patients" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"ProviderId" uuid NOT NULL,
+	"ProviderId" uuid,
 	"FirstName" text NOT NULL,
 	"LastName" text NOT NULL,
 	"DateOfBirth" date,
 	"PreferredLanguage" text,
 	"LastVisit" timestamp with time zone,
+	"Email" text CONSTRAINT "Patients_Email_key" UNIQUE,
+	"Phone" text,
+	"ExternalSubject" uuid CONSTRAINT "Patients_ExternalSubject_key" UNIQUE,
+	"LastLoginAt" timestamp with time zone,
+	"TermsAcceptedAt" timestamp with time zone,
+	"DisabledAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId")
@@ -928,7 +923,6 @@ ALTER TABLE "Notes" ADD CONSTRAINT "Notes_Patient_fk" FOREIGN KEY ("PatientId","
 ALTER TABLE "Notes" ADD CONSTRAINT "Notes_Session_fk" FOREIGN KEY ("SessionId") REFERENCES "Sessions"("Id") ON DELETE SET NULL;
 ALTER TABLE "NoteSections" ADD CONSTRAINT "NoteSections_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE CASCADE;
 ALTER TABLE "Notifications" ADD CONSTRAINT "Notifications_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
-ALTER TABLE "PatientAccounts" ADD CONSTRAINT "PatientAccounts_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_TermId_fkey" FOREIGN KEY ("TermId") REFERENCES "ThemeTerms"("Id") ON DELETE SET NULL;
