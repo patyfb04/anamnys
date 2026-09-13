@@ -100,6 +100,24 @@ public static class AuthEndpoints
                 [oidcScheme]))
             .AllowAnonymous();
 
+        // Same full-page-navigation requirement as /login above, and the same
+        // SafeLocalRedirect. The only difference is the "kc_action" marker in
+        // AuthenticationProperties.Items, which AuthenticationSetup.cs's
+        // OnRedirectToIdentityProvider reads to send the browser to Keycloak's
+        // registration form instead of its login form. Mounted for every realm
+        // mechanically, like /login; Keycloak itself refuses to render the form
+        // wherever that realm's registrationAllowed is false (today: patients,
+        // owners), so no realm-conditional check belongs here.
+        app.MapGet($"/auth/{segment}/register", (string? returnUrl) =>
+            Results.Challenge(
+                new AuthenticationProperties
+                {
+                    RedirectUri = SafeLocalRedirect(returnUrl, appPath),
+                    Items = { ["kc_action"] = "register" },
+                },
+                [oidcScheme]))
+            .AllowAnonymous();
+
         // Also a full-page navigation (a form POST from the SPA, not an XHR):
         // the OIDC leg of this sign-out answers with a 302 to Keycloak's
         // end_session_endpoint, which is cross-origin and carries no CORS

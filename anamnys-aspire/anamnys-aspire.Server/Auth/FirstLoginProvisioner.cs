@@ -29,14 +29,15 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
 
         return realm switch
         {
-            Realms.Providers => await ProvisionProviderAsync(subject, email, name, cancellationToken),
+            Realms.Providers => await ProvisionProviderAsync(principal, subject, email, name, cancellationToken),
             Realms.Owners => await ProvisionStaffAsync(principal, subject, email, name, cancellationToken),
             Realms.Patients => await ResolvePatientAsync(principal, subject, email, cancellationToken),
             _ => throw new InvalidOperationException($"Unknown realm {realm}."),
         };
     }
 
-    private async Task<Guid> ProvisionProviderAsync(Guid subject, string email, string name, CancellationToken cancellationToken)
+    private async Task<Guid> ProvisionProviderAsync(
+        ClaimsPrincipal principal, Guid subject, string email, string name, CancellationToken cancellationToken)
     {
         var existing = await db.Providers
             .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
@@ -45,6 +46,13 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
             return existing.Id;
         }
 
+        // Required fields on the providers realm's registration form (see the realm's
+        // declarative user profile config), so present for every self-registered
+        // provider. Null here only for a provider created before that shipped — the
+        // Providers_Crp_ck constraint accepts both-null as well as both-set.
+        var crpNumber = principal.FindFirstValue("crpNumber");
+        var crpRegion = principal.FindFirstValue("crpRegion");
+
         var now = DateTimeOffset.UtcNow;
         var provider = new Provider
         {
@@ -52,6 +60,8 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
             ExternalSubject = subject,
             Email = email,
             Name = name,
+            CrpNumber = crpNumber,
+            CrpRegion = crpRegion,
             CreatedAt = now,
             UpdatedAt = now,
         };

@@ -4,6 +4,7 @@
     "cancel": "Cancelar",
     "ok": "OK",
     "provider": "Profissional",
+    "patient": "Paciente",
     "specialty": {
       "mentalHealth": "Saúde Mental",
       "physicalTherapy": "Fisioterapia"
@@ -17,6 +18,7 @@
     }
   },
   "nav": {
+    "dashboard": "Painel",
     "patients": "Pacientes",
     "newNote": "Nova Nota",
     "settings": "Ajustes",
@@ -30,9 +32,19 @@
     "billing": "Faturamento",
     "viewProfile": "Ver perfil"
   },
+  "dashboard": {
+    "greeting": "Bem-vindo(a), {{name}}",
+    "comingSoon": "Seu painel completo está a caminho."
+  },
   "welcome": {
     "signIn": "Entrar",
     "getStarted": "Começar",
+    "getStartedPage": {
+      "title": "Como você quer começar?",
+      "subtitle": "Escolha seu perfil para criar sua conta.",
+      "providerBody": "Crie sua conta e comece a documentar suas sessões clínicas.",
+      "patientBody": "Acesse seu portal para agendar e acompanhar seu atendimento."
+    },
     "nav": {
       "product": "Produto",
       "solutions": "Soluções",
