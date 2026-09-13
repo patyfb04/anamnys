@@ -20,6 +20,44 @@ var postgres = builder.AddPostgres("postgres")
 var keycloakDb = postgres.AddDatabase("keycloakdb");
 var anamnysDb = postgres.AddDatabase("anamnysdb");
 
+// Same discriminator as INCLUDE_DEV_SEED below — see that comment for why both
+// conditions are needed. Named here because it now gates two independent things
+// (the realm's dev-only content, and the Mailpit resource just below).
+var isDevRun = builder.ExecutionContext.IsRunMode && builder.Environment.IsDevelopment();
+
+// Keycloak's verifyEmail registration/first-login step needs somewhere to actually
+// send mail — no environment has a real SMTP relay wired up yet (production still
+// needs one; see keycloak/dev-only-overrides.jq), and without it Keycloak's "send
+// verification email" step always fails, dead-ending every fresh registration.
+//
+// Two options, decided per developer: Mailpit (default, see below) or a real Resend
+// account. Read directly (not via AddParameter) so Resend is genuinely optional:
+// AddParameter's secret:true with no default forces every developer to configure it,
+// which is wrong for something this personal and optional — set your own with
+// `dotnet user-secrets set "Parameters:resend-api-key" "<key>"` from this AppHost
+// project directory, and dev-only-overrides.jq's SMTP block points at Resend's relay
+// instead of Mailpit; actual email lands in your own inbox rather than Mailpit's
+// catcher. Nobody else's setup changes whether or not this is set.
+//
+// Not wired up for anything outside a dev run — Resend is a third-party mail
+// provider Anamnys has no BAA with, so it must never carry real user data; this
+// path exists only for one developer's own local testing with their own key.
+// Production's own SMTP relay is a separate, not-yet-built piece of work — see
+// dev-only-overrides.jq.
+var resendApiKey = builder.Configuration["Parameters:resend-api-key"];
+var useResend = isDevRun && !string.IsNullOrEmpty(resendApiKey);
+
+// Mailpit is a throwaway SMTP catcher + web UI (no real delivery, nothing ever
+// leaves the machine) — dev-only, gated the same way the realm's dev seed is, so it
+// never appears in an `aspire publish`/`deploy` graph. Skipped entirely when a
+// developer's own Resend key is set above: nothing ever points at it in that case,
+// so starting it would just be an idle, unused container.
+var mailpit = isDevRun && !useResend
+    ? builder.AddContainer("mailpit", "axllent/mailpit")
+        .WithHttpEndpoint(port: 8025, targetPort: 8025, name: "http")
+        .WithEndpoint(port: 1025, targetPort: 1025, name: "smtp")
+    : null;
+
 // Declared before `keycloak` so ANAMNYS_APP_ORIGIN can reference this project's
 // endpoint without creating a WaitFor cycle: keycloak depends on server's endpoint,
 // so server cannot also WaitFor(keycloak) until keycloak exists (see below).
@@ -57,9 +95,7 @@ var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keyc
     // for `aspire publish`/`aspire deploy` regardless of the process
     // environment. Both conditions together mean the seed ships only into an
     // image built for a local `aspire run`.
-    .WithBuildArg(
-        "INCLUDE_DEV_SEED",
-        builder.ExecutionContext.IsRunMode && builder.Environment.IsDevelopment())
+    .WithBuildArg("INCLUDE_DEV_SEED", isDevRun)
     .WithPostgres(keycloakDb)
     .WithDataVolume()
     .WithOtlpExporter()
@@ -67,6 +103,23 @@ var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keyc
     .WithEnvironment("ANAMNYS_PATIENT_CLIENT_SECRET", patientClientSecret)
     .WithEnvironment("ANAMNYS_OWNER_CLIENT_SECRET", ownerClientSecret)
     .WithEnvironment("ANAMNYS_APP_ORIGIN", server.GetEndpoint("http"))
+    // Consumed by dev-only-overrides.jq's smtpServer block via Keycloak's own
+    // ${VAR} import-time substitution (the same mechanism ${ANAMNYS_APP_ORIGIN}
+    // and the client secrets above already rely on) — see useResend's own comment
+    // for why this branches on a directly-read, non-mandatory configuration value
+    // instead of an AddParameter. Both branches are only ever consumed when
+    // INCLUDE_DEV_SEED is true, so setting them unconditionally here is harmless
+    // outside a dev run — dev-only-overrides.jq never runs to read them.
+    .WithEnvironment("DEV_SMTP_HOST", useResend ? "smtp.resend.com" : "mailpit")
+    .WithEnvironment("DEV_SMTP_PORT", useResend ? "587" : "1025")
+    .WithEnvironment("DEV_SMTP_AUTH", useResend ? "true" : "false")
+    .WithEnvironment("DEV_SMTP_STARTTLS", useResend ? "true" : "false")
+    .WithEnvironment("DEV_SMTP_USER", useResend ? "resend" : "")
+    .WithEnvironment("DEV_SMTP_PASSWORD", useResend ? resendApiKey : "")
+    // resend.dev's shared sandbox sender — works with no domain verification,
+    // which fits a personal/local testing key. Swap for a verified domain's
+    // address once you have one, if you want "From" to look like anamnys.dev.
+    .WithEnvironment("DEV_SMTP_FROM", useResend ? "onboarding@resend.dev" : "noreply@anamnys.dev")
     // AddKeycloak only registers "http" (container :8080) and "management" (container
     // :9000) as Aspire-tracked endpoints — Keycloak's own realm/auth HTTPS listener on
     // container :8443 (see the container's own startup log: "Listening on: http://
@@ -92,6 +145,13 @@ var keycloak = builder.AddKeycloak("keycloak", 8080, keycloakAdminUsername, keyc
     // tracks or reports back a dynamically-assigned one.
     .WithContainerRuntimeArgs("-p", "8443:8443")
     .WaitFor(keycloakDb);
+
+// Not chained into the builder above: mailpit is null outside a dev run (see its
+// declaration), and WaitFor has no "skip if null" overload.
+if (mailpit is not null)
+{
+    keycloak.WaitFor(mailpit);
+}
 
 server.WithReference(keycloak).WaitFor(keycloak);
 

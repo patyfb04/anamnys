@@ -4,8 +4,8 @@ import type { KcContext } from './KcContext';
 import { useI18n } from './i18n';
 import DefaultPage from 'keycloakify/login/DefaultPage';
 // The stock keycloakify Template (with its default CSS) backs every page this theme does
-// not override — only login.ftl, login-otp.ftl and login-reset-password.ftl get the
-// Anamnys shell (./Template).
+// not override — only login.ftl, login-otp.ftl, login-reset-password.ftl, register.ftl
+// and login-verify-email.ftl get the Anamnys shell (./Template).
 import DefaultTemplate from 'keycloakify/login/Template';
 
 const UserProfileFormFields = lazy(() => import('keycloakify/login/UserProfileFormFields'));
@@ -13,6 +13,7 @@ const Login = lazy(() => import('./pages/Login'));
 const LoginOtp = lazy(() => import('./pages/LoginOtp'));
 const LoginResetPassword = lazy(() => import('./pages/LoginResetPassword'));
 const Register = lazy(() => import('./pages/Register'));
+const LoginVerifyEmail = lazy(() => import('./pages/LoginVerifyEmail'));
 
 const doMakeUserConfirmPassword = true;
 
@@ -40,6 +41,8 @@ export default function KcPage(props: { kcContext: KcContext }) {
                 doMakeUserConfirmPassword={doMakeUserConfirmPassword}
               />
             );
+          case 'login-verify-email.ftl':
+            return <LoginVerifyEmail kcContext={kcContext} i18n={i18n} />;
           default:
             return (
               <DefaultPage

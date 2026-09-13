@@ -163,6 +163,45 @@ docker volume rm <keycloak-data>    # one at a time; passing both names can fail
 docker volume rm <postgres-data>
 ```
 
+### Email verification in dev
+
+Every realm has `verifyEmail: true`, including in dev — registering a provider always
+triggers Keycloak's "send verification email" step, and there is no way to skip it short
+of editing the committed realm JSON (which would also relax it in every other
+environment). Something has to actually receive that email for the registration flow to
+complete.
+
+**Default: [Mailpit](https://github.com/axllent/mailpit)**, a throwaway SMTP catcher +
+web UI Aspire starts automatically for a dev run (`isDevRun` in `AppHost.cs`) — zero
+config, works for every developer out of the box, nothing ever really leaves the
+machine. Register with any email address, then open the Mailpit UI (the `mailpit`
+resource's URL in the Aspire dashboard, port 8025) to find the message and click the
+verification link.
+
+**Optional per-developer alternative: a real [Resend](https://resend.com) account**, if
+you want the email to actually land in a real inbox instead of Mailpit's catcher:
+
+```bash
+# from anamnys-aspire.AppHost/
+dotnet user-secrets set "Parameters:resend-api-key" "<your Resend API key>"
+```
+
+This is entirely optional and personal — nobody else's setup changes whether or not you
+set it, and it is never committed or shared. With it set, `AppHost.cs` points the dev
+realm's SMTP config at Resend's relay instead of Mailpit; without it, Mailpit stays the
+default. **Do not paste the key into a chat/AI session** — set it with the command above
+directly, so it never ends up in conversation history; if it already has, revoke and
+regenerate it in the Resend dashboard.
+
+Without a verified sending domain on your Resend account, Resend's sandbox mode only
+delivers to the email address your Resend account itself is registered with — register
+the test provider with that same address, or the send fails silently for any other
+recipient. This restriction is dev/sandbox-only; a verified domain removes it.
+
+Production has no SMTP relay configured yet (`verifyEmail: true` there too, currently
+with nowhere to send) — that is separate, not-yet-built work; see
+`keycloak/dev-only-overrides.jq` and `keycloak/strip-dev-seed.jq`.
+
 ### Aspire (from this directory)
 
 ```bash
