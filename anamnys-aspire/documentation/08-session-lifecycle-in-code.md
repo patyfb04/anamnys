@@ -117,9 +117,9 @@ the query level" principle: the id genuinely cannot come from anywhere except th
 code path.
 
 **`OnRemoteFailure`** exists because, without it, any exception thrown inside
-`ProvisionAsync` above (an uninvited patient, an owners-realm token missing every
-recognized staff role, a disabled account) would surface as a bare 500 ProblemDetails page
-after an otherwise entirely successful Keycloak login — confusing for the user and equally
+`ProvisionAsync` above (a patient with an unverified email, an owners-realm token missing
+every recognized staff role, a disabled account) would surface as a bare 500 ProblemDetails
+page after an otherwise entirely successful Keycloak login — confusing for the user and equally
 unhelpful for whoever's debugging it. This handler catches that, logs the underlying
 exception (which is safe to log — provisioning error messages name a subject id at most,
 never a claim value that could carry PHI), and redirects to the realm's landing path with a
@@ -221,22 +221,26 @@ roles is treated as a misconfiguration and rejected outright, rather than silent
 defaulting to some baseline role. (This exception is what `OnRemoteFailure` in
 `AuthenticationSetup.cs` is there to turn into a clean redirect rather than a raw 500.)
 
-**Patients: bind-only, never create.** This is the one that most surprises people coming
-from the "just create an account on first login" mental model the other two realms use, and
-the comment in the source states the reasoning plainly: *a `PatientAccount` exists only
-because a provider already created it and invited that patient* — so a login with no
-matching account is treated as an error, not as an invitation to create one on the spot.
-The binding logic looks first for an existing row already bound to this subject; if none
-exists, it looks for an **unclaimed** row (`ExternalSubject == null`) matching the token's
-email — but only binds it if the token explicitly asserts `email_verified: true`. That
-check is not optional politeness: binding an unclaimed account to whoever merely *presents*
-a matching email would let anyone who controls an unverified address at the same identity
-provider claim someone else's patient record. As with provider provisioning, a race on the
-bind (two logins claiming the same row concurrently) is caught and resolved by re-reading
-rather than failing the request outright.
+**Patients: bind first, create only as a last resort.** The binding logic looks first for
+an existing `Patients` row already bound to this subject; if none exists, it looks for an
+**unclaimed** row (`ExternalSubject == null`) matching the token's email — but only binds
+it if the token explicitly asserts `email_verified: true`. That check is not optional
+politeness: binding an unclaimed row to whoever merely *presents* a matching email would
+let anyone who controls an unverified address at the same identity provider claim someone
+else's patient record. As with provider provisioning, a race on the bind (two logins
+claiming the same row concurrently) is caught and resolved by re-reading rather than
+failing the request outright. Only when neither check finds a row does it create one —
+patient self-registration, with no `ProviderId` set — the same create-and-handle-the-race
+shape the Providers branch uses, on the same table.
+
+`Patients` and `PatientAccounts` used to be two tables (a clinical record and a separate
+portal-login row); they're one table now — `Patients` carries nullable `Email`/
+`ExternalSubject`/etc. columns directly, the same shape `Providers` already used. A row
+with all of those null is a provider's patient with no portal access; a row with `Email`
+and `ExternalSubject` both set is a bound, logged-in patient.
 
 Every one of these three paths also checks for `DisabledAt` where the entity supports it
-(`Staff`, `PatientAccount`) and rejects a disabled account with an explicit exception rather
+(`Staff`, `Patient`) and rejects a disabled account with an explicit exception rather
 than silently provisioning around it.
 
 ## `AuthEndpoints.cs`: the actual HTTP surface
@@ -269,7 +273,7 @@ stamped on the identity during federation, not which cookie scheme ultimately si
 — so it can't be used to distinguish the three realms. Instead, the handler tries
 `httpContext.AuthenticateAsync(...)` against each of the three cookie schemes in turn, and
 whichever one succeeds determines both the realm and which local table (`Providers`,
-`Staff`, or `PatientAccounts`) to look the row up in.
+`Staff`, or `Patients`) to look the row up in.
 
 The `SafeLocalRedirect` helper backing the login route's `returnUrl` parameter deserves a
 specific mention as a genuinely good piece of defensive code: because `returnUrl` arrives

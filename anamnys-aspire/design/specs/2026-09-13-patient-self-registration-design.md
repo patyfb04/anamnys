@@ -87,9 +87,9 @@ get updated alongside the code (section 6).
   null.
 - `PatientAccounts` is dropped entirely, along with its FK to `Patients`.
 - No other table is touched — every table with a `(PatientId, ProviderId)` composite FK
-  back to `Patients` (`Appointments`, `Notes`, `Sessions`, `ExternalDocuments`,
-  `ClinicalDocuments`) is only ever populated once a patient has a provider relationship,
-  which this spec does not create.
+  back to `Patients` (`Appointments`, `AppointmentSeries`, `Notes`, `Sessions`,
+  `ExternalDocuments`, `ClinicalDocuments`) is only ever populated once a patient has a
+  provider relationship, which this spec does not create.
 
 This requires the same local reset as any schema change in this repo: drop and recreate
 the Postgres volume so `DatabaseInitializer` re-runs the script (it only runs against an
@@ -280,3 +280,13 @@ bound.
   removes indirection the new branch would otherwise have to route through immediately
   (create a `Patient` row, then a `PatientAccount` row pointing at it), so doing it after
   would mean writing the two-table version now and rewriting it again right after.
+- **`Patients.Email`'s uniqueness makes a patient one row system-wide, not one row per
+  provider relationship.** Before this merge, a `Patients` row was purely per-provider
+  (no email on it), so in principle the same person could have had a separate row under
+  each provider they saw. After the merge, `Email` is globally unique on `Patients`, so
+  only one provider can ever hold the row for a given email — `ProviderId` is a mutable
+  field on a single row, not part of a compound identity with email. This is a
+  deliberate simplification, not an oversight: a patient is one row system-wide, and
+  reassigning or adding a provider relationship is an update to that row, not a new row.
+  The deferred provider-invite fix (section 9's "Out of scope") will need to bind to or
+  update an existing self-registered row rather than assume it can always insert fresh.

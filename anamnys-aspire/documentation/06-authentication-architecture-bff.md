@@ -148,8 +148,9 @@ application database *does* store, per provider/patient/staff row, is an `Extern
 — the Keycloak user's UUID — and that's the only thing tying a local database row to a
 real identity. This mapping is populated by **first-login provisioning**: the first time
 someone successfully authenticates, if no local row exists yet for their subject, one gets
-created (or, for patients specifically, an existing pre-created row gets bound to them —
-see Chapter 8 for why patients are handled differently from providers and staff).
+created (or, for patients, an existing pre-created row gets bound to them if one exists
+(an invited patient), or a new one is created if not (self-registration) — see Chapter 8
+for the three-way logic).
 
 Because this project is greenfield — no legacy accounts, no migration to reconcile — this
 mapping was designed correctly from the very first commit rather than retrofitted onto an

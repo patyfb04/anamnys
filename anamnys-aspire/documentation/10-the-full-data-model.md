@@ -11,10 +11,10 @@ Brazil-specific detail as you go.
 
 ## Patients, providers, and professional identity
 
-Beyond the `Providers` and `PatientAccounts` tables from Chapter 9: `Patients` (the actual
-clinical patient record — `ProviderId`, name, date of birth, preferred language, distinct
-from `PatientAccounts`, which is specifically the *portal login* for a patient, per Chapter
-8's binding logic), `ProviderProfiles` (a provider's public-facing profile — slug, display
+Beyond the `Providers` and `Patients` tables from Chapter 9 — the latter carrying both the
+clinical record (`ProviderId`, name, date of birth, preferred language) and, nullable, the
+patient's own portal login (`Email`, `ExternalSubject`, `Phone`, per Chapter 8's binding
+logic) on the same row: `ProviderProfiles` (a provider's public-facing profile — slug, display
 name, bio, photo, languages, modalities, city/state — doing double duty as both a profile
 *and* the provider marketplace listing, covered further below), and `SpecialistTitles`
 (professional credentials with a `RegistryRef` and `EvidenceObjectKey` — a verifiable
