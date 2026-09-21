@@ -24,6 +24,8 @@ public class FirstLoginProvisionerTests
         bool emailVerified = true,
         string? crpNumber = null,
         string? crpRegion = null,
+        string? givenName = null,
+        string? familyName = null,
         params string[] roles)
     {
         var claims = new List<Claim>
@@ -40,6 +42,14 @@ public class FirstLoginProvisionerTests
         if (crpRegion is not null)
         {
             claims.Add(new Claim("crpRegion", crpRegion));
+        }
+        if (givenName is not null)
+        {
+            claims.Add(new Claim("given_name", givenName));
+        }
+        if (familyName is not null)
+        {
+            claims.Add(new Claim("family_name", familyName));
         }
         claims.AddRange(roles.Select(role => new Claim("roles", role)));
         return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
@@ -127,24 +137,67 @@ public class FirstLoginProvisionerTests
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenPatientAccountDoesNotExist_ThrowsRatherThanCreating()
+    public async Task ProvisionAsync_WhenNoPatientMatches_CreatesNewRowWithNullProviderId()
     {
         // Arrange
         await using var db = NewContext();
         var provisioner = new FirstLoginProvisioner(db);
+        var subject = Guid.NewGuid();
 
         // Act
-        var act = async () => await provisioner.ProvisionAsync(
-            PrincipalFor(Guid.NewGuid(), "nobody@example.com", "Nobody"),
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "newpatient@example.com", "A Patient", givenName: "A", familyName: "Patient"),
             Realms.Patients,
             TestContext.Current.CancellationToken);
 
         // Assert
-        // The InMemory provider enforces neither the NOT NULL on FirstName/LastName nor
-        // any Postgres constraint, so this suite cannot catch an insert structurally the
-        // way Postgres would — the explicit zero-row assertion below is the only guard.
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
+        row.Id.Should().Be(localId);
+        row.ExternalSubject.Should().Be(subject);
+        row.Email.Should().Be("newpatient@example.com");
+        row.ProviderId.Should().BeNull();
+        row.FirstName.Should().Be("A");
+        row.LastName.Should().Be("Patient");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenPatientTokenCarriesNoNameClaims_LeavesNamesEmpty()
+    {
+        // Arrange — mirrors ProvisionAsync_WhenProviderTokenCarriesNoCrpClaims_LeavesBothNull:
+        // a missing claim must not throw, it's a realm-config gap to notice later, not a
+        // reason to fail the login.
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db);
+        var subject = Guid.NewGuid();
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "newpatient@example.com", "A Patient"),
+            Realms.Patients,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
+        row.FirstName.Should().Be("");
+        row.LastName.Should().Be("");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenPatientSelfRegistersTwiceForSameSubject_DoesNotCreateSecondRow()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db);
+        var subject = Guid.NewGuid();
+        var principal = PrincipalFor(subject, "newpatient@example.com", "A Patient", givenName: "A", familyName: "Patient");
+
+        // Act
+        var first = await provisioner.ProvisionAsync(principal, Realms.Patients, TestContext.Current.CancellationToken);
+        var second = await provisioner.ProvisionAsync(principal, Realms.Patients, TestContext.Current.CancellationToken);
+
+        // Assert
+        second.Should().Be(first);
+        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
     }
 
     [Fact]
@@ -172,6 +225,25 @@ public class FirstLoginProvisionerTests
         await act.Should().ThrowAsync<InvalidOperationException>();
         var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
         row.ExternalSubject.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenPatientEmailNotVerifiedAndNoRowMatches_ThrowsRatherThanCreating()
+    {
+        // Arrange — the emailVerified gate sits above the bind/create fork, so it must
+        // also block self-registration, not just binding to an existing unclaimed row.
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db);
+
+        // Act
+        var act = async () => await provisioner.ProvisionAsync(
+            PrincipalFor(Guid.NewGuid(), "nobody@example.com", "Nobody", emailVerified: false),
+            Realms.Patients,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
     [Fact]
