@@ -62,7 +62,14 @@ public static class AuthEndpoints
                     // bound or created by ResolvePatientAsync, both of which always set Email.
                     return patient is null
                         ? null
-                        : new MeResponse(patient.Id, patient.Email!, patient.Email!, Realms.Patients, []);
+                        : new MeResponse(
+                            patient.Id,
+                            patient.Email!,
+                            string.IsNullOrWhiteSpace($"{patient.FirstName} {patient.LastName}".Trim())
+                                ? patient.Email!
+                                : $"{patient.FirstName} {patient.LastName}".Trim(),
+                            Realms.Patients,
+                            []);
                 });
             }
 
@@ -109,8 +116,8 @@ public static class AuthEndpoints
         // OnRedirectToIdentityProvider reads to send the browser to Keycloak's
         // registration form instead of its login form. Mounted for every realm
         // mechanically, like /login; Keycloak itself refuses to render the form
-        // wherever that realm's registrationAllowed is false (today: patients,
-        // owners), so no realm-conditional check belongs here.
+        // wherever that realm's registrationAllowed is false (today: owners),
+        // so no realm-conditional check belongs here.
         app.MapGet($"/auth/{segment}/register", (string? returnUrl) =>
             Results.Challenge(
                 new AuthenticationProperties
