@@ -8,11 +8,9 @@ export const Route = createFileRoute('/_marketing/get-started')({
   component: GetStartedPage,
 });
 
-// Comecar's persona picker. Profissional links straight into Keycloak's (themed)
-// registration form for the providers realm — see design/specs/2026-09-07-provider-
-// patient-registration-design.md. Paciente is phase 2: its realm still has
-// registrationAllowed: false, so it renders disabled rather than linking anywhere that
-// would just fail.
+// Comecar's persona picker. Both cards link straight into Keycloak's (themed)
+// registration form for their respective realm — see design/specs/2026-09-07-provider-
+// patient-registration-design.md.
 function GetStartedPage() {
   const { t } = useTranslation();
 
@@ -34,16 +32,13 @@ function GetStartedPage() {
           </Card>
         </a>
 
-        <Card padded={false} className="h-full p-7 opacity-60 cursor-not-allowed" aria-disabled="true">
-          <div className="flex items-center justify-between mb-3">
-            <HeartPulse size={28} className="text-primary" />
-            <span className="text-label-sm text-onSurfaceVariant bg-surfaceContainerHigh rounded-radii-full px-2.5 py-1">
-              {t('welcome.comingSoon')}
-            </span>
-          </div>
-          <p className="text-headline-sm text-onSurface mb-1">{t('common.patient')}</p>
-          <p className="text-body-md text-onSurfaceVariant">{t('welcome.getStartedPage.patientBody')}</p>
-        </Card>
+        <a href={appUrls.patientRegister} className="block">
+          <Card padded={false} className="h-full p-7 hover:border-primary/50 transition-colors">
+            <HeartPulse size={28} className="text-primary mb-3" />
+            <p className="text-headline-sm text-onSurface mb-1">{t('common.patient')}</p>
+            <p className="text-body-md text-onSurfaceVariant">{t('welcome.getStartedPage.patientBody')}</p>
+          </Card>
+        </a>
       </div>
     </div>
   );
