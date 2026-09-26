@@ -15,6 +15,9 @@ import {
   Settings,
   type LucideIcon,
 } from "lucide-react";
+// Imported, not "/logo1.png": that file lives in apps/web/public, so it only resolves
+// at site root in production and 404s on the other apps' own dev servers.
+import logo from "../assets/logo1.png";
 import { featureFlagsMockApi, type DashboardNavFeature } from "@anamnys/shared/api-mock/featureFlags";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
 
@@ -79,7 +82,7 @@ export default function Sidenav() {
     <nav className="hidden md:flex h-screen flex-col py-6 border-r border-outlineVariant bg-surfaceContainerLow fixed left-0 top-0 z-40 w-72">
       <div className="px-6 mb-8">
         <div className="w-[170px] h-[34px]">
-          <img src="/logo1.png" alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
+          <img src={logo} alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
         </div>
         <p className="text-label-md text-onSurfaceVariant mt-1 text-center">{t("auth.login.subtitle")}</p>
       </div>

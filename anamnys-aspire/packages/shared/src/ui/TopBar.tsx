@@ -1,4 +1,5 @@
 import { Bell, Search, Settings, HelpCircle } from "lucide-react";
+import logo from "../assets/logo1.png";
 import { useTranslation } from "react-i18next";
 import AccountMenu from "@/components/AccountMenu";
 
@@ -14,7 +15,7 @@ export default function TopBar({ title }: { title?: string }) {
           ) : (
             <div className="w-[140px] h-7">
               <img
-                src="/logo1.png"
+                src={logo}
                 alt="Anamnys"
                 width={140}
                 height={28}
