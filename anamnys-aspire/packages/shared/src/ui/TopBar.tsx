@@ -33,9 +33,9 @@ export default function TopBar({ title }: { title?: string }) {
       </div>
 
       {/* Desktop row: search bar left, icons right, padding matched to main's md:p-6 so the
-          search box and icon cluster line up with the greeting/tiles below. No AccountMenu here
-          — Sidenav's profile footer already covers desktop, matching the spec's own header
-          (its avatar is md:hidden there too). */}
+          search box and icon cluster line up with the greeting/tiles below. AccountMenu is here
+          too: Sidenav's profile footer only links to the profile, so without it desktop has no
+          way to sign out. */}
       <div className="hidden md:flex h-16 items-center justify-between gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-surfaceVariant sticky top-0 z-30">
         <div className="relative w-full max-w-md">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-onSurfaceVariant" />
@@ -55,6 +55,7 @@ export default function TopBar({ title }: { title?: string }) {
           <button className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors">
             <HelpCircle size={22} />
           </button>
+          <AccountMenu realm="provider" />
         </div>
       </div>
     </>
