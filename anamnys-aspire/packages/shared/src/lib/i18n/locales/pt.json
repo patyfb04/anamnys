@@ -36,6 +36,9 @@
     "greeting": "Bem-vindo(a), {{name}}",
     "comingSoon": "Seu painel completo está a caminho."
   },
+  "patientPortal": {
+    "comingSoon": "Em breve você poderá agendar, remarcar e cancelar suas consultas por aqui."
+  },
   "welcome": {
     "signIn": "Entrar",
     "getStarted": "Começar",

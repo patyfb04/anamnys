@@ -1,7 +1,7 @@
 import { Bell, Search, Settings, HelpCircle } from "lucide-react";
 import logo from "../assets/logo1.png";
 import { useTranslation } from "react-i18next";
-import AccountMenu from "@/components/AccountMenu";
+import AccountMenu from "./AccountMenu";
 
 export default function TopBar({ title }: { title?: string }) {
   const { t } = useTranslation();
@@ -28,7 +28,7 @@ export default function TopBar({ title }: { title?: string }) {
           <button className="p-2 rounded-full hover:bg-surfaceContainerLow">
             <Bell size={22} className="text-primary" />
           </button>
-          <AccountMenu />
+          <AccountMenu realm="provider" />
         </div>
       </div>
 
