@@ -29,8 +29,7 @@
     "analytics": "Análises",
     "secureSharing": "Compartilhamento",
     "complianceVault": "Conformidade",
-    "billing": "Faturamento",
-    "viewProfile": "Ver perfil"
+    "billing": "Faturamento"
   },
   "dashboard": {
     "greeting": "Bem-vindo(a), {{name}}",
