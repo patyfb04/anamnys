@@ -15,6 +15,20 @@ GET {{Server_HostAddress}}/auth/owner/login
 
 ###
 
+### Keycloak account console (password, 2FA) for each realm — a 302 to
+### {KEYCLOAK_PUBLIC_HTTPS_ADDRESS}/realms/<realm>/account/
+GET {{Server_HostAddress}}/auth/provider/account
+
+###
+
+GET {{Server_HostAddress}}/auth/patient/account
+
+###
+
+GET {{Server_HostAddress}}/auth/owner/account
+
+###
+
 ### Current session (requires the __Host-anamnys-provider, __Host-anamnys-patient
 ### or __Host-anamnys-owner cookie — send from a browser session, not this file)
 GET {{Server_HostAddress}}/api/auth/me

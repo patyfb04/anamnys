@@ -12,7 +12,6 @@ import {
   Share2,
   ShieldCheck,
   CreditCard,
-  Settings,
   type LucideIcon,
 } from "lucide-react";
 // Imported, not "/logo1.png": that file lives in apps/web/public, so it only resolves
@@ -57,7 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     feature: "complianceVault",
   },
   { href: "/billing", Icon: CreditCard, labelKey: "nav.billing", matchPrefix: "/billing", feature: "billing" },
-  { href: "/settings", Icon: Settings, labelKey: "nav.settings", matchPrefix: "/settings" },
 ];
 
 // Fixed left rail shown at md+ (desktop), replacing the mobile TopBar/AppTabBar shell. Mirrors

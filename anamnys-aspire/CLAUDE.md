@@ -334,7 +334,8 @@ npm run lint    # eslint — root runs this across all workspaces
   all five defects will come back** — do not blindly overwrite it from that tool again.
 - **Keycloak owns TOTP enrolment, password reset, and recovery codes.** There is no 2FA
   settings UI in any SPA — link out to the Keycloak account console instead (see
-  `apps/provider/src/routes/_app/settings/account.tsx`).
+  the account menu's "Acesso e segurança" item in `packages/shared/src/ui/AccountMenu.tsx`,
+  which goes through the BFF's `/auth/{realm}/account` redirect).
 - **Aspire's `WithRealmImport` (Keycloak) is development-only** and is silently dropped by
   `aspire publish`/`deploy`. Production realm seeding needs a custom image — see
   `keycloak/Dockerfile` above.

@@ -196,6 +196,9 @@
       "passwordMismatchBody": "Digite sua senha novamente."
     }
   },
+  "accountMenu": {
+    "security": "Acesso e segurança"
+  },
   "settings": {
     "title": "Ajustes",
     "accountSecurity": "Conta e Segurança",

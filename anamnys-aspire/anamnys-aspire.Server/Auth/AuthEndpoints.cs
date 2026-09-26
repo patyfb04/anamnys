@@ -11,9 +11,9 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        MapRealm(app, "provider", AuthSchemes.ProviderOidc, AuthSchemes.ProviderCookie, "/provider/");
-        MapRealm(app, "patient", AuthSchemes.PatientOidc, AuthSchemes.PatientCookie, "/patient/");
-        MapRealm(app, "owner", AuthSchemes.OwnerOidc, AuthSchemes.OwnerCookie, "/admin/");
+        MapRealm(app, "provider", Realms.Providers, AuthSchemes.ProviderOidc, AuthSchemes.ProviderCookie, "/provider/");
+        MapRealm(app, "patient", Realms.Patients, AuthSchemes.PatientOidc, AuthSchemes.PatientCookie, "/patient/");
+        MapRealm(app, "owner", Realms.Owners, AuthSchemes.OwnerOidc, AuthSchemes.OwnerCookie, "/admin/");
 
         app.MapGet("/api/auth/me", async (
             HttpContext httpContext,
@@ -98,6 +98,7 @@ public static class AuthEndpoints
     private static void MapRealm(
         WebApplication app,
         string segment,
+        string realm,
         string oidcScheme,
         string cookieScheme,
         string appPath)
@@ -126,6 +127,20 @@ public static class AuthEndpoints
                     Items = { ["kc_action"] = "register" },
                 },
                 [oidcScheme]))
+            .AllowAnonymous();
+
+        // Keycloak owns passwords and 2FA, so account management is its own account
+        // console. Redirecting through here keeps Keycloak's public origin out of the
+        // SPAs: they link to this path, and only the server knows where Keycloak is
+        // (the same KEYCLOAK_PUBLIC_HTTPS_ADDRESS the OIDC authority is built from).
+        // Anonymous on purpose: the console authenticates against the SSO session itself.
+        app.MapGet($"/auth/{segment}/account", (IConfiguration configuration) =>
+        {
+            var keycloakBase = configuration["KEYCLOAK_PUBLIC_HTTPS_ADDRESS"];
+            return string.IsNullOrEmpty(keycloakBase)
+                ? Results.Problem("Keycloak's public address is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable)
+                : Results.Redirect($"{keycloakBase.TrimEnd('/')}/realms/{realm}/account/");
+        })
             .AllowAnonymous();
 
         // Also a full-page navigation (a form POST from the SPA, not an XHR):
