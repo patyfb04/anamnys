@@ -15,6 +15,7 @@
 // URI expects — a relative "/auth/provider/register" clicked from web's dev origin
 // (5275) just 404s there. Absolute only in dev, so it reaches provider's dev proxy.
 const providerDevOrigin = "http://localhost:5273";
+const patientDevOrigin = "http://localhost:5274";
 
 export const appUrls = {
   web: "/",
@@ -25,4 +26,7 @@ export const appUrls = {
     : "/auth/provider/register",
   getStarted: "/get-started",
   patient: "/patient/",
+  patientRegister: import.meta.env.DEV
+    ? `${patientDevOrigin}/auth/patient/register`
+    : "/auth/patient/register",
 } as const;

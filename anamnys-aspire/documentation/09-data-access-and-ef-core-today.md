@@ -16,7 +16,7 @@ from Part 4 depends on.
 public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbContext(options)
 {
     public DbSet<Provider> Providers => Set<Provider>();
-    public DbSet<PatientAccount> PatientAccounts => Set<PatientAccount>();
+    public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
@@ -25,8 +25,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
 ```
 
 If these five names look familiar, it's because you met all of them in Part 4:
-`Providers`, `PatientAccounts`, and `Staff` are exactly the three tables
-`FirstLoginProvisioner` (Chapter 8) provisions rows into, one per realm.
+`Providers`, `Patients`, and `Staff` are exactly the three tables `FirstLoginProvisioner`
+(Chapter 8) provisions rows into, one per realm.
 `BreakGlassGrants` and `AccessLogs` are exactly the two tables the September 5 Keycloak
 implementation design (Chapter 6) specified for the owners-realm break-glass mechanism.
 This is not a coincidence — this project's EF Core model was built to exactly the scope
@@ -45,11 +45,12 @@ modelBuilder.Entity<Provider>(e =>
 });
 ```
 
-`Provider`, `PatientAccount`, and `Staff` all get the same shape of index: a unique index
-on `ExternalSubject` (so the database itself enforces that a Keycloak subject can map to
-at most one local row — the same guarantee `FirstLoginProvisioner`'s
-`SingleOrDefaultAsync` + unique-index-driven race handling from Chapter 8 relies on) and a
-unique index on `Email`. `BreakGlassGrants` and `AccessLogs` get non-unique indexes on
+`Provider`, `Patient`, and `Staff` all get the same shape of index: a unique index on
+`ExternalSubject` (so the database itself enforces that a Keycloak subject can map to at
+most one local row — the same guarantee `FirstLoginProvisioner`'s `SingleOrDefaultAsync` +
+unique-index-driven race handling from Chapter 8 relies on) and a unique index on `Email`
+— both nullable on `Patient`, since a provider-created patient with no portal access yet
+has neither, but still unique whenever they are set. `BreakGlassGrants` and `AccessLogs` get non-unique indexes on
 their respective foreign-key-shaped columns (`StaffId`/`ProviderId`, and `ProviderId`
 respectively) — supporting lookups, not uniqueness constraints.
 

@@ -153,17 +153,18 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
         return staff.Id;
     }
 
-    // Patients are never created here. A PatientAccount exists only because a
-    // provider created the Patient row and invited them, so a login with no
-    // matching account is an error, not a signal to create one.
+    // A Patients row can exist two ways: a provider already created and invited this
+    // patient (bind-by-subject or bind-by-unclaimed-email below), or nobody has —
+    // in which case this login is a genuine self-registration and falls through to the
+    // create branch at the end.
     private async Task<Guid> ResolvePatientAsync(
         ClaimsPrincipal principal,
         Guid subject,
         string email,
         CancellationToken cancellationToken)
     {
-        var bySubject = await db.PatientAccounts
-            .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken);
+        var bySubject = await db.Patients
+            .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
         if (bySubject is not null)
         {
             return bySubject.DisabledAt is null
@@ -171,10 +172,10 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
                 : throw new InvalidOperationException("This patient account is disabled.");
         }
 
-        // Binding an unclaimed PatientAccount to whichever subject presents
-        // its email is only safe if Keycloak itself has verified that email
-        // belongs to this subject — otherwise any account with a known email
-        // and an unverified address at the same IdP can claim it.
+        // Binding an unclaimed Patients row to whichever subject presents its email is
+        // only safe if Keycloak itself has verified that email belongs to this subject —
+        // otherwise any account with a known email and an unverified address at the same
+        // IdP could claim it.
         var emailVerified = string.Equals(
             principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
         if (!emailVerified)
@@ -183,40 +184,94 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
         }
 
         var normalizedEmail = email.Trim().ToUpperInvariant();
-        var byEmail = await db.PatientAccounts
+        var byEmail = await db.Patients
             .SingleOrDefaultAsync(
-                a => a.ExternalSubject == null && a.Email.ToUpper() == normalizedEmail,
-                cancellationToken)
-            ?? throw new InvalidOperationException("No patient account matches this login.");
+                p => p.ExternalSubject == null && p.Email != null && p.Email.ToUpper() == normalizedEmail,
+                cancellationToken);
 
-        if (byEmail.DisabledAt is not null)
+        if (byEmail is not null)
         {
-            throw new InvalidOperationException("This patient account is disabled.");
+            if (byEmail.DisabledAt is not null)
+            {
+                throw new InvalidOperationException("This patient account is disabled.");
+            }
+
+            byEmail.ExternalSubject = subject;
+            byEmail.UpdatedAt = DateTimeOffset.UtcNow;
+
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // Someone else claimed the same unclaimed row (or the same subject logged
+                // in twice concurrently) between our read and our write. Re-read by
+                // subject: if it is now bound, that is success; otherwise this login
+                // genuinely lost the race for an unclaimed row and should fail rather
+                // than silently retry.
+                db.Entry(byEmail).State = EntityState.Detached;
+                var afterBindRace = await db.Patients
+                    .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken)
+                    ?? throw new InvalidOperationException("No patient account matches this login.");
+
+                return afterBindRace.DisabledAt is null
+                    ? afterBindRace.Id
+                    : throw new InvalidOperationException("This patient account is disabled.");
+            }
+
+            return byEmail.Id;
         }
 
-        byEmail.ExternalSubject = subject;
+        // Nobody invited this patient — this is a genuine self-registration. No provider
+        // relationship exists yet (ProviderId stays null until some future flow, e.g.
+        // booking a first appointment, sets it). given_name/family_name come from the same
+        // profile scope the provider realm already relies on for its own name claim; a
+        // missing claim here is a realm-config gap to notice later, not a reason to fail
+        // the login (mirrors how ProvisionProviderAsync tolerates missing crpNumber/
+        // crpRegion).
+        var givenName = principal.FindFirstValue("given_name") ?? "";
+        var familyName = principal.FindFirstValue("family_name") ?? "";
 
+        var now = DateTimeOffset.UtcNow;
+        var patient = new Patient
+        {
+            Id = Guid.NewGuid(),
+            ExternalSubject = subject,
+            Email = email,
+            FirstName = givenName,
+            LastName = familyName,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.Patients.Add(patient);
+
+        // Two concurrent first logins for the same subject both miss every lookup above
+        // and both try to insert; the unique index on ExternalSubject lets exactly one
+        // succeed. Rather than 500 the loser, re-read: the winner's row is now there.
         try
         {
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException)
         {
-            // Someone else claimed the same unclaimed row (or the same
-            // subject logged in twice concurrently) between our read and our
-            // write. Re-read by subject: if it is now bound, that is success;
-            // otherwise this login genuinely lost the race for an unclaimed
-            // account and should fail rather than silently retry the bind.
-            db.Entry(byEmail).State = EntityState.Detached;
-            var afterRace = await db.PatientAccounts
-                .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken)
-                ?? throw new InvalidOperationException("No patient account matches this login.");
+            db.Entry(patient).State = EntityState.Detached;
+            var afterCreateRace = await db.Patients
+                .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
+            if (afterCreateRace is null)
+            {
+                // A genuine same-subject race would always succeed on the re-query above
+                // (the winning insert used this same ExternalSubject) — reaching here means
+                // the actual constraint that fired was Patients.Email's uniqueness, not
+                // ExternalSubject's, i.e. this email already belongs to some other row.
+                throw new InvalidOperationException(
+                    "Cannot self-register: an account with this email already exists.");
+            }
 
-            return afterRace.DisabledAt is null
-                ? afterRace.Id
-                : throw new InvalidOperationException("This patient account is disabled.");
+            return afterCreateRace.Id;
         }
 
-        return byEmail.Id;
+        return patient.Id;
     }
 }

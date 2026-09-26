@@ -86,8 +86,8 @@ list as arbitrary taste:
   which a convention-based auto-mapper would obscure.
 - **Exceptions for business logic errors.** This is worth reading carefully rather than
   applying too broadly: `FirstLoginProvisioner` (Chapter 8) *does* throw
-  `InvalidOperationException` for things like an uninvited patient or a disabled account.
-  That's not a contradiction — those are authentication/authorization failures being
+  `InvalidOperationException` for things like a patient with an unverified email or a
+  disabled account. That's not a contradiction — those are authentication/authorization failures being
   surfaced through `OnRemoteFailure`'s exception handling, a genuinely exceptional and rare
   path, not routine business logic like "this form field failed validation." The
   distinction to hold onto: an exception here signals something has gone wrong at a

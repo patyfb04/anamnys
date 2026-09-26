@@ -6,7 +6,7 @@ namespace Anamnys.Server.Data;
 public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbContext(options)
 {
     public DbSet<Provider> Providers => Set<Provider>();
-    public DbSet<PatientAccount> PatientAccounts => Set<PatientAccount>();
+    public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
@@ -21,9 +21,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasIndex(x => x.Email).IsUnique();
         });
 
-        modelBuilder.Entity<PatientAccount>(e =>
+        modelBuilder.Entity<Patient>(e =>
         {
-            e.ToTable("PatientAccounts");
+            e.ToTable("Patients");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.ExternalSubject).IsUnique();
             e.HasIndex(x => x.Email).IsUnique();
