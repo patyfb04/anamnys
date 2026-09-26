@@ -431,6 +431,7 @@
       "clientId": "anamnys-web",
       "name": "Anamnys Provider BFF",
       "enabled": true,
+      "baseUrl": "${ANAMNYS_APP_ORIGIN}/",
       "publicClient": false,
       "secret": "${ANAMNYS_PROVIDER_CLIENT_SECRET}",
       "standardFlowEnabled": true,

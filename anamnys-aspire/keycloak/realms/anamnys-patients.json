@@ -377,6 +377,7 @@
       "clientId": "anamnys-patient-web",
       "name": "Anamnys Patient BFF",
       "enabled": true,
+      "baseUrl": "${ANAMNYS_APP_ORIGIN}/",
       "publicClient": false,
       "secret": "${ANAMNYS_PATIENT_CLIENT_SECRET}",
       "standardFlowEnabled": true,

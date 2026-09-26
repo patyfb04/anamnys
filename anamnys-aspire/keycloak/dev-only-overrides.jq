@@ -23,3 +23,9 @@
   user: "${DEV_SMTP_USER}",
   password: "${DEV_SMTP_PASSWORD}"
 }
+# The login theme's header links back to the marketing site via client.baseUrl. The
+# committed value is ${ANAMNYS_APP_ORIGIN}/, which in dev is the server's own endpoint —
+# but apps/web runs on its own pinned Vite port (5275) during a dev run, so point there.
+| .clients |= map(
+    if has("baseUrl") then .baseUrl = "http://localhost:5275/" else . end
+  )
