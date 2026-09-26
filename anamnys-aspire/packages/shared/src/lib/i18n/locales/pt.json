@@ -45,6 +45,12 @@
       "providerBody": "Crie sua conta e comece a documentar suas sessões clínicas.",
       "patientBody": "Acesse seu portal para agendar e acompanhar seu atendimento."
     },
+    "signInPage": {
+      "title": "Como você quer entrar?",
+      "subtitle": "Escolha seu perfil para acessar sua conta.",
+      "providerBody": "Acesse suas sessões, notas clínicas e agenda.",
+      "patientBody": "Acesse seu portal de paciente."
+    },
     "nav": {
       "product": "Produto",
       "solutions": "Soluções",

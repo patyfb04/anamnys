@@ -7,8 +7,9 @@
 //
 // These must stay in step with the `base` option in each app's vite.config.ts.
 //
-// providerRegister is reached from apps/web's own /get-started page, so it's not really
-// a "cross-app link" in the sense above — it's the BFF's /auth endpoint. In production
+// The *Register and *Login entries are reached from apps/web's own /get-started and
+// /sign-in pages, so they're not really "cross-app links" in the sense above — they're
+// the BFF's /auth endpoints. In production
 // that's fine as a relative path (one shared origin). In dev, each app is its own Vite
 // dev server on its own fixed port, and only the provider app's dev server actually
 // proxies /auth to the real server with the Host header Keycloak's registered redirect
@@ -20,12 +21,18 @@ const patientDevOrigin = "http://localhost:5274";
 export const appUrls = {
   web: "/",
   provider: "/provider/",
-  providerLogin: "/provider/login",
+  signIn: "/sign-in",
+  providerLogin: import.meta.env.DEV
+    ? `${providerDevOrigin}/auth/provider/login`
+    : "/auth/provider/login",
   providerRegister: import.meta.env.DEV
     ? `${providerDevOrigin}/auth/provider/register`
     : "/auth/provider/register",
   getStarted: "/get-started",
   patient: "/patient/",
+  patientLogin: import.meta.env.DEV
+    ? `${patientDevOrigin}/auth/patient/login`
+    : "/auth/patient/login",
   patientRegister: import.meta.env.DEV
     ? `${patientDevOrigin}/auth/patient/register`
     : "/auth/patient/register",
