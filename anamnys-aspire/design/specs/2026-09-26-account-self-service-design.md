@@ -77,8 +77,11 @@ handling is needed because the session is unchanged.
 with the `.http` entries for it.
 
 **Realm configuration:** the `UPDATE_EMAIL` required action is currently disabled in
-every realm. The providers and patients realm JSON gain a `requiredActions` entry
-enabling it. The running dev Keycloak is updated with `kcadm` (realm import does not
+every realm. The providers and patients realm JSON gain a full `requiredActions` array
+(every action Keycloak 26.6 installs by default, exported from the running server, with
+`UPDATE_EMAIL` switched on): an import that lists `requiredActions` at all installs
+only the listed ones, so a partial list would silently drop `CONFIGURE_TOTP` and the
+rest. The running dev Keycloak is updated with `kcadm` (realm import does not
 re-run on an existing realm); a fresh volume gets it from the JSON.
 
 ## 5. Server: profile API
@@ -86,13 +89,20 @@ re-run on an existing realm); a fresh volume gets it from the JSON.
 In the existing `/api/phi` group (provider and patient cookie schemes):
 
 ```
-GET /api/phi/me/profile
-PUT /api/phi/me/profile
+GET /api/phi/providers/me/profile
+PUT /api/phi/providers/me/profile
+GET /api/phi/patients/me/profile
+PUT /api/phi/patients/me/profile
 ```
 
-The realm is resolved the same way `/api/auth/me` does it: by which cookie scheme
-authenticated the request. The local row is found through `principal.LocalIdOrNull()`,
-never through a client-supplied id, preserving provider scoping.
+The realm is in the path, not inferred. A browser can hold both a provider and a patient
+session at once (cookies are distinguished by name, all at `Path=/`, all sent to
+`/api`), so guessing the realm from whichever cookie authenticates first could edit the
+wrong profile. Each handler authenticates its own realm's cookie scheme explicitly
+(`HttpContext.AuthenticateAsync(<realm cookie scheme>)`) and answers `401` if that
+scheme has no session. The local row is found through that result's
+`principal.LocalIdOrNull()`, never through a client-supplied id, preserving provider
+scoping.
 
 **Provider** — `GET` returns `{ email, name, crpNumber, crpRegion }`. `PUT` accepts
 `{ name, crpNumber, crpRegion }`.
@@ -122,9 +132,11 @@ stored one:
 
 - If they differ **and** `email_verified` is `true`, update the row's `Email` and
   `UpdatedAt`.
-- If saving fails because another row already has that email (the unique index on
-  `Email`), which can only happen with an unclaimed patient invite row, keep the old
-  value and log a warning with the row id only, no email address (no PHI in logs).
+- If another row of the same table already has that email (case-insensitive; in
+  practice only an unclaimed patient invite row), keep the old value and log a warning
+  with the row id only, no email address (no PHI in logs). This is checked before
+  saving; a `DbUpdateException` from the `Email` unique index (a concurrent write)
+  is handled the same way.
 
 The login itself is never blocked by this sync.
 
@@ -135,7 +147,9 @@ The login itself is never blocked by this sync.
 - `components/SecurityPage.tsx` shows two cards, "Alterar senha" and "Configurar
   autenticação em dois fatores". Each is a full-page `<a href>` to
   `/auth/{realm}/action/{UPDATE_PASSWORD|CONFIGURE_TOTP}?returnUrl=<current path>`.
-- `api/profile.ts` has `get` / `update` against `/api/phi/me/profile`, typed per realm.
+- `api/profile.ts` has `get` / `update` per realm against the section 5 routes, using
+  native `fetch` with `credentials: 'include'` (not the axios client, whose interceptor
+  discards the `400` body the form needs for per-field errors).
 
 **Per app** (`apps/provider`, `apps/patient`):
 - `routes/_app/account/profile.tsx` renders the realm's form with TanStack Query
@@ -153,9 +167,13 @@ patient's `PatientTopBar` passes `realm="patient"`. User-facing text goes into
 Integration tests (`anamnys-aspire.Tests`, shared AppHost fixture):
 
 - `AuthActionEndpointTests`: an allowed action redirects to Keycloak's authorization
-  endpoint with `kc_action=<action>`; an unknown action returns `400`; no session
+  endpoint, and following it with the session lands on that action's page (asserted by
+  the `pageId` in the embedded `kcContext`; `kc_action` itself travels in the pushed
+  authorization request, not the URL); an unknown action returns `400`; no session
   returns `401`.
-- `ProfileEndpointTests`: no session returns `401`; an invalid `PUT` returns `400` with
+- `ProfileValidationTests` (unit): every validation rule in section 5, both realms.
+- `ProfileEndpointTests` (seeded `dev.provider`; there is no seeded patient): no session
+  returns `401` on both realms' routes; an invalid `PUT` returns `400` with
   the offending field; a valid provider `PUT` persists and a following `GET` returns it.
 - Email sync: a returning provider whose verified token email differs gets the new
   email; a conflict with an unclaimed patient row leaves the old email and does not
