@@ -46,3 +46,26 @@ POST {{Server_HostAddress}}/auth/patient/logout
 POST {{Server_HostAddress}}/auth/owner/logout
 
 ###
+
+### Own profile (needs the matching realm's session cookie — send from a signed-in browser)
+GET {{Server_HostAddress}}/api/phi/providers/me/profile
+
+###
+
+PUT {{Server_HostAddress}}/api/phi/providers/me/profile
+Content-Type: application/json
+
+{ "name": "Ana Souza", "crpNumber": "06/12345", "crpRegion": "SP" }
+
+###
+
+GET {{Server_HostAddress}}/api/phi/patients/me/profile
+
+###
+
+PUT {{Server_HostAddress}}/api/phi/patients/me/profile
+Content-Type: application/json
+
+{ "firstName": "Ana", "lastName": "Souza", "phone": "+55 11 91234-5678", "dateOfBirth": "1990-01-02" }
+
+###

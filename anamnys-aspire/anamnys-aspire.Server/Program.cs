@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
+using Anamnys.Server.Profile;
 using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -86,6 +87,7 @@ var phi = app.MapGroup("/api/phi")
         .RequireAuthenticatedUser());
 
 phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
+phi.MapProfileEndpoints();
 
 var admin = app.MapGroup("/api/admin")
     .RequireAuthorization(policy => policy
