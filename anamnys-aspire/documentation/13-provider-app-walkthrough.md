@@ -110,12 +110,14 @@ don't assume it's already wired into a working feature because it exists and com
 
 ## Settings
 
-The account menu's *Acesso e segurança* item (`packages/shared/src/ui/AccountMenu.tsx`, via the
-BFF's `/auth/{realm}/account` redirect) is where two-factor authentication and password
-management are *linked out to*, not implemented — a direct consequence of Chapter 6's identity design:
-Keycloak owns TOTP enrollment, password reset, and recovery codes entirely, so there is no
-2FA settings UI to build in any SPA. If you're ever asked to add one, the answer is
-"link to the Keycloak account console," not "build a form here."
+The account menu (`packages/shared/src/ui/AccountMenu.tsx`) leads to two pages under
+`/account`. *Dados pessoais* edits the profile fields the application database owns
+(`/api/phi/providers/me/profile`). *Acesso e segurança* does not implement password or
+two-factor forms at all — a direct consequence of Chapter 6's identity design: each
+button starts a Keycloak application-initiated action through the BFF's
+`/auth/{realm}/action/{action}` route, rendered by the Anamnys login theme. If you're
+ever asked to add a password or 2FA form in an SPA, the answer is "start the Keycloak
+action," not "build a form here."
 
 ## The pattern to take away
 
