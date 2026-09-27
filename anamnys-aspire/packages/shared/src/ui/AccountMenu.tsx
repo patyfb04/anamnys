@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
+import type { AccountRealm } from "@anamnys/shared/api/profile";
 
 const itemClass =
   "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-onSurface hover:bg-surfaceContainerLow";
 
-// Signed-in user's avatar: clicking it opens a menu with their name/email, Keycloak's
-// account console for password and 2FA, and Sign Out. `realm` picks which BFF session
-// the security link and sign-out use.
-export default function AccountMenu({ realm }: { realm: "provider" | "patient" }) {
+// Signed-in user's avatar: clicking it opens a menu with their name/email, links to
+// their own profile and security pages, and Sign Out. `realm` picks which BFF session
+// sign-out ends.
+export default function AccountMenu({ realm }: { realm: AccountRealm }) {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const [open, setOpen] = useState(false);
@@ -35,11 +37,14 @@ export default function AccountMenu({ realm }: { realm: "provider" | "patient" }
               {user?.email && <div className="text-body-md text-onSurfaceVariant truncate mt-0.5">{user.email}</div>}
             </div>
             <div className="h-px bg-outlineVariant mb-1" />
-            {/* A full-page navigation: the BFF answers with a 302 to Keycloak's account console. */}
-            <a href={`/auth/${realm}/account`} className={itemClass}>
+            <Link to="/account/profile" onClick={() => setOpen(false)} className={itemClass}>
+              <UserRound size={18} />
+              {t("accountMenu.profile")}
+            </Link>
+            <Link to="/account/security" onClick={() => setOpen(false)} className={itemClass}>
               <ShieldCheck size={18} />
               {t("accountMenu.security")}
-            </a>
+            </Link>
             <div className="h-px bg-outlineVariant my-1" />
             <button
               onClick={() => {
