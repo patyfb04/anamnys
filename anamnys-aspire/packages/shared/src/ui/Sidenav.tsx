@@ -12,11 +12,12 @@ import {
   Share2,
   ShieldCheck,
   CreditCard,
-  Settings,
   type LucideIcon,
 } from "lucide-react";
+// Imported, not "/logo1.png": that file lives in apps/web/public, so it only resolves
+// at site root in production and 404s on the other apps' own dev servers.
+import logo from "../assets/logo1.png";
 import { featureFlagsMockApi, type DashboardNavFeature } from "@anamnys/shared/api-mock/featureFlags";
-import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
 
 interface NavItem {
   href: string;
@@ -55,7 +56,6 @@ const NAV_ITEMS: NavItem[] = [
     feature: "complianceVault",
   },
   { href: "/billing", Icon: CreditCard, labelKey: "nav.billing", matchPrefix: "/billing", feature: "billing" },
-  { href: "/settings", Icon: Settings, labelKey: "nav.settings", matchPrefix: "/settings" },
 ];
 
 // Fixed left rail shown at md+ (desktop), replacing the mobile TopBar/AppTabBar shell. Mirrors
@@ -65,7 +65,6 @@ const NAV_ITEMS: NavItem[] = [
 export default function Sidenav() {
   const { pathname } = useLocation();
   const { t } = useTranslation();
-  const { user } = useAuthStore();
 
   const { data: flags } = useQuery({
     queryKey: ["feature-flags"],
@@ -79,7 +78,7 @@ export default function Sidenav() {
     <nav className="hidden md:flex h-screen flex-col py-6 border-r border-outlineVariant bg-surfaceContainerLow fixed left-0 top-0 z-40 w-72">
       <div className="px-6 mb-8">
         <div className="w-[170px] h-[34px]">
-          <img src="/logo1.png" alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
+          <img src={logo} alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
         </div>
         <p className="text-label-md text-onSurfaceVariant mt-1 text-center">{t("auth.login.subtitle")}</p>
       </div>
@@ -102,19 +101,6 @@ export default function Sidenav() {
           );
         })}
       </div>
-      {user && (
-        <div className="px-6 mt-4">
-          <Link to="/settings/account" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primaryContainer text-onPrimaryContainer flex items-center justify-center text-label-lg">
-              {user.name.slice(0, 1).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-label-lg text-onSurface">{user.name}</p>
-              <p className="text-label-md text-onSurfaceVariant">{t("nav.viewProfile")}</p>
-            </div>
-          </Link>
-        </div>
-      )}
     </nav>
   );
 }

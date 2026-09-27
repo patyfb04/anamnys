@@ -10,7 +10,7 @@ public static class AnamnysClaims
     public const string LocalId = "anamnys:lid";
 }
 
-public sealed class FirstLoginProvisioner(AnamnysDbContext db)
+public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLoginProvisioner> logger)
 {
     private static readonly string[] StaffRoles = ["owner", "support", "ops"];
 
@@ -43,6 +43,7 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
             .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
         if (existing is not null)
         {
+            await SyncProviderEmailAsync(existing, principal, email, cancellationToken);
             return existing.Id;
         }
 
@@ -167,18 +168,20 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
             .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
         if (bySubject is not null)
         {
-            return bySubject.DisabledAt is null
-                ? bySubject.Id
-                : throw new InvalidOperationException("This patient account is disabled.");
+            if (bySubject.DisabledAt is not null)
+            {
+                throw new InvalidOperationException("This patient account is disabled.");
+            }
+
+            await SyncPatientEmailAsync(bySubject, principal, email, cancellationToken);
+            return bySubject.Id;
         }
 
         // Binding an unclaimed Patients row to whichever subject presents its email is
         // only safe if Keycloak itself has verified that email belongs to this subject —
         // otherwise any account with a known email and an unverified address at the same
         // IdP could claim it.
-        var emailVerified = string.Equals(
-            principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
-        if (!emailVerified)
+        if (!IsEmailVerified(principal))
         {
             throw new InvalidOperationException("Cannot bind a patient account to an unverified email.");
         }
@@ -274,4 +277,70 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db)
 
         return patient.Id;
     }
+
+    // Keycloak owns the login email; it changes through its UPDATE_EMAIL action, which
+    // only applies the new address once the user confirms it. A returning user's row
+    // follows it here. A clash with another row (in practice an unclaimed patient invite
+    // holding that address) keeps the old value: the login itself must never fail over
+    // this. Logged by row id only — an email address is PHI.
+    private async Task SyncProviderEmailAsync(
+        Provider row, ClaimsPrincipal principal, string email, CancellationToken cancellationToken)
+    {
+        if (!NeedsEmailSync(row.Email, principal, email))
+        {
+            return;
+        }
+
+        var normalized = email.Trim().ToUpperInvariant();
+        if (await db.Providers.AnyAsync(p => p.Id != row.Id && p.Email.ToUpper() == normalized, cancellationToken))
+        {
+            logger.LogWarning("Email sync skipped for provider {ProviderId}: another provider holds that email.", row.Id);
+            return;
+        }
+
+        row.Email = email;
+        row.UpdatedAt = DateTimeOffset.UtcNow;
+        await SaveEmailSyncAsync(row, "provider", row.Id, cancellationToken);
+    }
+
+    private async Task SyncPatientEmailAsync(
+        Patient row, ClaimsPrincipal principal, string email, CancellationToken cancellationToken)
+    {
+        if (!NeedsEmailSync(row.Email, principal, email))
+        {
+            return;
+        }
+
+        var normalized = email.Trim().ToUpperInvariant();
+        if (await db.Patients.AnyAsync(
+                p => p.Id != row.Id && p.Email != null && p.Email.ToUpper() == normalized, cancellationToken))
+        {
+            logger.LogWarning("Email sync skipped for patient {PatientId}: another patient row holds that email.", row.Id);
+            return;
+        }
+
+        row.Email = email;
+        row.UpdatedAt = DateTimeOffset.UtcNow;
+        await SaveEmailSyncAsync(row, "patient", row.Id, cancellationToken);
+    }
+
+    private async Task SaveEmailSyncAsync(object row, string kind, Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // A concurrent write took the address between the check above and this save.
+            await db.Entry(row).ReloadAsync(cancellationToken);
+            logger.LogWarning("Email sync skipped for {Kind} {Id}: the email was taken concurrently.", kind, id);
+        }
+    }
+
+    private static bool NeedsEmailSync(string? stored, ClaimsPrincipal principal, string email) =>
+        IsEmailVerified(principal) && !string.Equals(stored, email, StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsEmailVerified(ClaimsPrincipal principal) =>
+        string.Equals(principal.FindFirstValue("email_verified"), "true", StringComparison.OrdinalIgnoreCase);
 }

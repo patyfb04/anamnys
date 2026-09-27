@@ -10,7 +10,8 @@
     "./components/*": "./src/components/*.tsx",
     "./lib/*": "./src/lib/*.ts",
     "./lib/i18n": "./src/lib/i18n/index.ts",
-    "./lib/store/*": "./src/lib/store/*.ts"
+    "./lib/store/*": "./src/lib/store/*.ts",
+    "./assets/*": "./src/assets/*"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

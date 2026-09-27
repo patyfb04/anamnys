@@ -9,6 +9,10 @@ public sealed record MeResponse(Guid Id, string Email, string Name, string Realm
 
 public static class AuthEndpoints
 {
+    // Forwarded verbatim to Keycloak as kc_action, so only actions this app
+    // deliberately offers get through.
+    private static readonly string[] AllowedActions = ["UPDATE_PASSWORD", "CONFIGURE_TOTP", "UPDATE_EMAIL"];
+
     public static void MapAuthEndpoints(this WebApplication app)
     {
         MapRealm(app, "provider", AuthSchemes.ProviderOidc, AuthSchemes.ProviderCookie, "/provider/");
@@ -127,6 +131,27 @@ public static class AuthEndpoints
                 },
                 [oidcScheme]))
             .AllowAnonymous();
+
+        // Keycloak owns passwords, 2FA and the login email, so changing them is a
+        // Keycloak application-initiated action: the same challenge as /login plus a
+        // kc_action marker that AuthenticationSetup.cs's OnRedirectToIdentityProvider
+        // forwards. Keycloak runs the action against the live SSO session (themed by
+        // apps/keycloak-theme), then completes an ordinary code flow back here, which
+        // re-signs the cookie with fresh tokens. Requires this realm's session: the
+        // action belongs to whoever is signed in, never to an anonymous caller.
+        app.MapGet($"/auth/{segment}/action/{{action}}", (string action, string? returnUrl) =>
+            AllowedActions.Contains(action, StringComparer.Ordinal)
+                ? Results.Challenge(
+                    new AuthenticationProperties
+                    {
+                        RedirectUri = SafeLocalRedirect(returnUrl, appPath),
+                        Items = { ["kc_action"] = action },
+                    },
+                    [oidcScheme])
+                : Results.BadRequest())
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(cookieScheme)
+                .RequireAuthenticatedUser());
 
         // Also a full-page navigation (a form POST from the SPA, not an XHR):
         // the OIDC leg of this sign-out answers with a 302 to Keycloak's

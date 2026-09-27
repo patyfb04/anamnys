@@ -61,12 +61,12 @@ export default function MarketingHeader({
         </nav>
 
         <div className="flex items-center gap-2 shrink-0">
-          <a
-            href={appUrls.providerLogin}
+          <Link
+            to={appUrls.signIn}
             className="text-label-lg text-primary hover:opacity-80 transition-opacity px-2"
           >
             {t("welcome.signIn")}
-          </a>
+          </Link>
           <Link
             to={appUrls.getStarted}
             className="bg-primaryFixed text-onPrimaryFixedVariant rounded-radii-md px-4 py-2 text-label-lg text-[13px] hover:opacity-80 transition-opacity"

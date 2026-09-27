@@ -29,12 +29,14 @@
     "analytics": "Análises",
     "secureSharing": "Compartilhamento",
     "complianceVault": "Conformidade",
-    "billing": "Faturamento",
-    "viewProfile": "Ver perfil"
+    "billing": "Faturamento"
   },
   "dashboard": {
     "greeting": "Bem-vindo(a), {{name}}",
     "comingSoon": "Seu painel completo está a caminho."
+  },
+  "patientPortal": {
+    "comingSoon": "Em breve você poderá agendar, remarcar e cancelar suas consultas por aqui."
   },
   "welcome": {
     "signIn": "Entrar",
@@ -44,6 +46,12 @@
       "subtitle": "Escolha seu perfil para criar sua conta.",
       "providerBody": "Crie sua conta e comece a documentar suas sessões clínicas.",
       "patientBody": "Acesse seu portal para agendar e acompanhar seu atendimento."
+    },
+    "signInPage": {
+      "title": "Como você quer entrar?",
+      "subtitle": "Escolha seu perfil para acessar sua conta.",
+      "providerBody": "Acesse suas sessões, notas clínicas e agenda.",
+      "patientBody": "Acesse seu portal de paciente."
     },
     "nav": {
       "product": "Produto",
@@ -186,6 +194,37 @@
       "weakPasswordBody": "A senha deve ter pelo menos 10 caracteres e incluir uma letra maiúscula, uma minúscula, um número e um símbolo.",
       "passwordMismatchTitle": "As senhas não coincidem",
       "passwordMismatchBody": "Digite sua senha novamente."
+    }
+  },
+  "accountMenu": {
+    "profile": "Dados pessoais",
+    "security": "Acesso e segurança"
+  },
+  "accountPages": {
+    "profile": {
+      "subtitle": "Mantenha suas informações de cadastro atualizadas.",
+      "email": "E-mail",
+      "changeEmail": "Alterar e-mail",
+      "changeEmailHint": "Enviaremos um link de confirmação para o novo endereço. A troca só vale depois que você clicar nele.",
+      "name": "Nome completo",
+      "crpNumber": "Número do CRP",
+      "crpRegion": "Região do CRP",
+      "firstName": "Nome",
+      "lastName": "Sobrenome",
+      "phone": "Telefone",
+      "dateOfBirth": "Data de nascimento",
+      "save": "Salvar alterações",
+      "saved": "Dados atualizados.",
+      "saveError": "Não foi possível salvar. Tente novamente."
+    },
+    "security": {
+      "subtitle": "Gerencie sua senha e a autenticação em dois fatores.",
+      "passwordTitle": "Senha",
+      "passwordBody": "Altere a senha que você usa para entrar no Anamnys.",
+      "passwordAction": "Alterar senha",
+      "totpTitle": "Autenticação em dois fatores",
+      "totpBody": "Proteja sua conta com um código extra gerado por um aplicativo autenticador.",
+      "totpAction": "Configurar 2FA"
     }
   },
   "settings": {

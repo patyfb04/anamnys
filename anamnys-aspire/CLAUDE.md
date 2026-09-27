@@ -332,9 +332,12 @@ npm run lint    # eslint — root runs this across all workspaces
   `TABLESPACE public` clause on a view (views don't take a tablespace). All are fixed in
   the committed file. **If this file is ever regenerated from whatever tool produced it,
   all five defects will come back** — do not blindly overwrite it from that tool again.
-- **Keycloak owns TOTP enrolment, password reset, and recovery codes.** There is no 2FA
-  settings UI in any SPA — link out to the Keycloak account console instead (see
-  `apps/provider/src/routes/_app/settings/account.tsx`).
+- **Keycloak owns TOTP enrolment, password changes, and the login email.** There is no
+  password or 2FA form in any SPA. The account menu's "Acesso e segurança" page
+  (`packages/shared/src/components/SecurityPage.tsx`) starts Keycloak application-initiated
+  actions through the BFF's `/auth/{realm}/action/{action}` route, and "Alterar e-mail"
+  does the same with `UPDATE_EMAIL`. That route allowlists the action; do not widen it
+  without a reason.
 - **Aspire's `WithRealmImport` (Keycloak) is development-only** and is silently dropped by
   `aspire publish`/`deploy`. Production realm seeding needs a custom image — see
   `keycloak/Dockerfile` above.

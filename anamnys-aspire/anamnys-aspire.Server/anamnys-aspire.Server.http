@@ -15,6 +15,17 @@ GET {{Server_HostAddress}}/auth/owner/login
 
 ###
 
+### Keycloak application-initiated action (password, 2FA, email) — needs that realm's
+### session cookie, so open in a signed-in browser. 302 to Keycloak with kc_action;
+### 400 for an action outside UPDATE_PASSWORD, CONFIGURE_TOTP, UPDATE_EMAIL.
+GET {{Server_HostAddress}}/auth/provider/action/UPDATE_PASSWORD?returnUrl=/provider/account/security
+
+###
+
+GET {{Server_HostAddress}}/auth/patient/action/CONFIGURE_TOTP?returnUrl=/patient/account/security
+
+###
+
 ### Current session (requires the __Host-anamnys-provider, __Host-anamnys-patient
 ### or __Host-anamnys-owner cookie — send from a browser session, not this file)
 GET {{Server_HostAddress}}/api/auth/me
@@ -33,5 +44,28 @@ POST {{Server_HostAddress}}/auth/patient/logout
 
 ### End the owner session
 POST {{Server_HostAddress}}/auth/owner/logout
+
+###
+
+### Own profile (needs the matching realm's session cookie — send from a signed-in browser)
+GET {{Server_HostAddress}}/api/phi/providers/me/profile
+
+###
+
+PUT {{Server_HostAddress}}/api/phi/providers/me/profile
+Content-Type: application/json
+
+{ "name": "Ana Souza", "crpNumber": "06/12345", "crpRegion": "SP" }
+
+###
+
+GET {{Server_HostAddress}}/api/phi/patients/me/profile
+
+###
+
+PUT {{Server_HostAddress}}/api/phi/patients/me/profile
+Content-Type: application/json
+
+{ "firstName": "Ana", "lastName": "Souza", "phone": "+55 11 91234-5678", "dateOfBirth": "1990-01-02" }
 
 ###

@@ -265,12 +265,25 @@ public static class AuthenticationSetup
                 // already built it from discovery, before the redirect is issued —
                 // is the standard way to reach it; there is no separate "action" the
                 // OIDC handler itself understands.
+                // Any other kc_action value is an application-initiated action and is passed
+                // through as an authorization request parameter instead (the handler includes
+                // it in the pushed authorization request).
                 options.Events.OnRedirectToIdentityProvider = context =>
                 {
-                    if (context.Properties.Items.TryGetValue("kc_action", out var action) && action == "register")
+                    if (context.Properties.Items.TryGetValue("kc_action", out var action) && action is not null)
                     {
-                        context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress
-                            .Replace("/protocol/openid-connect/auth", "/protocol/openid-connect/registrations");
+                        if (action == "register")
+                        {
+                            context.ProtocolMessage.IssuerAddress = context.ProtocolMessage.IssuerAddress
+                                .Replace("/protocol/openid-connect/auth", "/protocol/openid-connect/registrations");
+                        }
+                        else
+                        {
+                            // Application-initiated action (AuthEndpoints.cs's /action route,
+                            // which allowlists the value). Keycloak reads it straight off the
+                            // authorization request.
+                            context.ProtocolMessage.SetParameter("kc_action", action);
+                        }
                     }
 
                     return Task.CompletedTask;

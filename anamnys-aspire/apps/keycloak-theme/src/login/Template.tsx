@@ -20,18 +20,69 @@ type Props = {
 export function Template({ kcContext, i18n, headline, subhead, children }: Props) {
   const branding = brandingFor(kcContext.realm.name);
   const { msg } = i18n;
+  // The marketing site's origin, from the Keycloak client's baseUrl (see the realm
+  // JSON). Absent for the owners realm, which is internal: logo only, no site nav.
+  const siteUrl = kcContext.client.baseUrl;
+  const site = (path: string) => (siteUrl ? new URL(path, siteUrl).toString() : undefined);
+
+  const logo = (
+    <img
+      src={branding.logo}
+      alt={branding.productName}
+      width={140}
+      height={30}
+      className="w-[140px] h-[30px] object-contain"
+    />
+  );
 
   return (
     <div className="min-h-screen bg-surfaceContainerLow flex flex-col">
-      <header className="bg-surface border-b border-surfaceVariant px-4">
-        <div className="h-16 max-w-5xl mx-auto w-full flex items-center justify-between">
-          <img
-            src={branding.logo}
-            alt={branding.productName}
-            width={140}
-            height={30}
-            className="w-[140px] h-[30px] object-contain"
-          />
+      <header className="bg-surface border-b border-surfaceVariant px-4 md:px-12">
+        <div className="h-16 max-w-7xl mx-auto w-full flex items-center justify-between gap-4">
+          {siteUrl ? (
+            <a href={site('/')} className="shrink-0">
+              {logo}
+            </a>
+          ) : (
+            logo
+          )}
+
+          {siteUrl && (
+            <>
+              <nav className="hidden md:flex items-center gap-6">
+                {(
+                  [
+                    ['/product', 'navProduct'],
+                    ['/pricing', 'navPricing'],
+                    ['/aboutus', 'navAboutUs'],
+                  ] as const
+                ).map(([path, key]) => (
+                  <a
+                    key={path}
+                    href={site(path)}
+                    className="text-onSurfaceVariant font-medium py-4 hover:text-primary transition-colors"
+                  >
+                    {msg(key)}
+                  </a>
+                ))}
+              </nav>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={site('/sign-in')}
+                  className="text-label-lg text-primary hover:opacity-80 transition-opacity px-2"
+                >
+                  {msg('navSignIn')}
+                </a>
+                <a
+                  href={site('/get-started')}
+                  className="bg-primaryFixed text-onPrimaryFixedVariant rounded-radii-md px-4 py-2 text-label-lg text-[13px] hover:opacity-80 transition-opacity"
+                >
+                  {msg('navGetStarted')}
+                </a>
+              </div>
+            </>
+          )}
         </div>
       </header>
 

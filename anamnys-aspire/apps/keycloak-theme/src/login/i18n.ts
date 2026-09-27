@@ -15,6 +15,12 @@ const { useI18n, ofTypeI18n } = i18nBuilder
       // Register.tsx's hero subhead — not doRegister (the button label, "Register"),
       // which read as a literal duplicate of the headline right above it.
       registerSubhead: 'Create your account and start documenting your clinical sessions.',
+      // Template.tsx's header, mirroring apps/web's MarketingHeader.
+      navProduct: 'Product',
+      navPricing: 'Pricing & Plans',
+      navAboutUs: 'About us',
+      navSignIn: 'Sign in',
+      navGetStarted: 'Get started',
     },
     // The realm's defaultLocale/supportedLocales (keycloak/realms/anamnys-providers.json)
     // is pt-BR, matching every other app in this repo — Keycloak's own built-in message
@@ -24,6 +30,11 @@ const { useI18n, ofTypeI18n } = i18nBuilder
       secureBadge: 'Seguro e Privado',
       footerCopyright: '© 2026 Anamnys. Seguro e privado por padrão.',
       registerSubhead: 'Crie sua conta e comece a documentar suas sessões clínicas.',
+      navProduct: 'Produto',
+      navPricing: 'Preços e Planos',
+      navAboutUs: 'Sobre nós',
+      navSignIn: 'Entrar',
+      navGetStarted: 'Começar',
     },
   })
   .build();
