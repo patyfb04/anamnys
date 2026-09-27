@@ -4,6 +4,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Anamnys.Tests.Auth;
 
@@ -60,7 +61,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -81,7 +82,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -103,7 +104,7 @@ public class FirstLoginProvisionerTests
         // (or logged in via a token that simply carries neither claim) must not throw;
         // the Providers_Crp_ck constraint accepts both-null.
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -123,7 +124,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
         var principal = PrincipalFor(subject, "clinician@example.com", "A Clinician");
 
@@ -141,7 +142,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -167,7 +168,7 @@ public class FirstLoginProvisionerTests
         // a missing claim must not throw, it's a realm-config gap to notice later, not a
         // reason to fail the login.
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -187,7 +188,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
         var principal = PrincipalFor(subject, "newpatient@example.com", "A Patient", givenName: "A", familyName: "Patient");
 
@@ -213,7 +214,7 @@ public class FirstLoginProvisionerTests
         };
         db.Patients.Add(unclaimed);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
         // Act
         var act = async () => await provisioner.ProvisionAsync(
@@ -233,7 +234,7 @@ public class FirstLoginProvisionerTests
         // Arrange — the emailVerified gate sits above the bind/create fork, so it must
         // also block self-registration, not just binding to an existing unclaimed row.
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
         // Act
         var act = async () => await provisioner.ProvisionAsync(
@@ -259,7 +260,7 @@ public class FirstLoginProvisionerTests
         };
         db.Patients.Add(unclaimed);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -290,7 +291,7 @@ public class FirstLoginProvisionerTests
         };
         db.Patients.Add(disabled);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
         // Act
         var act = async () => await provisioner.ProvisionAsync(
@@ -307,7 +308,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -327,7 +328,7 @@ public class FirstLoginProvisionerTests
     {
         // Arrange
         await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
 
         // Act
@@ -360,7 +361,7 @@ public class FirstLoginProvisionerTests
         };
         db.Staff.Add(disabled);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var provisioner = new FirstLoginProvisioner(db);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
         // Act
         var act = async () => await provisioner.ProvisionAsync(
@@ -370,5 +371,94 @@ public class FirstLoginProvisionerTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenReturningProviderHasNewVerifiedEmail_UpdatesStoredEmail()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "old@example.com", "A Clinician"), Realms.Providers, TestContext.Current.CancellationToken);
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "new@example.com", "A Clinician"), Realms.Providers, TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Providers.SingleAsync(TestContext.Current.CancellationToken);
+        row.Email.Should().Be("new@example.com");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenReturningProviderEmailIsUnverified_KeepsStoredEmail()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "old@example.com", "A Clinician"), Realms.Providers, TestContext.Current.CancellationToken);
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "new@example.com", "A Clinician", emailVerified: false),
+            Realms.Providers,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Providers.SingleAsync(TestContext.Current.CancellationToken);
+        row.Email.Should().Be("old@example.com");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenReturningPatientHasNewVerifiedEmail_UpdatesStoredEmail()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "old@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "new@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
+        row.Email.Should().Be("new@example.com");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenNewPatientEmailBelongsToUnclaimedRow_KeepsStoredEmailAndStillLogsIn()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "old@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
+        db.Patients.Add(new Patient
+        {
+            Id = Guid.NewGuid(),
+            FirstName = "Invited",
+            LastName = "Patient",
+            Email = "Taken@Example.com",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var secondLoginId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "taken@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
+
+        // Assert
+        secondLoginId.Should().Be(localId);
+        var row = await db.Patients.SingleAsync(p => p.Id == localId, TestContext.Current.CancellationToken);
+        row.Email.Should().Be("old@example.com");
     }
 }
