@@ -33,6 +33,7 @@ public static class DevOnlyTestClientGuard
     [
         (Realms.Providers, "dev.provider"),
         (Realms.Owners, "dev.owner"),
+        (Realms.Owners, "dev.pending"),
     ];
 
     // Every realm whose clients might carry a localhost:* dev origin

@@ -4,7 +4,7 @@
   "displayName": "Anamnys Internal",
   "loginTheme": "anamnys",
   "sslRequired": "external",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
   "resetPasswordAllowed": true,
   "verifyEmail": true,
   "loginWithEmailAllowed": true,
@@ -46,6 +46,22 @@
         {
           "type": "password",
           "value": "SupportStaff!2026Dev",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "dev.pending",
+      "email": "dev.pending@anamnys.local",
+      "firstName": "Dev",
+      "lastName": "Pending",
+      "enabled": true,
+      "emailVerified": true,
+      "realmRoles": [],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "PendingStaff!2026Dev",
           "temporary": false
         }
       ]
