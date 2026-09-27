@@ -17,7 +17,6 @@ public static class StaffRoles
 
 public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLoginProvisioner> logger)
 {
-
     public async Task<Guid> ProvisionAsync(
         ClaimsPrincipal principal,
         string realm,
@@ -101,7 +100,8 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
     // token with none of the staff roles gets a pending row (Role null) and a session
     // that /api/admin refuses. Someone grants a role in the Keycloak console; the next
     // login's token carries it and this activates the row. Permissions are read from
-    // the token, never from Role, so a token that lost its role leaves Role untouched.
+    // the token, never from Role — Role is not the access gate — so a revoked role
+    // lapses only when the session's token-derived claims do, at the next login.
     private async Task<Guid> ProvisionStaffAsync(
         ClaimsPrincipal principal,
         Guid subject,

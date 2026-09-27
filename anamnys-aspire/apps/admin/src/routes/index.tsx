@@ -11,6 +11,7 @@ export const Route = createFileRoute("/")({
   component: AdminHome,
 });
 
+// Keep in sync with StaffRoles.All in anamnys-aspire.Server/Auth/FirstLoginProvisioner.cs
 const STAFF_ROLES = ["owner", "support", "ops"];
 
 function AdminHome() {

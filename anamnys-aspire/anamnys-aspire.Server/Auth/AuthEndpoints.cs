@@ -120,8 +120,8 @@ public static class AuthEndpoints
         // OnRedirectToIdentityProvider reads to send the browser to Keycloak's
         // registration form instead of its login form. Mounted for every realm
         // mechanically, like /login; Keycloak itself refuses to render the form
-        // wherever that realm's registrationAllowed is false (today: owners),
-        // so no realm-conditional check belongs here.
+        // wherever that realm's registrationAllowed is false, so no
+        // realm-conditional check belongs here.
         app.MapGet($"/auth/{segment}/register", (string? returnUrl) =>
             Results.Challenge(
                 new AuthenticationProperties

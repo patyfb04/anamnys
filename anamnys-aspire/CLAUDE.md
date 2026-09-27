@@ -350,6 +350,16 @@ npm run lint    # eslint — root runs this across all workspaces
   role-mapping dialog, switch the filter to **Filter by realm roles** — the staff roles are
   realm roles, not client roles. Never add a staff role to the realm's default roles —
   that would make every registrant staff.
+  To reject or remove a staff account, **disable** the Keycloak user rather than deleting
+  it: the `Staff` row outlives a deleted Keycloak user, and because `Staff.Email` is
+  unique, the same person re-registering (new subject, same email) can then never sign
+  in. If a user was deleted, delete their `Staff` row too. Removing a role is not
+  immediate: `TokenRefresher` keeps the login-time `roles` claims in the session cookie,
+  so a revoked role keeps working until the Keycloak SSO session ends
+  (`ssoSessionMaxLifespan`, 4 hours for this realm). Disable the user for an immediate
+  cut-off. The admin client's optional scopes (`billing:write`, `breakglass:request`, …)
+  can be requested by any user who drives the authorize redirect — never gate an endpoint
+  on a scope alone, always on a staff role too.
 
 ## Workflow
 

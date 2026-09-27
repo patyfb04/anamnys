@@ -39,6 +39,27 @@ public class PendingOwnerTests
     }
 
     [Fact]
+    public async Task AdminProbe_WithProviderSession_Returns401()
+    {
+        // Arrange
+        using var session = await BrowserSession.LoginAsync(
+            new Uri("http://localhost:5273/"), "/provider/", "provider", "dev.provider@anamnys.local", "DevProvider!2026",
+            TestContext.Current.CancellationToken);
+
+        // Act
+        using var phiProbeResponse = await session.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "/api/phi/probe"), TestContext.Current.CancellationToken);
+        using var adminProbeResponse = await session.SendAsync(
+            new HttpRequestMessage(HttpMethod.Get, "/api/admin/probe"), TestContext.Current.CancellationToken);
+
+        // Assert — positive control: a provider session does authenticate on PHI.
+        phiProbeResponse.StatusCode.Should().Be(
+            HttpStatusCode.OK, "the provider session cookie must authenticate on the PHI group");
+        adminProbeResponse.StatusCode.Should().Be(
+            HttpStatusCode.Unauthorized, "a provider cookie is not an authenticated principal on the admin group at all");
+    }
+
+    [Fact]
     public async Task OwnerRegisterEndpoint_RendersKeycloaksRegistrationForm()
     {
         // Arrange

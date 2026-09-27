@@ -70,8 +70,9 @@ On every owners-realm login:
      `Role` and `UpdatedAt`. This is how a pending account becomes active after an
      approval, and how a role change follows the token.
    - Token role is `null` → leave the stored role alone. Authorization reads the token,
-     not the row (section 5), so a revoked role already loses access; the row is not the
-     source of truth for permissions.
+     not the row (section 5), so a revoked role loses access once the session's claims
+     are refreshed by a new login (up to the SSO max lifespan — see CLAUDE.md); the row
+     is not the source of truth for permissions.
    - Return the row id.
 3. No row → insert one with `Role` = token role (possibly `null`). The existing
    insert-race handling (re-read by `ExternalSubject` on `DbUpdateException`) is kept.

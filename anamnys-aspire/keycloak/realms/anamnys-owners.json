@@ -5,6 +5,7 @@
   "loginTheme": "anamnys",
   "sslRequired": "external",
   "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
   "resetPasswordAllowed": true,
   "verifyEmail": true,
   "loginWithEmailAllowed": true,
