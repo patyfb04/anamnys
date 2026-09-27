@@ -197,7 +197,35 @@
     }
   },
   "accountMenu": {
+    "profile": "Dados pessoais",
     "security": "Acesso e segurança"
+  },
+  "accountPages": {
+    "profile": {
+      "subtitle": "Mantenha suas informações de cadastro atualizadas.",
+      "email": "E-mail",
+      "changeEmail": "Alterar e-mail",
+      "changeEmailHint": "Enviaremos um link de confirmação para o novo endereço. A troca só vale depois que você clicar nele.",
+      "name": "Nome completo",
+      "crpNumber": "Número do CRP",
+      "crpRegion": "Região do CRP",
+      "firstName": "Nome",
+      "lastName": "Sobrenome",
+      "phone": "Telefone",
+      "dateOfBirth": "Data de nascimento",
+      "save": "Salvar alterações",
+      "saved": "Dados atualizados.",
+      "saveError": "Não foi possível salvar. Tente novamente."
+    },
+    "security": {
+      "subtitle": "Gerencie sua senha e a autenticação em dois fatores.",
+      "passwordTitle": "Senha",
+      "passwordBody": "Altere a senha que você usa para entrar no Anamnys.",
+      "passwordAction": "Alterar senha",
+      "totpTitle": "Autenticação em dois fatores",
+      "totpBody": "Proteja sua conta com um código extra gerado por um aplicativo autenticador.",
+      "totpAction": "Configurar 2FA"
+    }
   },
   "settings": {
     "title": "Ajustes",
