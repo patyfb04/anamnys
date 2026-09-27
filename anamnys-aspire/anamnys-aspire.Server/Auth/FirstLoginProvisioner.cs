@@ -10,9 +10,13 @@ public static class AnamnysClaims
     public const string LocalId = "anamnys:lid";
 }
 
+public static class StaffRoles
+{
+    public static readonly string[] All = ["owner", "support", "ops"];
+}
+
 public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLoginProvisioner> logger)
 {
-    private static readonly string[] StaffRoles = ["owner", "support", "ops"];
 
     public async Task<Guid> ProvisionAsync(
         ClaimsPrincipal principal,
@@ -93,6 +97,11 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
         return provider.Id;
     }
 
+    // Owners-realm registration is open, so realm membership alone confers nothing: a
+    // token with none of the staff roles gets a pending row (Role null) and a session
+    // that /api/admin refuses. Someone grants a role in the Keycloak console; the next
+    // login's token carries it and this activates the row. Permissions are read from
+    // the token, never from Role, so a token that lost its role leaves Role untouched.
     private async Task<Guid> ProvisionStaffAsync(
         ClaimsPrincipal principal,
         Guid subject,
@@ -100,23 +109,15 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
         string name,
         CancellationToken cancellationToken)
     {
+        var tokenRoles = principal.FindAll("roles").Select(c => c.Value).ToHashSet(StringComparer.Ordinal);
+        var role = StaffRoles.All.FirstOrDefault(tokenRoles.Contains);
+
         var existing = await db.Staff
             .SingleOrDefaultAsync(s => s.ExternalSubject == subject, cancellationToken);
         if (existing is not null)
         {
-            return existing.DisabledAt is null
-                ? existing.Id
-                : throw new InvalidOperationException("This staff account is disabled.");
+            return await ResolveExistingStaffAsync(existing, role, cancellationToken);
         }
-
-        // Realm membership alone confers no internal-staff role: a token that
-        // authenticates against the owners realm but carries none of the
-        // realm roles Staff_Role_ck allows is a misconfiguration, not a
-        // signal to default to "support".
-        var tokenRoles = principal.FindAll("roles").Select(c => c.Value).ToHashSet(StringComparer.Ordinal);
-        var role = StaffRoles.FirstOrDefault(tokenRoles.Contains)
-            ?? throw new InvalidOperationException(
-                $"Token for {subject} carries none of the required staff roles ({string.Join(", ", StaffRoles)}).");
 
         var now = DateTimeOffset.UtcNow;
         var staff = new Staff
@@ -146,12 +147,28 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
                 throw;
             }
 
-            return existing.DisabledAt is null
-                ? existing.Id
-                : throw new InvalidOperationException("This staff account is disabled.");
+            return await ResolveExistingStaffAsync(existing, role, cancellationToken);
         }
 
         return staff.Id;
+    }
+
+    private async Task<Guid> ResolveExistingStaffAsync(Staff existing, string? role, CancellationToken cancellationToken)
+    {
+        if (existing.DisabledAt is not null)
+        {
+            throw new InvalidOperationException("This staff account is disabled.");
+        }
+
+        if (role is not null && role != existing.Role)
+        {
+            existing.Role = role;
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Staff {StaffId} role set from token.", existing.Id);
+        }
+
+        return existing.Id;
     }
 
     // A Patients row can exist two ways: a provider already created and invited this

@@ -703,7 +703,7 @@ CREATE TABLE "Staff" (
 	"ExternalSubject" uuid NOT NULL CONSTRAINT "Staff_ExternalSubject_unique" UNIQUE,
 	"Email" text NOT NULL CONSTRAINT "Staff_Email_unique" UNIQUE,
 	"Name" text NOT NULL,
-	"Role" text NOT NULL,
+	"Role" text,
 	"DisabledAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
