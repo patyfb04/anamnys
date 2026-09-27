@@ -15,17 +15,14 @@ GET {{Server_HostAddress}}/auth/owner/login
 
 ###
 
-### Keycloak account console (password, 2FA) for each realm — a 302 to
-### {KEYCLOAK_PUBLIC_HTTPS_ADDRESS}/realms/<realm>/account/
-GET {{Server_HostAddress}}/auth/provider/account
+### Keycloak application-initiated action (password, 2FA, email) — needs that realm's
+### session cookie, so open in a signed-in browser. 302 to Keycloak with kc_action;
+### 400 for an action outside UPDATE_PASSWORD, CONFIGURE_TOTP, UPDATE_EMAIL.
+GET {{Server_HostAddress}}/auth/provider/action/UPDATE_PASSWORD?returnUrl=/provider/account/security
 
 ###
 
-GET {{Server_HostAddress}}/auth/patient/account
-
-###
-
-GET {{Server_HostAddress}}/auth/owner/account
+GET {{Server_HostAddress}}/auth/patient/action/CONFIGURE_TOTP?returnUrl=/patient/account/security
 
 ###
 

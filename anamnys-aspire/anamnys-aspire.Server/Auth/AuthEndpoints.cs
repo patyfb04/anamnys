@@ -9,11 +9,15 @@ public sealed record MeResponse(Guid Id, string Email, string Name, string Realm
 
 public static class AuthEndpoints
 {
+    // Forwarded verbatim to Keycloak as kc_action, so only actions this app
+    // deliberately offers get through.
+    private static readonly string[] AllowedActions = ["UPDATE_PASSWORD", "CONFIGURE_TOTP", "UPDATE_EMAIL"];
+
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        MapRealm(app, "provider", Realms.Providers, AuthSchemes.ProviderOidc, AuthSchemes.ProviderCookie, "/provider/");
-        MapRealm(app, "patient", Realms.Patients, AuthSchemes.PatientOidc, AuthSchemes.PatientCookie, "/patient/");
-        MapRealm(app, "owner", Realms.Owners, AuthSchemes.OwnerOidc, AuthSchemes.OwnerCookie, "/admin/");
+        MapRealm(app, "provider", AuthSchemes.ProviderOidc, AuthSchemes.ProviderCookie, "/provider/");
+        MapRealm(app, "patient", AuthSchemes.PatientOidc, AuthSchemes.PatientCookie, "/patient/");
+        MapRealm(app, "owner", AuthSchemes.OwnerOidc, AuthSchemes.OwnerCookie, "/admin/");
 
         app.MapGet("/api/auth/me", async (
             HttpContext httpContext,
@@ -98,7 +102,6 @@ public static class AuthEndpoints
     private static void MapRealm(
         WebApplication app,
         string segment,
-        string realm,
         string oidcScheme,
         string cookieScheme,
         string appPath)
@@ -129,19 +132,26 @@ public static class AuthEndpoints
                 [oidcScheme]))
             .AllowAnonymous();
 
-        // Keycloak owns passwords and 2FA, so account management is its own account
-        // console. Redirecting through here keeps Keycloak's public origin out of the
-        // SPAs: they link to this path, and only the server knows where Keycloak is
-        // (the same KEYCLOAK_PUBLIC_HTTPS_ADDRESS the OIDC authority is built from).
-        // Anonymous on purpose: the console authenticates against the SSO session itself.
-        app.MapGet($"/auth/{segment}/account", (IConfiguration configuration) =>
-        {
-            var keycloakBase = configuration["KEYCLOAK_PUBLIC_HTTPS_ADDRESS"];
-            return string.IsNullOrEmpty(keycloakBase)
-                ? Results.Problem("Keycloak's public address is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable)
-                : Results.Redirect($"{keycloakBase.TrimEnd('/')}/realms/{realm}/account/");
-        })
-            .AllowAnonymous();
+        // Keycloak owns passwords, 2FA and the login email, so changing them is a
+        // Keycloak application-initiated action: the same challenge as /login plus a
+        // kc_action marker that AuthenticationSetup.cs's OnRedirectToIdentityProvider
+        // forwards. Keycloak runs the action against the live SSO session (themed by
+        // apps/keycloak-theme), then completes an ordinary code flow back here, which
+        // re-signs the cookie with fresh tokens. Requires this realm's session: the
+        // action belongs to whoever is signed in, never to an anonymous caller.
+        app.MapGet($"/auth/{segment}/action/{{action}}", (string action, string? returnUrl) =>
+            AllowedActions.Contains(action, StringComparer.Ordinal)
+                ? Results.Challenge(
+                    new AuthenticationProperties
+                    {
+                        RedirectUri = SafeLocalRedirect(returnUrl, appPath),
+                        Items = { ["kc_action"] = action },
+                    },
+                    [oidcScheme])
+                : Results.BadRequest())
+            .RequireAuthorization(policy => policy
+                .AddAuthenticationSchemes(cookieScheme)
+                .RequireAuthenticatedUser());
 
         // Also a full-page navigation (a form POST from the SPA, not an XHR):
         // the OIDC leg of this sign-out answers with a 302 to Keycloak's

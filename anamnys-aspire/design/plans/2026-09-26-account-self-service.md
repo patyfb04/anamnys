@@ -384,7 +384,7 @@ git commit -m "test: extract the Keycloak browser-login driver into BrowserSessi
 - Consumes: `BrowserSession` (Task 1).
 - Produces: `GET /auth/{provider|patient|owner}/action/{UPDATE_PASSWORD|CONFIGURE_TOTP|UPDATE_EMAIL}?returnUrl=<local path>` → `302` to Keycloak's authorization endpoint with `kc_action=<action>` in the authorization request; `400` for any other action; `401` without that realm's session.
 
-**Note on PAR:** the OIDC handler uses Pushed Authorization Requests (Keycloak advertises them), so the `302` Location carries only `client_id` and a `request_uri`; `kc_action` travels in the pushed request, not the URL. The test therefore follows the redirect into Keycloak and asserts which page Keycloak renders (the `pageId` in the embedded `kcContext`): `login-update-password.ftl`, `login-config-totp.ftl`, `update-email.ftl`.
+**Note on PAR:** the OIDC handler uses Pushed Authorization Requests (Keycloak advertises them), so the `302` Location carries only `client_id` and a `request_uri`; `kc_action` travels in the pushed request, not the URL. The test therefore follows the redirect into Keycloak and asserts which page Keycloak renders (the `pageId` in the embedded `kcContext`): `login-update-password`, `login-config-totp`, `update-email`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -405,9 +405,9 @@ public class AuthActionEndpointTests
     private static readonly Uri ProviderBaseAddress = new("http://localhost:5273/");
 
     [Theory]
-    [InlineData("UPDATE_PASSWORD", "login-update-password.ftl")]
-    [InlineData("CONFIGURE_TOTP", "login-config-totp.ftl")]
-    [InlineData("UPDATE_EMAIL", "update-email.ftl")]
+    [InlineData("UPDATE_PASSWORD", "login-update-password")]
+    [InlineData("CONFIGURE_TOTP", "login-config-totp")]
+    [InlineData("UPDATE_EMAIL", "update-email")]
     public async Task ActionEndpoint_WithSessionAndAllowedAction_OpensThatKeycloakActionPage(string action, string expectedPageId)
     {
         // Arrange
