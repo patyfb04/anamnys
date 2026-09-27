@@ -111,9 +111,9 @@ and cannot drift from what Keycloak granted.
 
 Nothing changes in `apps/web`, `apps/provider` or `apps/patient`. `/sign-in` and
 `/get-started` keep omitting the owners realm. The Keycloak theme already hides site
-navigation for the owners client. The only places that link to owner registration are
-the admin app itself and the owners realm's own login page (Keycloak's standard
-"register" link, shown because `registrationAllowed` is now true).
+navigation for the owners client. The theme's `Login.tsx` renders no "register" link for
+any realm, so the admin app's landing screen is the only place that links to owner
+registration.
 
 ## 8. Approving a pending account
 
