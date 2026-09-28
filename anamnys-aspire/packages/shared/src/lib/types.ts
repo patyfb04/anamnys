@@ -133,3 +133,44 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
 }
+
+// Patient list (POST /api/phi/providers/me/patients/search). See
+// design/specs/2026-09-27-patient-list-design.md §4.
+export type NoteStatusGroup = "pending" | "signed" | "none";
+export type PatientSortBy = "name" | "lastVisit" | "nextVisit" | "noteStatus";
+export type SortDir = "asc" | "desc";
+
+export interface PatientFilters {
+  name?: string;
+  email?: string;
+  noteStatus?: NoteStatusGroup[];
+  lastVisitFrom?: string; // "YYYY-MM-DD"
+  lastVisitTo?: string;
+  nextVisitFrom?: string;
+  nextVisitTo?: string;
+}
+
+export interface PatientSearchRequest extends PatientFilters {
+  search?: string;
+  sortBy?: PatientSortBy;
+  sortDir?: SortDir;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PatientListItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  lastVisit: string | null;
+  nextAppointmentAt: string | null;
+  noteStatus: NoteStatusGroup;
+}
+
+export interface PatientSearchResponse {
+  items: PatientListItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

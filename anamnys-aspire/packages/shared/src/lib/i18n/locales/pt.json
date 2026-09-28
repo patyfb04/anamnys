@@ -284,14 +284,57 @@
   },
   "patients": {
     "list": {
-      "searchPlaceholder": "Buscar pacientes…",
-      "recent": "Recentes",
-      "last48h": "ÚLTIMAS 48H",
-      "allPatients": "Todos os pacientes",
-      "noPatientsFound": "Nenhum paciente encontrado.",
+      "title": "Pacientes",
+      "subtitle": "Gerencie seus pacientes e acompanhe a documentação clínica.",
+      "filter": "Filtrar",
+      "addPatient": "Adicionar paciente",
+      "searchPlaceholder": "Buscar pacientes por nome ou e-mail…",
       "failedToLoad": "Falha ao carregar pacientes.",
-      "lastVisit": "Última visita: {{date}}",
-      "dob": "Nascimento: {{date}}"
+      "columns": {
+        "patient": "Paciente",
+        "lastVisit": "Último atendimento",
+        "nextVisit": "Próximo atendimento",
+        "details": "Detalhes",
+        "status": "Status"
+      },
+      "viewDetails": "Ver detalhes",
+      "noPortal": "Sem portal",
+      "status": {
+        "pending": "Rascunho pendente",
+        "signed": "Assinada",
+        "none": "Sem notas"
+      },
+      "sortLabel": "Ordenar por",
+      "sort": {
+        "nextVisit": "Próximo atendimento",
+        "lastVisit": "Último atendimento",
+        "name": "Nome",
+        "noteStatus": "Status"
+      },
+      "dir": {
+        "asc": "crescente",
+        "desc": "decrescente"
+      },
+      "filters": {
+        "title": "Filtros",
+        "name": "Nome",
+        "email": "E-mail",
+        "status": "Status da última nota",
+        "lastVisit": "Último atendimento",
+        "nextVisit": "Próximo atendimento",
+        "from": "De",
+        "to": "Até",
+        "apply": "Aplicar",
+        "clear": "Limpar",
+        "close": "Fechar filtros"
+      },
+      "showing": "Mostrando {{from}}–{{to}} de {{total}} pacientes",
+      "previousPage": "Página anterior",
+      "nextPage": "Próxima página",
+      "emptyTitle": "Nenhum paciente ainda",
+      "emptyBody": "Adicione seu primeiro paciente para começar.",
+      "noResults": "Nenhum paciente corresponde à busca ou aos filtros.",
+      "clearFilters": "Limpar busca e filtros"
     },
     "add": {
       "title": "Adicionar paciente",

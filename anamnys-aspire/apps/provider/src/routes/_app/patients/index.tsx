@@ -1,129 +1,156 @@
-import { useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Search, ChevronRight, UserPlus, Loader2 } from "lucide-react";
-import { patientsApi } from "@anamnys/shared/api/patients";
-import type { Patient } from "@anamnys/shared/lib/types";
+import { Filter, Search, UserPlus } from "lucide-react";
 import TextField from "@anamnys/shared/ui/TextField";
-import Card from "@anamnys/shared/ui/Card";
-import Avatar from "@anamnys/shared/ui/Avatar";
+import { usePatientSearch } from "@/hooks/usePatientSearch";
+import PatientsTable from "@/components/patients/PatientsTable";
+import PatientCards from "@/components/patients/PatientCards";
+import PatientSortSelect from "@/components/patients/PatientSortSelect";
+import PatientFilterPanel from "@/components/patients/PatientFilterPanel";
+import PaginationFooter from "@/components/patients/PaginationFooter";
 
 export const Route = createFileRoute("/_app/patients/")({
   component: PatientListPage,
 });
 
-const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000;
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString();
-}
-
-function PatientRow({ patient, avatarSize, onClick }: { patient: Patient; avatarSize: number; onClick: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <Card onClick={onClick}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <Avatar name={`${patient.firstName} ${patient.lastName}`} size={avatarSize} />
-          <div className="min-w-0">
-            <p className="text-label-lg text-[15px] text-onSurface truncate">
-              {patient.firstName} {patient.lastName}
-            </p>
-            <p className="text-body-md text-[12px] text-onSurfaceVariant mt-0.5">
-              {patient.lastVisit
-                ? t("patients.list.lastVisit", { date: formatDate(patient.lastVisit) })
-                : t("patients.list.dob", { date: formatDate(patient.dateOfBirth) })}
-            </p>
-          </div>
-        </div>
-        <ChevronRight size={22} className="text-outline shrink-0" />
-      </div>
-    </Card>
-  );
-}
-
-// Searchable list of patients that navigates into a patient's profile on selection.
+// Provider's patient list: server-side search, filters, sortable columns and paging.
+// See design/specs/2026-09-27-patient-list-design.md.
 function PatientListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const closeFilters = useCallback(() => setFiltersOpen(false), []);
+  const {
+    search,
+    setSearch,
+    filters,
+    setFilters,
+    activeFilterCount,
+    hasCriteria,
+    sortBy,
+    sortDir,
+    setSort,
+    toggleSort,
+    page,
+    setPage,
+    query,
+  } = usePatientSearch();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["patients"],
-    queryFn: () => patientsApi.list(1, 50),
-  });
+  const openPatient = (patientId: string) => navigate({ to: "/patients/$patientId", params: { patientId } });
+  const clearAll = () => {
+    setSearch("");
+    setFilters({});
+  };
 
-  // Captured once via useState's lazy initializer (React's blessed pattern for a one-time
-  // impure read like Date.now()) rather than called directly during render, which the
-  // react-hooks/purity rule disallows.
-  const [now] = useState(() => Date.now());
-
-  const patients = data?.items ?? [];
-  const filtered = patients.filter((p) => {
-    const full = `${p.firstName} ${p.lastName}`.toLowerCase();
-    return full.includes(search.toLowerCase());
-  });
-
-  const recent = useMemo(() => {
-    return filtered
-      .filter((p) => p.lastVisit && now - new Date(p.lastVisit).getTime() < RECENT_WINDOW_MS)
-      .slice(0, 3);
-  }, [filtered, now]);
+  const data = query.data;
 
   return (
-    <div className="relative min-h-full">
-      <div className="p-4 pb-28 max-w-2xl mx-auto">
-        <TextField
-          icon={Search}
-          placeholder={t("patients.list.searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          containerClassName="mt-4 mb-6"
-          pill
-        />
-
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-primary" size={32} />
+    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">
+        <div>
+          <h1 className="text-headline-lg text-onSurface">{t("patients.list.title")}</h1>
+          <p className="text-body-md text-onSurfaceVariant mt-1">{t("patients.list.subtitle")}</p>
+        </div>
+        <div className="flex gap-3">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              className="flex items-center gap-2 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface bg-surfaceContainerLowest hover:bg-surfaceContainerLow transition-colors"
+            >
+              <Filter size={18} />
+              {t("patients.list.filter")}
+              {activeFilterCount > 0 && (
+                <span className="min-w-5 h-5 px-1 rounded-radii-full bg-primary text-onPrimary text-label-md flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+            {filtersOpen && <PatientFilterPanel filters={filters} onApply={setFilters} onClose={closeFilters} />}
           </div>
-        ) : error ? (
-          <p className="text-error text-center py-12">{t("patients.list.failedToLoad")}</p>
-        ) : (
-          <>
-            {recent.length > 0 && (
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-headline-sm text-onSurfaceVariant">{t("patients.list.recent")}</h2>
-                  <span className="text-label-md text-primary uppercase tracking-wide">{t("patients.list.last48h")}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {recent.map((p) => (
-                    <PatientRow key={p.id} patient={p} avatarSize={40} onClick={() => navigate({ to: `/patients/${p.id}` })} />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <h2 className="text-headline-sm text-onSurfaceVariant mb-3">{t("patients.list.allPatients")}</h2>
-            {filtered.length === 0 ? (
-              <p className="text-body-md text-onSurfaceVariant text-center mt-8">{t("patients.list.noPatientsFound")}</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {filtered.map((p) => (
-                  <PatientRow key={p.id} patient={p} avatarSize={44} onClick={() => navigate({ to: `/patients/${p.id}` })} />
-                ))}
-              </div>
-            )}
-          </>
-        )}
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/patients/new" })}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-onPrimary rounded-radii-md text-label-lg shadow-sm hover:opacity-90 transition-opacity"
+          >
+            <UserPlus size={18} />
+            {t("patients.list.addPatient")}
+          </button>
+        </div>
       </div>
 
+      <TextField
+        icon={Search}
+        placeholder={t("patients.list.searchPlaceholder")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        containerClassName="mb-4"
+        aria-label={t("patients.list.searchPlaceholder")}
+      />
+
+      <div className="md:hidden mb-3">
+        <PatientSortSelect sortBy={sortBy} sortDir={sortDir} onChange={setSort} />
+      </div>
+
+      <div className="bg-surfaceContainerLowest rounded-radii-xl border border-outlineVariant overflow-hidden shadow-sm">
+        {query.isPending ? (
+          <LoadingRows />
+        ) : query.isError ? (
+          <p className="text-error text-center py-12">{t("patients.list.failedToLoad")}</p>
+        ) : data && data.items.length === 0 ? (
+          <EmptyState
+            hasCriteria={hasCriteria}
+            onClear={clearAll}
+            onAdd={() => navigate({ to: "/patients/new" })}
+          />
+        ) : data ? (
+          <div className={query.isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}>
+            <div className="hidden md:block overflow-x-auto">
+              <PatientsTable items={data.items} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} onOpen={openPatient} />
+            </div>
+            <div className="md:hidden">
+              <PatientCards items={data.items} onOpen={openPatient} />
+            </div>
+            <PaginationFooter page={page} pageSize={data.pageSize} totalCount={data.totalCount} onPage={setPage} />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function LoadingRows() {
+  return (
+    <div className="divide-y divide-outlineVariant" aria-busy="true">
+      {Array.from({ length: 5 }, (_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-4 animate-pulse">
+          <div className="w-10 h-10 rounded-radii-full bg-surfaceContainerHigh" />
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="h-3 w-40 rounded-radii-sm bg-surfaceContainerHigh" />
+            <div className="h-3 w-24 rounded-radii-sm bg-surfaceContainer" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ hasCriteria, onClear, onAdd }: { hasCriteria: boolean; onClear: () => void; onAdd: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col items-center text-center gap-3 px-4 py-12">
+      <p className="text-headline-sm text-onSurface">
+        {hasCriteria ? t("patients.list.noResults") : t("patients.list.emptyTitle")}
+      </p>
+      {!hasCriteria && <p className="text-body-md text-onSurfaceVariant">{t("patients.list.emptyBody")}</p>}
       <button
-        onClick={() => navigate({ to: "/patients/new" })}
-        className="fixed bottom-24 right-5 w-15 h-15 rounded-radii-full bg-primary shadow-lg shadow-primary/35 flex items-center justify-center"
+        type="button"
+        onClick={hasCriteria ? onClear : onAdd}
+        className="text-label-lg text-primary hover:underline"
       >
-        <UserPlus size={26} className="text-onPrimary" />
+        {hasCriteria ? t("patients.list.clearFilters") : t("patients.list.addPatient")}
       </button>
     </div>
   );
