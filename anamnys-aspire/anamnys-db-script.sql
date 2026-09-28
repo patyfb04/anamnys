@@ -837,6 +837,7 @@ CREATE INDEX "InsurerAuthorizations_ValidUntil_idx" ON "InsurerAuthorizations" (
 CREATE INDEX "IntakeResponses_PatientId_idx" ON "IntakeResponses" ("PatientId");
 CREATE INDEX "MedicationEntries_Patient_Started_idx" ON "MedicationEntries" ("PatientId","StartedOn");
 CREATE INDEX "Notes_PatientId_idx" ON "Notes" ("PatientId");
+CREATE INDEX "Notes_Patient_Created_idx" ON "Notes" ("PatientId","CreatedAt" DESC);
 CREATE INDEX "Notes_ProviderId_idx" ON "Notes" ("ProviderId");
 CREATE INDEX "Notes_Status_idx" ON "Notes" ("Status");
 CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");

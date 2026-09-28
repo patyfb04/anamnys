@@ -10,6 +10,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<Note> Notes => Set<Note>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +52,18 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("AccessLogs");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.ProviderId);
+        });
+
+        modelBuilder.Entity<Appointment>(e =>
+        {
+            e.ToTable("Appointments");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<Note>(e =>
+        {
+            e.ToTable("Notes");
+            e.HasKey(x => x.Id);
         });
     }
 }
