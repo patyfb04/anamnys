@@ -28,9 +28,18 @@ _app/
 
 ## What's actually built
 
-`patients/index.tsx` (130 lines) and `patients/new.tsx` (132 lines) are real, complete
-views — a patient list and a patient-creation form, each wired to
-`packages/shared/src/api/patients.ts` through TanStack Query.
+`patients/index.tsx` is the patient list, backed end to end by
+`POST /api/phi/providers/me/patients/search` (`anamnys-aspire.Server/Patients/`). Search,
+filters (latest-note status, name, email, last/next visit ranges), sortable columns and
+paging all run server-side, scoped to the signed-in provider. The page renders a table at
+`md+` and cards below (`components/patients/`), and keeps its filter state in
+`hooks/usePatientSearch.ts`, never in the URL, because name and email are PHI. See
+`design/specs/2026-09-27-patient-list-design.md`.
+
+`patients/new.tsx` (132 lines) is a complete patient-creation form wired to
+`packages/shared/src/api/patients.ts` through TanStack Query, but the `POST /api/patients`
+route it calls (like `GET /api/patients/{id}` behind `PatientDetailView`) does not exist
+on the server yet.
 
 `patients/$patientId/index.tsx` and `patients/$patientId/notes.tsx` are each barely more
 than ten lines — but that's because they're thin route wrappers, not stubs, delegating
