@@ -324,7 +324,7 @@ public class FirstLoginProvisionerTests
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenStaffTokenCarriesNoRecognisedRole_ThrowsRatherThanDefaulting()
+    public async Task ProvisionAsync_WhenStaffTokenCarriesNoRecognisedRole_CreatesPendingRow()
     {
         // Arrange
         await using var db = NewContext();
@@ -332,14 +332,86 @@ public class FirstLoginProvisionerTests
         var subject = Guid.NewGuid();
 
         // Act
-        var act = async () => await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "staffer@example.com", "A Staffer"),
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer", roles: "default-roles-anamnys-owners"),
             Realms.Owners,
             TestContext.Current.CancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        (await db.Staff.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        var row = await db.Staff.SingleAsync(TestContext.Current.CancellationToken);
+        row.Id.Should().Be(localId);
+        row.Role.Should().BeNull("realm membership alone confers no staff role; the row waits for approval");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenPendingStaffReturnsWithRole_ActivatesRow()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        var pendingId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Act
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer", roles: "support"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        localId.Should().Be(pendingId);
+        var row = await db.Staff.SingleAsync(TestContext.Current.CancellationToken);
+        row.Role.Should().Be("support");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenStaffTokenRoleChanges_UpdatesStoredRole()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer", roles: "support"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Act
+        await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer", roles: "ops"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var row = await db.Staff.SingleAsync(TestContext.Current.CancellationToken);
+        row.Role.Should().Be("ops");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenActiveStaffTokenLosesRole_KeepsStoredRoleAndStillLogsIn()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+        var subject = Guid.NewGuid();
+        var activeId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer", roles: "owner"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Act
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "staffer@example.com", "A Staffer"),
+            Realms.Owners,
+            TestContext.Current.CancellationToken);
+
+        // Assert — authorization reads the token, so the stale row grants nothing.
+        localId.Should().Be(activeId);
+        var row = await db.Staff.SingleAsync(TestContext.Current.CancellationToken);
+        row.Role.Should().Be("owner");
     }
 
     [Fact]

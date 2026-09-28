@@ -89,10 +89,14 @@ var phi = app.MapGroup("/api/phi")
 phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 phi.MapProfileEndpoints();
 
+// Owners-realm registration is open: an owners cookie proves identity, a staff role
+// in the token proves access. Missing role = 403; another realm's cookie stays 401
+// because the scheme list is unchanged.
 var admin = app.MapGroup("/api/admin")
     .RequireAuthorization(policy => policy
         .AddAuthenticationSchemes(AuthSchemes.OwnerCookie)
-        .RequireAuthenticatedUser());
+        .RequireAuthenticatedUser()
+        .RequireClaim("roles", StaffRoles.All));
 
 admin.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 

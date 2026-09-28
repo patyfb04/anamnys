@@ -1,1 +1,5 @@
-@import 'tailwindcss';
+@import "tailwindcss";
+@import "../../../packages/shared/src/styles/theme.css";
+
+/* Tailwind only scans files it knows about; the shared ui/ components live in packages/shared/src. */
+@source "../../../packages/shared/src";

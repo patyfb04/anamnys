@@ -699,5 +699,21 @@
     "closingBody": "Fale direto com quem construiu o produto. Não há central de atendimento, script nem primeiro nível.",
     "closingButton": "Agendar uma conversa",
     "closingEmail": "[E-MAIL]"
+  },
+  "admin": {
+    "landing": {
+      "title": "Anamnys Interno",
+      "subtitle": "Acesso restrito à equipe Anamnys.",
+      "signIn": "Entrar",
+      "register": "Criar conta"
+    },
+    "pending": {
+      "title": "Conta aguardando aprovação",
+      "body": "Sua conta foi criada. Um administrador precisa liberar seu acesso. Depois da aprovação, saia e entre novamente.",
+      "signOut": "Sair"
+    },
+    "topBar": {
+      "internal": "Interno"
+    }
   }
 }

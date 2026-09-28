@@ -288,7 +288,7 @@ npm run lint    # eslint — root runs this across all workspaces
   production.** `keycloak/Dockerfile` runs a `jq` filter (`strip-dev-seed.jq`) that removes
   the `users` array and every `localhost` redirect/logout/web-origin entry from each realm
   file unless `INCLUDE_DEV_SEED=true`; `AppHost.cs` only passes `true` in Development. The
-  committed realm JSON contains real dev-only credentials (`dev.provider`, `dev.owner`) —
+  committed realm JSON contains real dev-only credentials (`dev.provider`, `dev.owner`, `dev.pending`) —
   this filter is the entire reason they never ship. Anyone editing the Dockerfile or the
   realm JSON must not weaken or bypass it.
 - **Cookies are distinguished by name, not path.** `__Host-anamnys-provider`, `-patient`,
@@ -341,6 +341,25 @@ npm run lint    # eslint — root runs this across all workspaces
 - **Aspire's `WithRealmImport` (Keycloak) is development-only** and is silently dropped by
   `aspire publish`/`deploy`. Production realm seeding needs a custom image — see
   `keycloak/Dockerfile` above.
+- **Owners-realm registration is open; access is not.** Anyone can create an account from
+  the admin app, and `FirstLoginProvisioner` gives it a `Staff` row with `Role` null
+  (pending). `/api/admin` requires a `roles` claim of `owner`, `support` or `ops`, so a
+  pending session gets 403 there. To approve: Keycloak admin console → realm
+  `anamnys-owners` → Users → the user → Role mapping → assign the role. The user must
+  sign out and back in; the role only reaches the session through a new token. In the
+  role-mapping dialog, switch the filter to **Filter by realm roles** — the staff roles are
+  realm roles, not client roles. Never add a staff role to the realm's default roles —
+  that would make every registrant staff.
+  To reject or remove a staff account, **disable** the Keycloak user rather than deleting
+  it: the `Staff` row outlives a deleted Keycloak user, and because `Staff.Email` is
+  unique, the same person re-registering (new subject, same email) can then never sign
+  in. If a user was deleted, delete their `Staff` row too. Removing a role is not
+  immediate: `TokenRefresher` keeps the login-time `roles` claims in the session cookie,
+  so a revoked role keeps working until the Keycloak SSO session ends
+  (`ssoSessionMaxLifespan`, 4 hours for this realm). Disable the user for an immediate
+  cut-off. The admin client's optional scopes (`billing:write`, `breakglass:request`, …)
+  can be requested by any user who drives the authorize redirect — never gate an endpoint
+  on a scope alone, always on a staff role too.
 
 ## Workflow
 
