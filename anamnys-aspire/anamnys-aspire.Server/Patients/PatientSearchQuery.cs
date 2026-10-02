@@ -11,6 +11,9 @@ public static class PatientSearchQuery
 {
     private static readonly TimeZoneInfo PracticeTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
+    public static DateOnly PracticeToday(DateTimeOffset now) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, PracticeTimeZone).DateTime);
+
     public static async Task<PatientSearchResponse> ExecuteAsync(
         AnamnysDbContext db,
         Guid providerId,
