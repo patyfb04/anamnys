@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
+using Anamnys.Server.Patients;
 using Anamnys.Server.Profile;
 using Microsoft.AspNetCore.Authentication;
 
@@ -88,6 +89,8 @@ var phi = app.MapGroup("/api/phi")
 
 phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 phi.MapProfileEndpoints();
+phi.MapPatientEndpoints();
+phi.MapPatientRecordEndpoints();
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401

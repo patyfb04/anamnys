@@ -1,25 +1,91 @@
 // ─── Domain types ─────────────────────────────────────────────────────────────
 
-export interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  diagnoses: string[];
-  currentMedications: string[];
-  treatmentPlan?: string;
-  preferredLanguage?: string; // ISO 639-1 code, e.g. "en" — undefined means auto-detect
-  lastVisit?: string;
+// Patient records (/api/phi/providers/me/patients). See
+// design/specs/2026-10-01-patient-records-design.md §4. Dates are "YYYY-MM-DD".
+export interface DiagnosisInput {
+  description: string;
+  icdCode?: string | null;
+  resolvedOn?: string | null;
+}
+
+export interface MedicationInput {
+  drug: string;
+  dose?: string | null;
+  posology?: string | null;
+  startedOn: string | null;
+  endedOn?: string | null;
+}
+
+export interface ObjectiveInput {
+  description: string;
 }
 
 export interface CreatePatientRequest {
   firstName: string;
   lastName: string;
-  dateOfBirth: string; // ISO date string, e.g. "1990-01-31"
-  diagnoses?: string[];
-  currentMedications?: string[];
-  treatmentPlan?: string;
-  preferredLanguage?: string;
+  contactEmail: string;
+  dateOfBirth: string | null;
+  diagnoses?: DiagnosisInput[];
+  medications?: MedicationInput[];
+  treatmentObjectives?: string[];
+}
+
+export interface UpdatePatientRequest {
+  firstName: string;
+  lastName: string;
+  contactEmail: string;
+  dateOfBirth: string | null;
+}
+
+export interface DiagnosisItem {
+  id: string;
+  description: string;
+  icdCode: string | null;
+  recordedAt: string;
+  resolvedOn: string | null;
+}
+
+export interface MedicationItem {
+  id: string;
+  drug: string;
+  dose: string | null;
+  posology: string | null;
+  startedOn: string;
+  endedOn: string | null;
+}
+
+export interface ObjectiveItem {
+  id: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface NoteSummary {
+  id: string;
+  status: string;
+  format: string;
+  createdAt: string;
+  signedAt: string | null;
+}
+
+export interface PatientDetail {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  contactEmail: string | null;
+  portalEmail: string | null; // login email; set only when hasPortalAccount
+  phone: string | null;
+  hasPortalAccount: boolean;
+  archivedAt: string | null;
+  lastVisit: string | null;
+  nextAppointmentAt: string | null;
+  noteStatus: NoteStatusGroup;
+  canDelete: boolean;
+  diagnoses: DiagnosisItem[];
+  medications: MedicationItem[];
+  objectives: ObjectiveItem[];
+  recentNotes: NoteSummary[];
 }
 
 // Keep in sync with the backend's ClinicalDraft.Domain.SupportedLanguages.
@@ -130,6 +196,48 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
+  page: number;
+  pageSize: number;
+}
+
+// Patient list (POST /api/phi/providers/me/patients/search). See
+// design/specs/2026-09-27-patient-list-design.md §4.
+export type NoteStatusGroup = "pending" | "signed" | "none";
+export type PatientSortBy = "name" | "lastVisit" | "nextVisit" | "noteStatus";
+export type SortDir = "asc" | "desc";
+
+export interface PatientFilters {
+  name?: string;
+  email?: string;
+  noteStatus?: NoteStatusGroup[];
+  lastVisitFrom?: string; // "YYYY-MM-DD"
+  lastVisitTo?: string;
+  nextVisitFrom?: string;
+  nextVisitTo?: string;
+  archived?: boolean; // true: archived patients only
+}
+
+export interface PatientSearchRequest extends PatientFilters {
+  search?: string;
+  sortBy?: PatientSortBy;
+  sortDir?: SortDir;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PatientListItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  contactEmail: string | null;
+  lastVisit: string | null;
+  nextAppointmentAt: string | null;
+  noteStatus: NoteStatusGroup;
+}
+
+export interface PatientSearchResponse {
+  items: PatientListItem[];
+  totalCount: number;
   page: number;
   pageSize: number;
 }

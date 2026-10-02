@@ -202,33 +202,6 @@ public class FirstLoginProvisionerTests
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenPatientEmailNotVerified_ThrowsRatherThanBinding()
-    {
-        // Arrange
-        await using var db = NewContext();
-        var unclaimed = new Patient
-        {
-            Id = Guid.NewGuid(),
-            Email = "patient@example.com",
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-        db.Patients.Add(unclaimed);
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-
-        // Act
-        var act = async () => await provisioner.ProvisionAsync(
-            PrincipalFor(Guid.NewGuid(), "patient@example.com", "A Patient", emailVerified: false),
-            Realms.Patients,
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
-        row.ExternalSubject.Should().BeNull();
-    }
-
-    [Fact]
     public async Task ProvisionAsync_WhenPatientEmailNotVerifiedAndNoRowMatches_ThrowsRatherThanCreating()
     {
         // Arrange — the emailVerified gate sits above the bind/create fork, so it must
@@ -248,17 +221,22 @@ public class FirstLoginProvisionerTests
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenPatientEmailVerified_BindsUnclaimedAccountCaseInsensitively()
+    public async Task ProvisionAsync_WhenAProviderRecordHasTheSameContactEmail_DoesNotBindIt()
     {
-        // Arrange
+        // Arrange — a provider typed this email in for scheduling notices. That is not an
+        // invitation: a portal sign-up with the same verified email must not land in the
+        // provider's record (design/specs/2026-10-01-patient-records-design.md §8).
         await using var db = NewContext();
-        var unclaimed = new Patient
+        var providerRecord = new Patient
         {
             Id = Guid.NewGuid(),
-            Email = "Patient@Example.com",
+            ProviderId = Guid.NewGuid(),
+            FirstName = "Ana",
+            LastName = "Silva",
+            ContactEmail = "Patient@Example.com",
             CreatedAt = DateTimeOffset.UtcNow,
         };
-        db.Patients.Add(unclaimed);
+        db.Patients.Add(providerRecord);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
         var subject = Guid.NewGuid();
@@ -270,9 +248,12 @@ public class FirstLoginProvisionerTests
             TestContext.Current.CancellationToken);
 
         // Assert
-        localId.Should().Be(unclaimed.Id);
-        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
-        row.ExternalSubject.Should().Be(subject);
+        localId.Should().NotBe(providerRecord.Id);
+        var record = await db.Patients.SingleAsync(p => p.Id == providerRecord.Id, TestContext.Current.CancellationToken);
+        record.ExternalSubject.Should().BeNull();
+        var own = await db.Patients.SingleAsync(p => p.Id == localId, TestContext.Current.CancellationToken);
+        own.ProviderId.Should().BeNull();
+        own.ExternalSubject.Should().Be(subject);
     }
 
     [Fact]

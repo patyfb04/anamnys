@@ -11,7 +11,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
-  { href: "/patients/new", Icon: Mic, labelKey: "nav.newNote", matchPrefix: "/notes" },
+  { href: "/patients", Icon: Mic, labelKey: "nav.newNote", matchPrefix: "/notes" },
   { href: "/settings", Icon: Settings, labelKey: "nav.settings", matchPrefix: "/settings" },
 ];
 
@@ -31,7 +31,7 @@ export default function AppTabBar() {
 
         if (isNewNote) {
           return (
-            <Link key={tab.href} to={tab.href} className="flex-1 flex flex-col items-center">
+            <Link key={tab.labelKey} to={tab.href} className="flex-1 flex flex-col items-center">
               <span className="w-11 h-11 rounded-full bg-primary flex items-center justify-center -mt-[22px] shadow-lg shadow-primary/30">
                 <tab.Icon size={22} className="text-onPrimary" />
               </span>
@@ -41,7 +41,7 @@ export default function AppTabBar() {
         }
 
         return (
-          <Link key={tab.href} to={tab.href} className="flex-1 flex flex-col items-center">
+          <Link key={tab.labelKey} to={tab.href} className="flex-1 flex flex-col items-center">
             <span className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-radii-full ${isActive ? "bg-primaryContainer" : ""}`}>
               <tab.Icon size={20} className={isActive ? "text-onPrimaryContainer" : "text-onSurfaceVariant"} />
               <span className={`text-label-md normal-case ${isActive ? "text-onPrimaryContainer" : "text-onSurfaceVariant"}`}>{label}</span>
