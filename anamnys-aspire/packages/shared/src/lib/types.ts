@@ -23,6 +23,7 @@ export interface ObjectiveInput {
 export interface CreatePatientRequest {
   firstName: string;
   lastName: string;
+  contactEmail: string;
   dateOfBirth: string | null;
   diagnoses?: DiagnosisInput[];
   medications?: MedicationInput[];
@@ -32,6 +33,7 @@ export interface CreatePatientRequest {
 export interface UpdatePatientRequest {
   firstName: string;
   lastName: string;
+  contactEmail: string;
   dateOfBirth: string | null;
 }
 
@@ -71,7 +73,8 @@ export interface PatientDetail {
   firstName: string;
   lastName: string;
   dateOfBirth: string | null;
-  email: string | null;
+  contactEmail: string | null;
+  portalEmail: string | null; // login email; set only when hasPortalAccount
   phone: string | null;
   hasPortalAccount: boolean;
   archivedAt: string | null;
@@ -226,7 +229,7 @@ export interface PatientListItem {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
+  contactEmail: string | null;
   lastVisit: string | null;
   nextAppointmentAt: string | null;
   noteStatus: NoteStatusGroup;

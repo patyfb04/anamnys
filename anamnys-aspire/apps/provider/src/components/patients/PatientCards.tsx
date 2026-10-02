@@ -30,7 +30,7 @@ export default function PatientCards({ items, onOpen }: Props) {
               <Avatar name={fullName} size={40} />
               <div className="flex-1 min-w-0">
                 <p className="text-label-lg text-onSurface truncate">{fullName}</p>
-                <p className="text-label-md text-outline truncate">{patient.email ?? t("patients.list.noPortal")}</p>
+                <p className="text-label-md text-outline truncate">{patient.contactEmail ?? "—"}</p>
                 <p className="text-body-md text-onSurfaceVariant mt-1">
                   {t("patients.list.columns.nextVisit")}:{" "}
                   {patient.nextAppointmentAt

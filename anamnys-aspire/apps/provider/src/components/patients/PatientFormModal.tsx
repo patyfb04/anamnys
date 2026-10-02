@@ -37,6 +37,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
   const [tab, setTab] = useState<Tab>("basic");
   const [firstName, setFirstName] = useState(editing?.firstName ?? "");
   const [lastName, setLastName] = useState(editing?.lastName ?? "");
+  const [contactEmail, setContactEmail] = useState(editing?.contactEmail ?? "");
   const [dateOfBirth, setDateOfBirth] = useState(editing?.dateOfBirth ?? "");
   const [diagnoses, setDiagnoses] = useState<DiagnosisRow[]>([]);
   const [medications, setMedications] = useState<MedicationRow[]>([]);
@@ -45,8 +46,11 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const dirty = editing
-    ? firstName !== editing.firstName || lastName !== editing.lastName || dateOfBirth !== (editing.dateOfBirth ?? "")
-    : Boolean(firstName || lastName || dateOfBirth || diagnoses.length || medications.length || objectives.length);
+    ? firstName !== editing.firstName ||
+      lastName !== editing.lastName ||
+      contactEmail !== (editing.contactEmail ?? "") ||
+      dateOfBirth !== (editing.dateOfBirth ?? "")
+    : Boolean(firstName || lastName || contactEmail || dateOfBirth || diagnoses.length || medications.length || objectives.length);
 
   const requestClose = () => {
     if (!dirty || window.confirm(t("patients.form.discardConfirm"))) onClose();
@@ -55,7 +59,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
   const mutation = useMutation({
     mutationFn: async () => {
       if (editing) {
-        await patientsApi.update(editing.id, { firstName, lastName, dateOfBirth: dateOfBirth || null });
+        await patientsApi.update(editing.id, { firstName, lastName, contactEmail, dateOfBirth: dateOfBirth || null });
         return editing.id;
       }
       // Rows left completely blank are dropped, so server indexes match the rows shown.
@@ -68,6 +72,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
       return patientsApi.create({
         firstName,
         lastName,
+        contactEmail,
         dateOfBirth: dateOfBirth || null,
         diagnoses: keptDiagnoses.map((d) => ({ description: d.description, icdCode: d.icdCode || null })),
         medications: keptMedications.map((m) => ({
@@ -89,7 +94,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
         setErrors(e.errors);
         setFormError(null);
         const keys = Object.keys(e.errors);
-        if (!editing && keys.length > 0 && !keys.some((k) => ["firstName", "lastName", "dateOfBirth"].includes(k))) {
+        if (!editing && keys.length > 0 && !keys.some((k) => ["firstName", "lastName", "contactEmail", "dateOfBirth"].includes(k))) {
           setTab("clinical");
         } else {
           setTab("basic");
@@ -168,6 +173,19 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
               onChange={(e) => setLastName(e.target.value)}
               error={errors.lastName}
             />
+            <div className="flex flex-col gap-1">
+              <FormField
+                label={t("patients.form.contactEmail")}
+                type="email"
+                autoComplete="off"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                error={errors.contactEmail}
+              />
+              {!errors.contactEmail && (
+                <span className="text-label-md text-outline">{t("patients.form.contactEmailHint")}</span>
+              )}
+            </div>
             <FormField
               label={t("patients.form.dateOfBirth")}
               type="date"

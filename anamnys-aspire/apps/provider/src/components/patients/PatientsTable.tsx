@@ -72,7 +72,7 @@ export default function PatientsTable({ items, sortBy, sortDir, onSort, onOpen }
                     <p className="text-label-lg text-onSurface truncate group-hover:text-primary transition-colors">
                       {fullName}
                     </p>
-                    <p className="text-label-md text-outline truncate">{patient.email ?? t("patients.list.noPortal")}</p>
+                    <p className="text-label-md text-outline truncate">{patient.contactEmail ?? "—"}</p>
                   </div>
                 </div>
               </td>

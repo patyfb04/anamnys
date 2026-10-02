@@ -137,10 +137,12 @@ function PatientDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <DetailCard title={t("patients.detail.contact")} icon={<UserRound size={20} />}>
           <dl className="flex flex-col gap-3">
-            <Field label={t("patients.detail.email")} value={patient.email ?? t("patients.list.noPortal")} />
+            <Field label={t("patients.detail.contactEmail")} value={patient.contactEmail ?? "—"} />
             <Field label={t("patients.detail.phone")} value={patient.phone ?? "—"} />
             <p className="text-label-md text-outline">
-              {patient.hasPortalAccount ? t("patients.detail.portalLinked") : t("patients.detail.portalNotLinked")}
+              {patient.hasPortalAccount
+                ? t("patients.detail.portalLinked", { email: patient.portalEmail })
+                : t("patients.detail.portalNotLinked")}
             </p>
           </dl>
         </DetailCard>
