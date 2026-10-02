@@ -13,10 +13,9 @@ asked you to build.
 _app.tsx                                    layout: auth gate + shell
 _app/
 ├── patients/
-│   ├── index.tsx                           patient list
-│   ├── new.tsx                             create-patient form
+│   ├── index.tsx                           patient list (+ create modal)
 │   └── $patientId/
-│       ├── index.tsx                       patient detail
+│       ├── index.tsx                       patient record
 │       ├── notes.tsx                       patient's notes list
 │       └── live-transcribe.tsx             live dictation session
 ├── notes/
@@ -30,36 +29,31 @@ _app/
 
 `patients/index.tsx` is the patient list, backed end to end by
 `POST /api/phi/providers/me/patients/search` (`anamnys-aspire.Server/Patients/`). Search,
-filters (latest-note status, name, email, last/next visit ranges), sortable columns and
-paging all run server-side, scoped to the signed-in provider. The page renders a table at
-`md+` and cards below (`components/patients/`), and keeps its filter state in
+filters (latest-note status, name, email, last/next visit ranges, archived), sortable
+columns and paging all run server-side, scoped to the signed-in provider. The page renders
+a table at `md+` and cards below (`components/patients/`), and keeps its filter state in
 `hooks/usePatientSearch.ts`, never in the URL, because name and email are PHI. See
 `design/specs/2026-09-27-patient-list-design.md`.
 
-`patients/new.tsx` (132 lines) is a complete patient-creation form wired to
-`packages/shared/src/api/patients.ts` through TanStack Query, but the `POST /api/patients`
-route it calls (like `GET /api/patients/{id}` behind `PatientDetailView`) does not exist
-on the server yet.
+Creating a patient happens in `PatientFormModal`, a tabbed modal opened from the list
+(basic data, then an optional clinical profile of diagnoses, medications and treatment-plan
+objectives), saved in one transaction by `POST /api/phi/providers/me/patients`.
+`patients/$patientId/index.tsx` is the patient record: edit basic data (same modal),
+archive or reactivate, delete a record created by mistake (only when it has no clinical
+history or portal login — Res. CFP 001/2009 retention), and add, edit, resolve/end or
+remove clinical items in place (`components/patients/detail/`). Every route resolves the
+patient with `Id == id && ProviderId == <session provider>`, so another provider's patient
+is a 404. See `design/specs/2026-10-01-patient-records-design.md`.
 
-`patients/$patientId/index.tsx` and `patients/$patientId/notes.tsx` are each barely more
-than ten lines — but that's because they're thin route wrappers, not stubs, delegating
-straight to substantial shared components:
+Forms read field errors from `ApiError.errors` (`packages/shared/src/api/client.ts`), the
+server's `ValidationProblem` body, and show them next to each field.
 
-```tsx
-// routes/_app/patients/$patientId/index.tsx
-import PatientDetailView from "@/components/PatientDetailView";
-// ...
-return <PatientDetailView patientId={patientId} />;
-```
-
-`PatientDetailView` (120 lines) is a good example to study for how a "real" screen in this
-codebase is put together: a `useQuery` call against `patientsApi.get(patientId)`, explicit
-loading and error states, and a page built entirely out of `packages/shared`'s UI kit
-(`TopBar`, `Card`, `Avatar`, `Button` — Chapter 12) plus `useTranslation` for every piece
-of user-facing text. `PatientNotesView` and `NoteCard` follow the same shape for the notes
-list, and `AccountMenu` backs the account menu in the app shell. None of this is
-placeholder code — it's a legitimate template for how the rest of this app's screens are
-meant to be built.
+`patients/$patientId/notes.tsx` is a thin route wrapper around `PatientNotesView`, which
+follows the same shape as the record page: a `useQuery` call, explicit loading and error
+states, shared UI kit components (Chapter 12) and `useTranslation` for every piece of
+user-facing text. `NoteCard` backs its list, and `AccountMenu` backs the account menu in
+the app shell. The notes it lists come from `notesApi`, whose server routes do not exist
+yet.
 
 ## What's explicitly a placeholder
 
