@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Anamnys.Server.Profile;
 
 namespace Anamnys.Server.Patients;
@@ -8,6 +9,7 @@ namespace Anamnys.Server.Patients;
 public sealed record CreatePatientRequest(
     string? FirstName,
     string? LastName,
+    string? ContactEmail,
     DateOnly? DateOfBirth,
     DiagnosisInput[]? Diagnoses,
     MedicationInput[]? Medications,
@@ -18,7 +20,7 @@ public sealed record CreatePatientRequest(
     public Dictionary<string, string[]> Validate(DateOnly today)
     {
         var errors = new Dictionary<string, string[]>();
-        PatientRules.ValidateBasics(errors, FirstName, LastName, DateOfBirth, today);
+        PatientRules.ValidateBasics(errors, FirstName, LastName, ContactEmail, DateOfBirth, today);
 
         ValidateList(errors, "diagnoses", Diagnoses, (item, prefix) => item.Validate(errors, prefix, today));
         ValidateList(errors, "medications", Medications, (item, prefix) => item.Validate(errors, prefix, today));
@@ -46,12 +48,12 @@ public sealed record CreatePatientRequest(
     }
 }
 
-public sealed record UpdatePatientRequest(string? FirstName, string? LastName, DateOnly? DateOfBirth)
+public sealed record UpdatePatientRequest(string? FirstName, string? LastName, string? ContactEmail, DateOnly? DateOfBirth)
 {
     public Dictionary<string, string[]> Validate(DateOnly today)
     {
         var errors = new Dictionary<string, string[]>();
-        PatientRules.ValidateBasics(errors, FirstName, LastName, DateOfBirth, today);
+        PatientRules.ValidateBasics(errors, FirstName, LastName, ContactEmail, DateOfBirth, today);
         return errors;
     }
 }
@@ -124,7 +126,8 @@ public sealed record PatientDetailResponse(
     string FirstName,
     string LastName,
     DateOnly? DateOfBirth,
-    string? Email,
+    string? ContactEmail,
+    string? PortalEmail,
     string? Phone,
     bool HasPortalAccount,
     DateTimeOffset? ArchivedAt,
@@ -145,16 +148,17 @@ public sealed record ObjectiveItem(Guid Id, string Description, DateTimeOffset C
 
 public sealed record NoteSummary(Guid Id, string Status, string Format, DateTimeOffset CreatedAt, DateTimeOffset? SignedAt);
 
-internal static class PatientRules
+internal static partial class PatientRules
 {
     public const int MaxItemText = 500;
     private static readonly DateOnly EarliestBirth = new(1900, 1, 1);
 
     public static void ValidateBasics(
-        Dictionary<string, string[]> errors, string? firstName, string? lastName, DateOnly? dateOfBirth, DateOnly today)
+        Dictionary<string, string[]> errors, string? firstName, string? lastName, string? contactEmail, DateOnly? dateOfBirth, DateOnly today)
     {
         ProfileText.RequireName(errors, "firstName", firstName);
         ProfileText.RequireName(errors, "lastName", lastName);
+        RequireEmail(errors, "contactEmail", contactEmail);
 
         if (dateOfBirth is not { } dob)
         {
@@ -186,4 +190,22 @@ internal static class PatientRules
             errors[key] = [$"Use no máximo {max} caracteres."];
         }
     }
+
+    // Shape check only (one @, a dotted domain, no spaces): deliverability is proven by the
+    // first notice, not here. 254 is the SMTP path limit.
+    public static void RequireEmail(Dictionary<string, string[]> errors, string key, string? value)
+    {
+        var cleaned = ProfileText.Clean(value);
+        if (cleaned is null)
+        {
+            errors[key] = ["Informe o e-mail."];
+        }
+        else if (cleaned.Length > 254 || !EmailPattern().IsMatch(cleaned))
+        {
+            errors[key] = ["Informe um e-mail válido."];
+        }
+    }
+
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s.]+$")]
+    private static partial Regex EmailPattern();
 }

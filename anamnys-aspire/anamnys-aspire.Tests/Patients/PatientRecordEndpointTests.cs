@@ -47,6 +47,7 @@ public class PatientRecordEndpointTests
         {
             firstName = "Teste",
             lastName = "Endpoint",
+            contactEmail = "teste.endpoint@example.com",
             dateOfBirth = "1990-05-12",
             diagnoses = new[] { new { description = "Teste", icdCode = "F41.1" } },
         });
@@ -77,6 +78,7 @@ public class PatientRecordEndpointTests
         {
             firstName = "",
             lastName = "X",
+            contactEmail = "nao-e-email",
             medications = new[] { new { drug = "" } },
         });
 
@@ -86,6 +88,7 @@ public class PatientRecordEndpointTests
         errors.TryGetProperty("firstName", out _).Should().BeTrue();
         errors.TryGetProperty("dateOfBirth", out _).Should().BeTrue();
         errors.TryGetProperty("medications[0].drug", out _).Should().BeTrue();
+        errors.TryGetProperty("contactEmail", out _).Should().BeTrue();
     }
 
     [Fact]
@@ -97,7 +100,7 @@ public class PatientRecordEndpointTests
 
         // Act
         using var get = await SendAsync(session, HttpMethod.Get, path);
-        using var put = await SendAsync(session, HttpMethod.Put, path, new { firstName = "A", lastName = "B", dateOfBirth = "1990-01-01" });
+        using var put = await SendAsync(session, HttpMethod.Put, path, new { firstName = "A", lastName = "B", contactEmail = "a@b.co", dateOfBirth = "1990-01-01" });
         using var archive = await SendAsync(session, HttpMethod.Post, $"{path}/archive");
         using var addDiagnosis = await SendAsync(session, HttpMethod.Post, $"{path}/diagnoses", new { description = "x" });
         using var removeObjective = await SendAsync(session, HttpMethod.Delete, $"{path}/objectives/{Guid.NewGuid()}");

@@ -10,6 +10,11 @@ public class Patient
     public string? PreferredLanguage { get; set; }
     public DateTimeOffset? LastVisit { get; set; }
 
+    // Where the provider's scheduling notices go. Not unique and not a login: the same
+    // person can be a patient of several providers, and typing an email here is not a
+    // portal invitation (design/specs/2026-10-01-patient-records-design.md §8).
+    public string? ContactEmail { get; set; }
+
     // Everything below used to live on the separate PatientAccounts table — a patient's
     // portal login is now just nullable columns on their clinical record, the same shape
     // Provider already uses. Null on all of them means a provider created this patient

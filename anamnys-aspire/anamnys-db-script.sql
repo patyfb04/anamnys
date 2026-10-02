@@ -473,6 +473,7 @@ CREATE TABLE "Patients" (
 	"DateOfBirth" date,
 	"PreferredLanguage" text,
 	"LastVisit" timestamp with time zone,
+	"ContactEmail" text,
 	"Email" text CONSTRAINT "Patients_Email_key" UNIQUE,
 	"Phone" text,
 	"ExternalSubject" uuid CONSTRAINT "Patients_ExternalSubject_key" UNIQUE,
@@ -482,7 +483,8 @@ CREATE TABLE "Patients" (
 	"ArchivedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId")
+	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId"),
+	CONSTRAINT "Patients_Login_ck" CHECK ((("Email" IS NULL) = ("ExternalSubject" IS NULL)))
 );
 CREATE TABLE "PatientDiagnoses" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -13,7 +13,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static CreatePatientRequest FullRequest() => new(
-        " Ana ", "Silva", new DateOnly(1990, 5, 12),
+        " Ana ", "Silva", " ana.silva@example.com ", new DateOnly(1990, 5, 12),
         [new DiagnosisInput("Transtorno depressivo maior", "F33.1", null)],
         [new MedicationInput("Sertralina", "100mg", "1x/dia", new DateOnly(2026, 9, 1), null)],
         ["Reduzir sintomas ansiosos", "Retomar rotina de sono"]);
@@ -35,6 +35,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         // Assert
         detail.Should().NotBeNull();
         detail!.FirstName.Should().Be("Ana");
+        detail.ContactEmail.Should().Be("ana.silva@example.com");
         detail.DateOfBirth.Should().Be(new DateOnly(1990, 5, 12));
         detail.Diagnoses.Should().ContainSingle().Which.IcdCode.Should().Be("F33.1");
         detail.Medications.Should().ContainSingle().Which.Drug.Should().Be("Sertralina");
@@ -72,7 +73,8 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         var detail = await GetAsync(seed, id);
 
         // Assert
-        detail!.Email.Should().StartWith("ana.");
+        detail!.ContactEmail.Should().StartWith("ana.");
+        detail.PortalEmail.Should().BeNull();
         detail.LastVisit.Should().Be(Now.AddDays(-3));
         detail.NextAppointmentAt.Should().Be(Now.AddDays(2));
         detail.NoteStatus.Should().Be(NoteStatusGroup.Signed);
@@ -93,7 +95,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
 
         // Act + Assert
         (await PatientRecords.GetAsync(db, me, foreign, Now, Ct)).Should().BeNull();
-        (await PatientRecords.UpdateAsync(db, me, foreign, new UpdatePatientRequest("X", "Y", new DateOnly(1990, 1, 1)), Now, Ct)).Should().BeFalse();
+        (await PatientRecords.UpdateAsync(db, me, foreign, new UpdatePatientRequest("X", "Y", "x@example.com", new DateOnly(1990, 1, 1)), Now, Ct)).Should().BeFalse();
         (await PatientRecords.DeleteAsync(db, me, foreign, Ct)).Should().Be(RecordOutcome.NotFound);
         (await PatientRecords.SetArchivedAsync(db, me, foreign, true, Now, Ct)).Should().BeFalse();
         (await PatientRecords.AddDiagnosisAsync(db, me, foreign, new DiagnosisInput("x", null, null), Now, Ct)).Should().BeNull();
@@ -129,7 +131,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
 
         // Act
-        var updated = await PatientRecords.UpdateAsync(db, seed.ProviderId, id, new UpdatePatientRequest("Ana Maria", "Souza", new DateOnly(1985, 1, 2)), Now, Ct);
+        var updated = await PatientRecords.UpdateAsync(db, seed.ProviderId, id, new UpdatePatientRequest("Ana Maria", "Souza", "ana.souza@example.com", new DateOnly(1985, 1, 2)), Now, Ct);
 
         // Assert
         updated.Should().BeTrue();
@@ -137,6 +139,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         detail!.FirstName.Should().Be("Ana Maria");
         detail.LastName.Should().Be("Souza");
         detail.DateOfBirth.Should().Be(new DateOnly(1985, 1, 2));
+        detail.ContactEmail.Should().Be("ana.souza@example.com");
     }
 
     [Fact]

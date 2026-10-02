@@ -36,7 +36,7 @@ public static class PatientSearchQuery
                 Id = p.Id,
                 FirstName = p.FirstName,
                 LastName = p.LastName,
-                Email = p.Email,
+                ContactEmail = p.ContactEmail,
                 LastVisit = p.LastVisit,
                 NextAppointmentAt = db.Appointments
                     .Where(a => a.PatientId == p.Id && a.ProviderId == providerId
@@ -57,7 +57,7 @@ public static class PatientSearchQuery
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(r => new PatientListItem(
-                r.Id, r.FirstName, r.LastName, r.Email, r.LastVisit, r.NextAppointmentAt, r.NoteGroup))
+                r.Id, r.FirstName, r.LastName, r.ContactEmail, r.LastVisit, r.NextAppointmentAt, r.NoteGroup))
             .ToListAsync(cancellationToken);
 
         return new PatientSearchResponse(items, totalCount, request.Page, request.PageSize);
@@ -68,7 +68,7 @@ public static class PatientSearchQuery
         if (ContainsPattern(request.Search) is { } search)
         {
             rows = rows.Where(r => EF.Functions.ILike(r.FirstName + " " + r.LastName, search, "\\")
-                || (r.Email != null && EF.Functions.ILike(r.Email, search, "\\")));
+                || (r.ContactEmail != null && EF.Functions.ILike(r.ContactEmail, search, "\\")));
         }
         if (ContainsPattern(request.Name) is { } name)
         {
@@ -76,7 +76,7 @@ public static class PatientSearchQuery
         }
         if (ContainsPattern(request.Email) is { } email)
         {
-            rows = rows.Where(r => r.Email != null && EF.Functions.ILike(r.Email, email, "\\"));
+            rows = rows.Where(r => r.ContactEmail != null && EF.Functions.ILike(r.ContactEmail, email, "\\"));
         }
         if (request.NoteStatus is { Length: > 0 } statuses)
         {
@@ -147,7 +147,7 @@ public static class PatientSearchQuery
         public Guid Id { get; init; }
         public string FirstName { get; init; } = "";
         public string LastName { get; init; } = "";
-        public string? Email { get; init; }
+        public string? ContactEmail { get; init; }
         public DateTimeOffset? LastVisit { get; init; }
         public DateTimeOffset? NextAppointmentAt { get; init; }
         public string NoteGroup { get; init; } = "";

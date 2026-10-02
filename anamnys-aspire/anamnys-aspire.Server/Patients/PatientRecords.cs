@@ -26,6 +26,7 @@ public static class PatientRecords
             ProviderId = providerId,
             FirstName = ProfileText.Clean(request.FirstName)!,
             LastName = ProfileText.Clean(request.LastName)!,
+            ContactEmail = ProfileText.Clean(request.ContactEmail),
             DateOfBirth = request.DateOfBirth,
             CreatedAt = nowUtc,
             UpdatedAt = nowUtc,
@@ -109,6 +110,7 @@ public static class PatientRecords
             patient.FirstName,
             patient.LastName,
             patient.DateOfBirth,
+            patient.ContactEmail,
             patient.Email,
             patient.Phone,
             patient.ExternalSubject is not null,
@@ -134,6 +136,7 @@ public static class PatientRecords
 
         patient.FirstName = ProfileText.Clean(request.FirstName)!;
         patient.LastName = ProfileText.Clean(request.LastName)!;
+        patient.ContactEmail = ProfileText.Clean(request.ContactEmail);
         patient.DateOfBirth = request.DateOfBirth;
         patient.UpdatedAt = now.ToUniversalTime();
         await db.SaveChangesAsync(cancellationToken);

@@ -194,56 +194,18 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
             return bySubject.Id;
         }
 
-        // Binding an unclaimed Patients row to whichever subject presents its email is
-        // only safe if Keycloak itself has verified that email belongs to this subject —
-        // otherwise any account with a known email and an unverified address at the same
-        // IdP could claim it.
+        // A portal account's email must be one Keycloak has verified as this subject's.
         if (!IsEmailVerified(principal))
         {
-            throw new InvalidOperationException("Cannot bind a patient account to an unverified email.");
+            throw new InvalidOperationException("Cannot register a patient account with an unverified email.");
         }
 
-        var normalizedEmail = email.Trim().ToUpperInvariant();
-        var byEmail = await db.Patients
-            .SingleOrDefaultAsync(
-                p => p.ExternalSubject == null && p.Email != null && p.Email.ToUpper() == normalizedEmail,
-                cancellationToken);
-
-        if (byEmail is not null)
-        {
-            if (byEmail.DisabledAt is not null)
-            {
-                throw new InvalidOperationException("This patient account is disabled.");
-            }
-
-            byEmail.ExternalSubject = subject;
-            byEmail.UpdatedAt = DateTimeOffset.UtcNow;
-
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException)
-            {
-                // Someone else claimed the same unclaimed row (or the same subject logged
-                // in twice concurrently) between our read and our write. Re-read by
-                // subject: if it is now bound, that is success; otherwise this login
-                // genuinely lost the race for an unclaimed row and should fail rather
-                // than silently retry.
-                db.Entry(byEmail).State = EntityState.Detached;
-                var afterBindRace = await db.Patients
-                    .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken)
-                    ?? throw new InvalidOperationException("No patient account matches this login.");
-
-                return afterBindRace.DisabledAt is null
-                    ? afterBindRace.Id
-                    : throw new InvalidOperationException("This patient account is disabled.");
-            }
-
-            return byEmail.Id;
-        }
-
-        // Nobody invited this patient — this is a genuine self-registration. No provider
+        // No row is bound to this subject, so this is a self-registration. There is
+        // deliberately no "bind the unclaimed record with the same email" step: a provider's
+        // record carries a ContactEmail for notices, and matching on it would attach any
+        // later portal sign-up to that provider's record without an invitation (see
+        // design/specs/2026-10-01-patient-records-design.md §8). Linking a login to a
+        // provider record will go through an explicit, token-based invitation. No provider
         // relationship exists yet (ProviderId stays null until some future flow, e.g.
         // booking a first appointment, sets it). given_name/family_name come from the same
         // profile scope the provider realm already relies on for its own name claim; a

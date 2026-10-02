@@ -58,7 +58,7 @@ public sealed class PatientSearchSeed : IAsyncDisposable
         var id = Guid.NewGuid();
         await ExecuteAsync(
             """
-            INSERT INTO "Patients" ("Id", "ProviderId", "FirstName", "LastName", "Email", "LastVisit", "ArchivedAt")
+            INSERT INTO "Patients" ("Id", "ProviderId", "FirstName", "LastName", "ContactEmail", "LastVisit", "ArchivedAt")
             VALUES (@id, @provider, @first, @last, @email, @lastVisit, @archivedAt)
             """,
             cancellationToken,

@@ -8,7 +8,7 @@ public class PatientRecordValidationTests
     private static readonly DateOnly Today = new(2026, 10, 1);
 
     private static CreatePatientRequest ValidCreate() => new(
-        "Ana", "Silva", new DateOnly(1990, 5, 12),
+        "Ana", "Silva", "ana@example.com", new DateOnly(1990, 5, 12),
         [new DiagnosisInput("Transtorno depressivo maior", "F33.1", null)],
         [new MedicationInput("Sertralina", "100mg", "1x/dia", new DateOnly(2026, 9, 1), null)],
         ["Reduzir sintomas ansiosos"]);
@@ -22,15 +22,36 @@ public class PatientRecordValidationTests
     [Fact]
     public void Create_WithoutClinicalLists_IsValid()
     {
-        new CreatePatientRequest("Ana", "Silva", new DateOnly(1990, 5, 12), null, null, null).Validate(Today).Should().BeEmpty();
+        new CreatePatientRequest("Ana", "Silva", "ana@example.com", new DateOnly(1990, 5, 12), null, null, null).Validate(Today).Should().BeEmpty();
     }
 
     [Fact]
     public void Create_MissingBasics_ReportsEachField()
     {
-        var errors = new CreatePatientRequest(" ", null, null, null, null, null).Validate(Today);
+        var errors = new CreatePatientRequest(" ", null, null, null, null, null, null).Validate(Today);
 
-        errors.Keys.Should().BeEquivalentTo(["firstName", "lastName", "dateOfBirth"]);
+        errors.Keys.Should().BeEquivalentTo(["firstName", "lastName", "contactEmail", "dateOfBirth"]);
+    }
+
+    [Theory]
+    [InlineData("ana")]
+    [InlineData("ana@")]
+    [InlineData("ana@example")]
+    [InlineData("ana silva@example.com")]
+    [InlineData("ana@@example.com")]
+    public void ContactEmail_Malformed_IsRejected(string email)
+    {
+        var request = ValidCreate() with { ContactEmail = email };
+
+        request.Validate(Today).Should().ContainKey("contactEmail");
+    }
+
+    [Fact]
+    public void ContactEmail_Over254Chars_IsRejected()
+    {
+        var request = ValidCreate() with { ContactEmail = new string('a', 250) + "@x.co" };
+
+        request.Validate(Today).Should().ContainKey("contactEmail");
     }
 
     [Theory]
@@ -102,7 +123,7 @@ public class PatientRecordValidationTests
     [Fact]
     public void Update_ValidatesBasics()
     {
-        new UpdatePatientRequest("Ana", "", Today.AddDays(1)).Validate(Today).Keys
+        new UpdatePatientRequest("Ana", "", "ana@example.com", Today.AddDays(1)).Validate(Today).Keys
             .Should().BeEquivalentTo(["lastName", "dateOfBirth"]);
     }
 }

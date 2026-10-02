@@ -107,7 +107,7 @@ public sealed record PatientListItem(
     Guid Id,
     string FirstName,
     string LastName,
-    string? Email,
+    string? ContactEmail,
     DateTimeOffset? LastVisit,
     DateTimeOffset? NextAppointmentAt,
     string NoteStatus);
