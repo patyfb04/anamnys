@@ -72,6 +72,12 @@ public sealed class PatientSearchSeed : IAsyncDisposable
         return id;
     }
 
+    // What a bound patient-portal login looks like on the row (see Patient.cs).
+    public Task BindPortalAccountAsync(Guid patientId, CancellationToken cancellationToken) =>
+        ExecuteAsync(
+            """UPDATE "Patients" SET "Email" = @email, "ExternalSubject" = @sub WHERE "Id" = @id""",
+            cancellationToken, ("id", patientId), ("email", $"{patientId:N}@portal.test"), ("sub", Guid.NewGuid()));
+
     public Task AddAppointmentAsync(
         Guid patientId,
         DateTimeOffset startsAt,

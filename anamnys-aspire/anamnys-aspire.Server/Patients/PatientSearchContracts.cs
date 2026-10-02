@@ -10,6 +10,14 @@ public static class NoteStatusGroup
     public const string Signed = "signed";
     public const string None = "none";
     public static readonly string[] All = [Pending, Signed, None];
+
+    // C# twin of the CASE in PatientSearchQuery, for code that already has the raw status.
+    public static string Of(string? rawStatus) => rawStatus switch
+    {
+        null => None,
+        "Signed" or "Exported" => Signed,
+        _ => Pending,
+    };
 }
 
 public static class PatientSortBy

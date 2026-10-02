@@ -70,28 +70,34 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasKey(x => x.Id);
         });
 
+        // The foreign keys below mirror the schema's. Declaring them is what makes EF insert
+        // a new patient before its diagnoses, medications and plan in one SaveChanges.
         modelBuilder.Entity<PatientDiagnosis>(e =>
         {
             e.ToTable("PatientDiagnoses");
             e.HasKey(x => x.Id);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MedicationEntry>(e =>
         {
             e.ToTable("MedicationEntries");
             e.HasKey(x => x.Id);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<TreatmentPlan>(e =>
         {
             e.ToTable("TreatmentPlans");
             e.HasKey(x => x.Id);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<PlanObjective>(e =>
         {
             e.ToTable("PlanObjectives");
             e.HasKey(x => x.Id);
+            e.HasOne<TreatmentPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
