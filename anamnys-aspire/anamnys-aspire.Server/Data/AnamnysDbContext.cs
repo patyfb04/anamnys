@@ -12,6 +12,10 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<PatientDiagnosis> PatientDiagnoses => Set<PatientDiagnosis>();
+    public DbSet<MedicationEntry> MedicationEntries => Set<MedicationEntry>();
+    public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
+    public DbSet<PlanObjective> PlanObjectives => Set<PlanObjective>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +67,30 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         modelBuilder.Entity<Note>(e =>
         {
             e.ToTable("Notes");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<PatientDiagnosis>(e =>
+        {
+            e.ToTable("PatientDiagnoses");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<MedicationEntry>(e =>
+        {
+            e.ToTable("MedicationEntries");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<TreatmentPlan>(e =>
+        {
+            e.ToTable("TreatmentPlans");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<PlanObjective>(e =>
+        {
+            e.ToTable("PlanObjectives");
             e.HasKey(x => x.Id);
         });
     }

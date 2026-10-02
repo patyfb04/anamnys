@@ -22,8 +22,12 @@ public static class PatientSearchQuery
         var nowUtc = now.ToUniversalTime();
 
         // Scope first, always. The subqueries repeat the provider filter as defence in depth.
-        var rows = db.Patients.AsNoTracking()
-            .Where(p => p.ProviderId == providerId)
+        var patients = db.Patients.AsNoTracking().Where(p => p.ProviderId == providerId);
+        patients = request.Archived
+            ? patients.Where(p => p.ArchivedAt != null)
+            : patients.Where(p => p.ArchivedAt == null);
+
+        var rows = patients
             .Select(p => new PatientRow
             {
                 Id = p.Id,

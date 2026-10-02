@@ -479,9 +479,18 @@ CREATE TABLE "Patients" (
 	"LastLoginAt" timestamp with time zone,
 	"TermsAcceptedAt" timestamp with time zone,
 	"DisabledAt" timestamp with time zone,
+	"ArchivedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId")
+);
+CREATE TABLE "PatientDiagnoses" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"PatientId" uuid NOT NULL,
+	"Description" text NOT NULL,
+	"IcdCode" text,
+	"RecordedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ResolvedOn" date
 );
 CREATE TABLE "PlanFeatures" (
 	"PlanId" uuid,
@@ -844,6 +853,7 @@ CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
+CREATE INDEX "PatientDiagnoses_PatientId_idx" ON "PatientDiagnoses" ("PatientId");
 CREATE INDEX "PlanObjectives_PlanId_idx" ON "PlanObjectives" ("PlanId");
 CREATE INDEX "ProfileListingEvents_ProfileId_At_idx" ON "ProfileListingEvents" ("ProfileId","At");
 CREATE INDEX "ProviderFocusAreas_FocusAreaId_idx" ON "ProviderFocusAreas" ("FocusAreaId");
@@ -926,6 +936,7 @@ ALTER TABLE "NoteSections" ADD CONSTRAINT "NoteSections_NoteId_fkey" FOREIGN KEY
 ALTER TABLE "Notifications" ADD CONSTRAINT "Notifications_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE CASCADE;
+ALTER TABLE "PatientDiagnoses" ADD CONSTRAINT "PatientDiagnoses_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_TermId_fkey" FOREIGN KEY ("TermId") REFERENCES "ThemeTerms"("Id") ON DELETE SET NULL;
 ALTER TABLE "Patients" ADD CONSTRAINT "Patients_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "PlanFeatures" ADD CONSTRAINT "PlanFeatures_PlanId_fkey" FOREIGN KEY ("PlanId") REFERENCES "Plans"("Id") ON DELETE CASCADE;

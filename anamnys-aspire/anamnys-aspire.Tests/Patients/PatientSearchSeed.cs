@@ -51,14 +51,15 @@ public sealed class PatientSearchSeed : IAsyncDisposable
         string lastName,
         string? email = null,
         DateTimeOffset? lastVisit = null,
+        DateTimeOffset? archivedAt = null,
         Guid? providerId = null,
         CancellationToken cancellationToken = default)
     {
         var id = Guid.NewGuid();
         await ExecuteAsync(
             """
-            INSERT INTO "Patients" ("Id", "ProviderId", "FirstName", "LastName", "Email", "LastVisit")
-            VALUES (@id, @provider, @first, @last, @email, @lastVisit)
+            INSERT INTO "Patients" ("Id", "ProviderId", "FirstName", "LastName", "Email", "LastVisit", "ArchivedAt")
+            VALUES (@id, @provider, @first, @last, @email, @lastVisit, @archivedAt)
             """,
             cancellationToken,
             ("id", id),
@@ -66,7 +67,8 @@ public sealed class PatientSearchSeed : IAsyncDisposable
             ("first", firstName),
             ("last", lastName),
             ("email", (object?)email ?? DBNull.Value),
-            ("lastVisit", (object?)lastVisit?.ToUniversalTime() ?? DBNull.Value));
+            ("lastVisit", (object?)lastVisit?.ToUniversalTime() ?? DBNull.Value),
+            ("archivedAt", (object?)archivedAt?.ToUniversalTime() ?? DBNull.Value));
         return id;
     }
 

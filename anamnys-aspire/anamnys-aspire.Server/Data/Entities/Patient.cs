@@ -22,6 +22,10 @@ public class Patient
     public DateTimeOffset? TermsAcceptedAt { get; set; }
     public DateTimeOffset? DisabledAt { get; set; }
 
+    // Set when the provider archives the patient: hidden from the list, record kept (see
+    // design/specs/2026-10-01-patient-records-design.md).
+    public DateTimeOffset? ArchivedAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

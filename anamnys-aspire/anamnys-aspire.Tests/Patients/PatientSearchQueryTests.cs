@@ -32,6 +32,24 @@ public class PatientSearchQueryTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task Archived_PatientsHiddenUnlessRequested()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var active = await seed.AddPatientAsync("Ana", "Ativa", cancellationToken: Ct);
+        var archived = await seed.AddPatientAsync("Bia", "Arquivada", archivedAt: Now.AddDays(-1), cancellationToken: Ct);
+
+        // Act
+        var defaultResult = await SearchAsync(seed, new PatientSearchRequest());
+        var archivedResult = await SearchAsync(seed, new PatientSearchRequest { Archived = true });
+
+        // Assert
+        defaultResult.Items.Select(i => i.Id).Should().Equal(active);
+        defaultResult.TotalCount.Should().Be(1);
+        archivedResult.Items.Select(i => i.Id).Should().Equal(archived);
+    }
+
+    [Fact]
     public async Task NextAppointment_IsEarliestFutureScheduledOrConfirmed()
     {
         // Arrange

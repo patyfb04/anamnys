@@ -36,6 +36,8 @@ public sealed record PatientSearchRequest
     public DateOnly? LastVisitTo { get; init; }
     public DateOnly? NextVisitFrom { get; init; }
     public DateOnly? NextVisitTo { get; init; }
+    // false: active patients only; true: archived patients only.
+    public bool Archived { get; init; }
     public string? SortBy { get; init; } = PatientSortBy.NextVisit;
     public string? SortDir { get; init; } = "asc";
     public int Page { get; init; } = 1;
