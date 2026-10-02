@@ -95,6 +95,10 @@ export default function PatientFilterPanel({ filters, onApply, onClose }: Props)
             onChange={(from, to) => set({ nextVisitFrom: from, nextVisitTo: to })}
             inputClass={inputClass}
           />
+
+          <Checkbox checked={draft.archived ?? false} onToggle={() => set({ archived: !draft.archived })}>
+            <span className="text-body-md text-onSurface">{t("patients.list.filters.archivedOnly")}</span>
+          </Checkbox>
         </div>
 
         <div className="flex gap-2 px-4 py-3 border-t border-outlineVariant">

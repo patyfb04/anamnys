@@ -11,7 +11,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
-  { href: "/patients/new", Icon: Mic, labelKey: "nav.newNote", matchPrefix: "/notes" },
+  { href: "/patients", Icon: Mic, labelKey: "nav.newNote", matchPrefix: "/notes" },
   { href: "/settings", Icon: Settings, labelKey: "nav.settings", matchPrefix: "/settings" },
 ];
 

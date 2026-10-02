@@ -9,6 +9,7 @@ import PatientCards from "@/components/patients/PatientCards";
 import PatientSortSelect from "@/components/patients/PatientSortSelect";
 import PatientFilterPanel from "@/components/patients/PatientFilterPanel";
 import PaginationFooter from "@/components/patients/PaginationFooter";
+import PatientFormModal from "@/components/patients/PatientFormModal";
 
 export const Route = createFileRoute("/_app/patients/")({
   component: PatientListPage,
@@ -20,6 +21,7 @@ function PatientListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const closeFilters = useCallback(() => setFiltersOpen(false), []);
   const {
     search,
@@ -46,7 +48,7 @@ function PatientListPage() {
   const data = query.data;
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto">
+    <div className="p-4 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-6">
         <div>
           <h1 className="text-headline-lg text-onSurface">{t("patients.list.title")}</h1>
@@ -72,7 +74,7 @@ function PatientListPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate({ to: "/patients/new" })}
+            onClick={() => setCreating(true)}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-onPrimary rounded-radii-md text-label-lg shadow-sm hover:opacity-90 transition-opacity"
           >
             <UserPlus size={18} />
@@ -103,7 +105,7 @@ function PatientListPage() {
           <EmptyState
             hasCriteria={hasCriteria}
             onClear={clearAll}
-            onAdd={() => navigate({ to: "/patients/new" })}
+            onAdd={() => setCreating(true)}
           />
         ) : data ? (
           <div className={query.isPlaceholderData ? "opacity-60 transition-opacity" : "transition-opacity"}>
@@ -117,6 +119,17 @@ function PatientListPage() {
           </div>
         ) : null}
       </div>
+
+      {creating && (
+        <PatientFormModal
+          mode={{ kind: "create" }}
+          onClose={() => setCreating(false)}
+          onSaved={(patientId) => {
+            setCreating(false);
+            openPatient(patientId);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -91,6 +91,7 @@ function compactFilters(filters: PatientFilters): PatientFilters {
     lastVisitTo: blankToUndefined(filters.lastVisitTo),
     nextVisitFrom: blankToUndefined(filters.nextVisitFrom),
     nextVisitTo: blankToUndefined(filters.nextVisitTo),
+    archived: filters.archived || undefined,
   };
 }
 
@@ -103,5 +104,6 @@ export function countActiveFilters(filters: PatientFilters): number {
     f.noteStatus,
     f.lastVisitFrom || f.lastVisitTo,
     f.nextVisitFrom || f.nextVisitTo,
+    f.archived,
   ].filter(Boolean).length;
 }

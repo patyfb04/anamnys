@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Loader2 } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
-import TopBar from "@anamnys/shared/ui/TopBar";
 import NoteCard from "@/components/NoteCard";
 
 // Lists a single patient's notes; selecting one opens it in the editor.
@@ -18,8 +17,8 @@ export default function PatientNotesView({ patientId }: { patientId: string }) {
 
   return (
     <div className="min-h-full flex flex-col">
-      <TopBar title={t("patients.notes.title")} />
       <div className="p-4 pb-10 max-w-2xl mx-auto w-full">
+        <h1 className="text-headline-lg text-onSurface mb-4">{t("patients.notes.title")}</h1>
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="animate-spin text-primary" size={32} />

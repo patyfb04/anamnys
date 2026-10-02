@@ -1,25 +1,88 @@
 // ─── Domain types ─────────────────────────────────────────────────────────────
 
-export interface Patient {
-  id: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  diagnoses: string[];
-  currentMedications: string[];
-  treatmentPlan?: string;
-  preferredLanguage?: string; // ISO 639-1 code, e.g. "en" — undefined means auto-detect
-  lastVisit?: string;
+// Patient records (/api/phi/providers/me/patients). See
+// design/specs/2026-10-01-patient-records-design.md §4. Dates are "YYYY-MM-DD".
+export interface DiagnosisInput {
+  description: string;
+  icdCode?: string | null;
+  resolvedOn?: string | null;
+}
+
+export interface MedicationInput {
+  drug: string;
+  dose?: string | null;
+  posology?: string | null;
+  startedOn: string;
+  endedOn?: string | null;
+}
+
+export interface ObjectiveInput {
+  description: string;
 }
 
 export interface CreatePatientRequest {
   firstName: string;
   lastName: string;
-  dateOfBirth: string; // ISO date string, e.g. "1990-01-31"
-  diagnoses?: string[];
-  currentMedications?: string[];
-  treatmentPlan?: string;
-  preferredLanguage?: string;
+  dateOfBirth: string;
+  diagnoses?: DiagnosisInput[];
+  medications?: MedicationInput[];
+  treatmentObjectives?: string[];
+}
+
+export interface UpdatePatientRequest {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+}
+
+export interface DiagnosisItem {
+  id: string;
+  description: string;
+  icdCode: string | null;
+  recordedAt: string;
+  resolvedOn: string | null;
+}
+
+export interface MedicationItem {
+  id: string;
+  drug: string;
+  dose: string | null;
+  posology: string | null;
+  startedOn: string;
+  endedOn: string | null;
+}
+
+export interface ObjectiveItem {
+  id: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface NoteSummary {
+  id: string;
+  status: string;
+  format: string;
+  createdAt: string;
+  signedAt: string | null;
+}
+
+export interface PatientDetail {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | null;
+  email: string | null;
+  phone: string | null;
+  hasPortalAccount: boolean;
+  archivedAt: string | null;
+  lastVisit: string | null;
+  nextAppointmentAt: string | null;
+  noteStatus: NoteStatusGroup;
+  canDelete: boolean;
+  diagnoses: DiagnosisItem[];
+  medications: MedicationItem[];
+  objectives: ObjectiveItem[];
+  recentNotes: NoteSummary[];
 }
 
 // Keep in sync with the backend's ClinicalDraft.Domain.SupportedLanguages.
@@ -148,6 +211,7 @@ export interface PatientFilters {
   lastVisitTo?: string;
   nextVisitFrom?: string;
   nextVisitTo?: string;
+  archived?: boolean; // true: archived patients only
 }
 
 export interface PatientSearchRequest extends PatientFilters {
