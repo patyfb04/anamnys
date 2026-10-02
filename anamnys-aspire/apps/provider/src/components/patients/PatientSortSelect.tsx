@@ -14,7 +14,7 @@ interface Props {
 export default function PatientSortSelect({ sortBy, sortDir, onChange }: Props) {
   const { t } = useTranslation();
   return (
-    <label className="flex items-center gap-2 text-label-md text-onSurfaceVariant">
+    <label className="flex items-center gap-2 whitespace-nowrap text-label-md text-onSurfaceVariant">
       {t("patients.list.sortLabel")}
       <select
         value={`${sortBy}:${sortDir}`}

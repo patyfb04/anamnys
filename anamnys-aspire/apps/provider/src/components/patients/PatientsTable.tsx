@@ -32,7 +32,7 @@ export default function PatientsTable({ items, sortBy, sortDir, onSort, onOpen }
         <button
           type="button"
           onClick={() => onSort(column)}
-          className={`inline-flex items-center gap-1 uppercase tracking-wider hover:text-primary transition-colors ${
+          className={`inline-flex items-center gap-1 text-left uppercase tracking-wider hover:text-primary transition-colors ${
             active ? "text-primary" : ""
           }`}
         >
@@ -88,7 +88,7 @@ export default function PatientsTable({ items, sortBy, sortDir, onSort, onOpen }
                     e.stopPropagation();
                     onOpen(patient.id);
                   }}
-                  className="inline-flex items-center gap-1 text-label-md text-primary hover:underline"
+                  className="inline-flex items-center gap-1 whitespace-nowrap text-label-md text-primary hover:underline"
                 >
                   <FileText size={16} />
                   {t("patients.list.viewDetails")}
