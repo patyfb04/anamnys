@@ -95,7 +95,7 @@ export function MedicationsCard({ patientId, items, readOnly, onChanged }: CardP
     drug: d.drug,
     dose: d.dose || null,
     posology: d.posology || null,
-    startedOn: d.startedOn,
+    startedOn: d.startedOn || null,
     endedOn: d.endedOn || null,
   });
   return (

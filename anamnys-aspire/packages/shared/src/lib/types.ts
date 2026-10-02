@@ -12,7 +12,7 @@ export interface MedicationInput {
   drug: string;
   dose?: string | null;
   posology?: string | null;
-  startedOn: string;
+  startedOn: string | null;
   endedOn?: string | null;
 }
 
@@ -23,7 +23,7 @@ export interface ObjectiveInput {
 export interface CreatePatientRequest {
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
   diagnoses?: DiagnosisInput[];
   medications?: MedicationInput[];
   treatmentObjectives?: string[];
@@ -32,7 +32,7 @@ export interface CreatePatientRequest {
 export interface UpdatePatientRequest {
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  dateOfBirth: string | null;
 }
 
 export interface DiagnosisItem {

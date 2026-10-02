@@ -55,7 +55,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
   const mutation = useMutation({
     mutationFn: async () => {
       if (editing) {
-        await patientsApi.update(editing.id, { firstName, lastName, dateOfBirth });
+        await patientsApi.update(editing.id, { firstName, lastName, dateOfBirth: dateOfBirth || null });
         return editing.id;
       }
       // Rows left completely blank are dropped, so server indexes match the rows shown.
@@ -68,13 +68,13 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
       return patientsApi.create({
         firstName,
         lastName,
-        dateOfBirth,
+        dateOfBirth: dateOfBirth || null,
         diagnoses: keptDiagnoses.map((d) => ({ description: d.description, icdCode: d.icdCode || null })),
         medications: keptMedications.map((m) => ({
           drug: m.drug,
           dose: m.dose || null,
           posology: m.posology || null,
-          startedOn: m.startedOn,
+          startedOn: m.startedOn || null,
         })),
         treatmentObjectives: keptObjectives.map((o) => o.description),
       });

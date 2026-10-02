@@ -168,7 +168,10 @@ function PatientDetailPage() {
         <DetailCard title={t("patients.detail.recentNotes")} icon={<FileText size={20} />}>
           <RecentNotes notes={patient.recentNotes} />
         </DetailCard>
+      </div>
 
+      {/* Clinical lists carry per-item actions, so they get wider columns than the summary row. */}
+      <div className="grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
         <DiagnosesCard patientId={patientId} items={patient.diagnoses} readOnly={archived} onChanged={refresh} />
         <MedicationsCard patientId={patientId} items={patient.medications} readOnly={archived} onChanged={refresh} />
         <ObjectivesCard patientId={patientId} items={patient.objectives} readOnly={archived} onChanged={refresh} />
