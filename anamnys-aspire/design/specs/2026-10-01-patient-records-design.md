@@ -168,3 +168,32 @@ only active patients, `true` only archived ones.
 - HTTP: `401` without session, `201`/`200`/`404`/`400` happy and error paths.
 - Browser: create via modal, detail page, edit, add/resolve items, archive/unarchive,
   delete.
+
+---
+
+## 8. Addendum (2026-10-02): contact email, and no binding by email
+
+**Problem.** `Patients.Email` is the patient-portal login: globally unique, and
+`FirstLoginProvisioner` bound a new portal login to any unclaimed row with the same
+email. Storing the provider-entered email there would (1) silently attach a future portal
+sign-up to that provider's record, (2) fail a second provider's registration of the same
+person with a uniqueness error that discloses they are someone else's patient, and
+(3) hand portal access to whoever owns a mistyped email.
+
+**Decision.**
+
+- New column `Patients.ContactEmail` (text, not unique). Required by the API on create and
+  update; used for scheduling notices only, never clinical content. Search, the email
+  filter and the list subtitle use it.
+- `Patients.Email` stays the portal login, set only together with `ExternalSubject`:
+  `CONSTRAINT "Patients_Login_ck" CHECK (("Email" IS NULL) = ("ExternalSubject" IS NULL))`.
+- `FirstLoginProvisioner.ResolvePatientAsync` no longer binds by email. A login with no
+  row bound to its subject always creates its own row (still only with a verified email).
+- Migration `design/migrations/2026-10-02-patient-contact-email.sql` moves `Email` to
+  `ContactEmail` on rows without a login, then adds the constraint.
+
+**Deferred to its own spec:** opt-in portal invitation from the provider record (single-use
+token sent to `ContactEmail`, binding only through the token, statuses "não convidado /
+convite enviado / acesso ativo"), splitting portal account from per-provider record so one
+login can relate to several providers, and the portal showing past/upcoming sessions per
+provider (never clinical content).
