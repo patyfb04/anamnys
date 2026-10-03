@@ -45,12 +45,14 @@ modelBuilder.Entity<Provider>(e =>
 });
 ```
 
-`Provider`, `Patient`, and `Staff` all get the same shape of index: a unique index on
-`ExternalSubject` (so the database itself enforces that a Keycloak subject can map to at
-most one local row — the same guarantee `FirstLoginProvisioner`'s `SingleOrDefaultAsync` +
-unique-index-driven race handling from Chapter 8 relies on) and a unique index on `Email`
-— both nullable on `Patient`, since a provider-created patient with no portal access yet
-has neither, but still unique whenever they are set. `BreakGlassGrants` and `AccessLogs` get non-unique indexes on
+`Provider`, `PatientAccount`, and `Staff` — the three login tables, one per realm — all get
+a unique index on `ExternalSubject` (so the database itself enforces that a Keycloak subject
+can map to at most one local row — the same guarantee `FirstLoginProvisioner`'s
+`SingleOrDefaultAsync` + unique-index-driven race handling from Chapter 8 relies on), and
+their emails are unique too (for `PatientAccounts`, case-insensitively, on `lower("Email")`).
+`Patient` is not a login table: it is a provider's clinical record, linked to a
+`PatientAccount` by a nullable `AccountId` (`ON DELETE SET NULL`, unique together with
+`ProviderId`). `BreakGlassGrants` and `AccessLogs` get non-unique indexes on
 their respective foreign-key-shaped columns (`StaffId`/`ProviderId`, and `ProviderId`
 respectively) — supporting lookups, not uniqueness constraints.
 
