@@ -10,48 +10,51 @@ import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
 // design/specs/2026-10-03-portal-invitation-design.md §6.
 export const Route = createFileRoute("/convite/$token")({ component: InvitationPage });
 
-type State =
-  | { kind: "waiting" }
-  | { kind: "accepted"; providerName: string }
-  | { kind: "failed"; code: "invalid" | "email_mismatch" | "already_linked" };
+type FailureCode = "invalid" | "email_mismatch" | "already_linked";
 
-const PATIENT_REALM = "anamnys-patients";
+type State =
+  | { kind: "checking" }
+  | { kind: "signedOut" }
+  | { kind: "accepted"; providerName: string }
+  | { kind: "failed"; code: FailureCode };
 
 function InvitationPage() {
   const { token } = Route.useParams();
   const { t } = useTranslation();
-  const { user, isLoading, login, logout } = useAuthStore();
-  const [state, setState] = useState<State>({ kind: "waiting" });
+  const { login, logout } = useAuthStore();
+  const [state, setState] = useState<State>({ kind: "checking" });
   const attempted = useRef(false);
-
-  // /api/auth/me may describe a provider session held by the same browser; only a
-  // patient-portal session can accept.
-  const signedIn = user?.realm === PATIENT_REALM;
   const returnUrl = window.location.pathname;
 
+  // Try to accept straight away. 401 means "no patient-portal session" — which
+  // /api/auth/me cannot tell us when the same browser also holds a provider session —
+  // and the server answers it before looking at the token, so nothing is consumed.
   useEffect(() => {
-    if (!signedIn || attempted.current) return;
+    if (attempted.current) return;
     attempted.current = true;
     invitationsApi
       .accept(token)
       .then(({ providerName }) => setState({ kind: "accepted", providerName }))
       .catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 401) {
+          setState({ kind: "signedOut" });
+          return;
+        }
         const code = e instanceof ApiError ? e.code : undefined;
-        setState({
-          kind: "failed",
-          code: code === "email_mismatch" || code === "already_linked" ? code : "invalid",
-        });
+        setState({ kind: "failed", code: code === "email_mismatch" || code === "already_linked" ? code : "invalid" });
       });
-  }, [signedIn, token]);
-
-  if (isLoading) return null;
+  }, [token]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-surfaceContainerLow px-4">
       <div className="w-full max-w-md bg-surfaceContainerLowest rounded-radii-xl border border-outlineVariant p-6 shadow-sm">
         <h1 className="text-headline-sm text-onSurface">{t("patientPortal.invite.title")}</h1>
 
-        {!signedIn && (
+        {state.kind === "checking" && (
+          <p className="text-body-md text-onSurfaceVariant mt-2">{t("patientPortal.invite.accepting")}</p>
+        )}
+
+        {state.kind === "signedOut" && (
           <>
             <p className="text-body-md text-onSurfaceVariant mt-2">{t("patientPortal.invite.signedOut")}</p>
             <div className="flex flex-col gap-2 mt-5">
@@ -73,10 +76,6 @@ function InvitationPage() {
           </>
         )}
 
-        {signedIn && state.kind === "waiting" && (
-          <p className="text-body-md text-onSurfaceVariant mt-2">{t("patientPortal.invite.accepting")}</p>
-        )}
-
         {state.kind === "accepted" && (
           <>
             <p className="text-body-md text-onSurface mt-2">
@@ -91,7 +90,7 @@ function InvitationPage() {
         {state.kind === "failed" && (
           <>
             <p className="text-body-md text-error mt-2">{t(`patientPortal.invite.errors.${state.code}`)}</p>
-            {state.code === "email_mismatch" && (
+            {state.code === "email_mismatch" ? (
               <button
                 type="button"
                 onClick={() => logout("patient")}
@@ -99,8 +98,7 @@ function InvitationPage() {
               >
                 {t("patientPortal.invite.switchAccount")}
               </button>
-            )}
-            {state.code !== "email_mismatch" && (
+            ) : (
               <Link to="/" className="inline-block mt-5 text-label-lg text-primary hover:underline">
                 {t("patientPortal.invite.goHome")}
               </Link>

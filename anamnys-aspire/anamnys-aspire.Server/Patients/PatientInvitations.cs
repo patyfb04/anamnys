@@ -173,6 +173,19 @@ public static class PatientInvitations
         var nowUtc = now.ToUniversalTime();
         var hash = PatientInvitationTokens.Hash(token);
         var invitation = await db.PatientInvitations.SingleOrDefaultAsync(i => i.TokenHash == hash, cancellationToken);
+
+        // Re-submitted by the account that already accepted it (a reload of the acceptance
+        // page): report the same success instead of "invalid". Any other account still
+        // gets "invalid" — the token stays single use.
+        if (invitation is { AcceptedAt: not null } && invitation.AcceptedAccountId == accountId)
+        {
+            var linkedProvider = await db.Patients
+                .Where(p => p.Id == invitation.PatientId && p.AccountId == accountId)
+                .Join(db.Providers, p => p.ProviderId, pr => pr.Id, (p, pr) => pr.Name)
+                .SingleOrDefaultAsync(cancellationToken);
+            return linkedProvider is null ? new AcceptResult(AcceptOutcome.Invalid) : new AcceptResult(AcceptOutcome.Accepted, linkedProvider);
+        }
+
         if (invitation is null || invitation.RevokedAt is not null || invitation.AcceptedAt is not null || invitation.ExpiresAt <= nowUtc)
         {
             return new AcceptResult(AcceptOutcome.Invalid);

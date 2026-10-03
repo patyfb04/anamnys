@@ -172,7 +172,29 @@ public class PatientInvitationsTests(SharedAppHostFixture fixture)
         (await PatientInvitations.AcceptAsync(db, stranger, token, Now, Ct)).Outcome.Should().Be(AcceptOutcome.EmailMismatch);
         (await PatientInvitations.AcceptAsync(db, owner, token, Now.AddDays(8), Ct)).Outcome.Should().Be(AcceptOutcome.Invalid);
         (await PatientInvitations.AcceptAsync(db, owner, token, Now, Ct)).Outcome.Should().Be(AcceptOutcome.Accepted);
-        (await PatientInvitations.AcceptAsync(db, owner, token, Now, Ct)).Outcome.Should().Be(AcceptOutcome.Invalid, "a token is single use");
+        (await PatientInvitations.AcceptAsync(db, stranger, token, Now, Ct)).Outcome.Should().Be(AcceptOutcome.Invalid, "a token is single use");
+    }
+
+    [Fact]
+    public async Task Accept_Again_ByTheAccountThatAcceptedIt_StillSucceeds()
+    {
+        // Arrange — a reload of the acceptance page re-submits the same token.
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var email = $"ana.{Guid.NewGuid():N}@mail.test";
+        var record = await seed.AddPatientAsync("Ana", "Silva", email: email, cancellationToken: Ct);
+        var sender = new FakeSender();
+        await using var db = seed.CreateDbContext();
+        await PatientInvitations.InviteAsync(db, seed.ProviderId, record, sender, PortalBase, Now, Ct);
+        var token = TokenFrom(sender.Messages[0]);
+        var owner = await seed.AddAccountAsync(Ct, email);
+        await PatientInvitations.AcceptAsync(db, owner, token, Now, Ct);
+
+        // Act
+        var again = await PatientInvitations.AcceptAsync(db, owner, token, Now.AddMinutes(1), Ct);
+
+        // Assert
+        again.Outcome.Should().Be(AcceptOutcome.Accepted);
+        again.ProviderName.Should().Be("Test Provider");
     }
 
     [Fact]
