@@ -8,6 +8,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<PatientAccount> PatientAccounts => Set<PatientAccount>();
+    public DbSet<PatientInvitation> PatientInvitations => Set<PatientInvitation>();
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
@@ -41,6 +42,15 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasKey(x => x.Id);
             e.HasOne<PatientAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.AccountId, x.ProviderId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PatientInvitation>(e =>
+        {
+            e.ToTable("PatientInvitations");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<PatientAccount>().WithMany().HasForeignKey(x => x.AcceptedAccountId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Staff>(e =>

@@ -31,13 +31,20 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
 
     public HttpClient CreateServerClient() => _app!.CreateHttpClient("server");
 
+    // Mailpit's web/API endpoint at whatever host port this run got (see KeycloakBaseAddress).
+    public HttpClient CreateMailpitClient() => _app!.CreateHttpClient("mailpit", "http");
+
     public ValueTask<string?> GetConnectionStringAsync(string name, CancellationToken cancellationToken) =>
         _app!.GetConnectionStringAsync(name, cancellationToken);
 
     public async ValueTask InitializeAsync()
     {
         var appHost = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.anamnys_aspire_AppHost>(TestContext.Current.CancellationToken);
+            .CreateAsync<Projects.anamnys_aspire_AppHost>(
+                // Never send real email from tests: an empty Resend key makes the AppHost
+                // route both Keycloak and the server to Mailpit.
+                ["--Parameters:resend-api-key="],
+                TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();
         KeycloakAdminUsername = await keycloakResource.AdminUserNameParameter!.GetValueAsync(TestContext.Current.CancellationToken)

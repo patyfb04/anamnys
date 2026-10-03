@@ -68,6 +68,9 @@ export interface NoteSummary {
   signedAt: string | null;
 }
 
+// Patient-portal access for a record (design/specs/2026-10-03-portal-invitation-design.md).
+export type PortalStatus = "none" | "invited" | "expired" | "active";
+
 export interface PatientDetail {
   id: string;
   firstName: string;
@@ -86,6 +89,9 @@ export interface PatientDetail {
   medications: MedicationItem[];
   objectives: ObjectiveItem[];
   recentNotes: NoteSummary[];
+  portalStatus: PortalStatus;
+  invitationSentAt: string | null;
+  invitationExpiresAt: string | null;
 }
 
 // Keep in sync with the backend's ClinicalDraft.Domain.SupportedLanguages.

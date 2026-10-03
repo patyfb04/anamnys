@@ -138,7 +138,10 @@ public sealed record PatientDetailResponse(
     IReadOnlyList<DiagnosisItem> Diagnoses,
     IReadOnlyList<MedicationItem> Medications,
     IReadOnlyList<ObjectiveItem> Objectives,
-    IReadOnlyList<NoteSummary> RecentNotes);
+    IReadOnlyList<NoteSummary> RecentNotes,
+    string PortalStatus,
+    DateTimeOffset? InvitationSentAt,
+    DateTimeOffset? InvitationExpiresAt);
 
 public sealed record DiagnosisItem(Guid Id, string Description, string? IcdCode, DateTimeOffset RecordedAt, DateOnly? ResolvedOn);
 

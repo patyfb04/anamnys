@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, FileText, Pencil, Trash2, UserRound } from "lucide-react";
@@ -12,6 +12,7 @@ import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/pat
 import PatientFormModal from "@/components/patients/PatientFormModal";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import NoteStatusBadge from "@/components/patients/NoteStatusBadge";
+import PortalAccessBlock from "@/components/patients/detail/PortalAccessBlock";
 import { ageFrom, formatDate, formatDay, formatTime } from "@/components/patients/format";
 
 export const Route = createFileRoute("/_app/patients/$patientId/")({
@@ -24,6 +25,8 @@ type Confirm = "archive" | "delete" | null;
 // design/specs/2026-10-01-patient-records-design.md §6.
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
+  // Set by the create modal when it could not send the invitation it was asked to send.
+  const inviteError = useRouterState({ select: (s) => s.location.state.inviteError });
   const { t, i18n } = useTranslation();
   const locale = i18n.language;
   const navigate = useNavigate();
@@ -139,12 +142,10 @@ function PatientDetailPage() {
           <dl className="flex flex-col gap-3">
             <Field label={t("patients.detail.contactEmail")} value={patient.contactEmail ?? "—"} />
             <Field label={t("patients.detail.phone")} value={patient.phone ?? "—"} />
-            <p className="text-label-md text-outline">
-              {patient.hasPortalAccount
-                ? t("patients.detail.portalLinked", { email: patient.portalEmail })
-                : t("patients.detail.portalNotLinked")}
-            </p>
           </dl>
+          <div className="mt-4">
+            <PortalAccessBlock patient={patient} onChanged={refresh} initialError={inviteError ?? null} />
+          </div>
         </DetailCard>
 
         <DetailCard title={t("patients.detail.visits")} icon={<CalendarClock size={20} />}>

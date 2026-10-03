@@ -52,6 +52,16 @@ export const patientsApi = {
   archive: async (id: string): Promise<void> => {
     await api.post(`${BASE}/${id}/archive`);
   },
+  // Portal access (design/specs/2026-10-03-portal-invitation-design.md).
+  invite: async (id: string): Promise<void> => {
+    await api.post(`${BASE}/${id}/invitation`);
+  },
+  cancelInvitation: async (id: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}/invitation`);
+  },
+  removePortalAccess: async (id: string): Promise<void> => {
+    await api.delete(`${BASE}/${id}/portal-access`);
+  },
   unarchive: async (id: string): Promise<void> => {
     await api.post(`${BASE}/${id}/unarchive`);
   },

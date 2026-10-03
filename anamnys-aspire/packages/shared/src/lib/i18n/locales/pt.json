@@ -40,7 +40,22 @@
     "comingSoon": "Seu painel completo está a caminho."
   },
   "patientPortal": {
-    "comingSoon": "Em breve você poderá agendar, remarcar e cancelar suas consultas por aqui."
+    "comingSoon": "Em breve você poderá agendar, remarcar e cancelar suas consultas por aqui.",
+    "invite": {
+      "title": "Convite para o portal Anamnys",
+      "signedOut": "Você recebeu um convite para acessar o portal de pacientes. Entre ou crie sua conta usando o mesmo e-mail que recebeu o convite.",
+      "signIn": "Entrar",
+      "register": "Criar conta",
+      "accepting": "Confirmando seu convite…",
+      "accepted": "Pronto! Você está conectada(o) a {{provider}}.",
+      "goHome": "Ir para o início",
+      "switchAccount": "Sair e entrar com outro e-mail",
+      "errors": {
+        "invalid": "Este convite não é mais válido. Peça um novo ao seu profissional.",
+        "email_mismatch": "Este convite foi enviado para outro e-mail. Entre com esse e-mail para aceitá-lo.",
+        "already_linked": "Você já está conectada(o) a este profissional."
+      }
+    }
   },
   "welcome": {
     "signIn": "Entrar",
@@ -352,6 +367,8 @@
       "lastName": "Sobrenome",
       "contactEmail": "E-mail",
       "contactEmailHint": "Para avisos e lembretes de sessão. Não dá acesso ao portal do paciente.",
+      "invitePortal": "Convidar para o portal do paciente",
+      "invitePortalHint": "Enviaremos um convite para o e-mail acima.",
       "dateOfBirth": "Data de nascimento",
       "diagnoses": "Diagnósticos",
       "addDiagnosis": "Adicionar diagnóstico",
@@ -389,8 +406,6 @@
       "contact": "Dados e contato",
       "contactEmail": "E-mail de contato",
       "phone": "Telefone",
-      "portalLinked": "Acesso ao portal do paciente ativo ({{email}}).",
-      "portalNotLinked": "Sem acesso ao portal do paciente.",
       "visits": "Atendimentos",
       "recentNotes": "Notas recentes",
       "noNotes": "Nenhuma nota ainda.",
@@ -408,6 +423,20 @@
       "objectives": "Objetivos do plano",
       "noObjectives": "Nenhum objetivo definido.",
       "add": "Adicionar"
+    },
+    "portal": {
+      "title": "Portal do paciente",
+      "none": "Sem acesso ao portal.",
+      "invited": "Convite enviado em {{sent}}, válido até {{until}}.",
+      "expired": "O convite expirou em {{until}}.",
+      "active": "Acesso ativo ({{email}}).",
+      "invite": "Convidar para o portal",
+      "resend": "Reenviar convite",
+      "cancel": "Cancelar convite",
+      "remove": "Remover acesso",
+      "removeTitle": "Remover acesso ao portal?",
+      "removeBody": "{{name}} deixará de ver você no portal. A conta e o prontuário continuam existindo, e você pode convidar de novo depois.",
+      "inviteFailed": "Não foi possível enviar o convite."
     },
     "notes": {
       "title": "Notas",

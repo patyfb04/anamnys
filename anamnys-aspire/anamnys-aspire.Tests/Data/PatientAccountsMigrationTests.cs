@@ -102,9 +102,41 @@ public class PatientAccountsMigrationTests(SharedAppHostFixture fixture)
             .Should().Be(2);
     }
 
-    private static async Task RunMigrationAsync(NpgsqlConnection db)
+    [Fact]
+    public async Task InvitationsMigration_AfterAccounts_AndOnTheCurrentBootstrapSchema_Agree()
     {
-        var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Migrations", "2026-10-03-patient-accounts.sql"), Ct);
+        // From the previous schema: accounts migration, then invitations migration (twice).
+        await using var old = await ScratchDatabase.CreateAsync(fixture, Ct);
+        await using (var db = await old.OpenAsync(Ct))
+        {
+            await RunMigrationAsync(db);
+            await RunMigrationAsync(db, "2026-10-04-patient-invitations.sql");
+            await RunMigrationAsync(db, "2026-10-04-patient-invitations.sql");
+            (await InvitationObjectsAsync(db)).Should().Be(5);
+        }
+
+        // On the current bootstrap schema the invitations migration changes nothing.
+        await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
+        await using (var db = await fresh.OpenAsync(Ct))
+        {
+            (await InvitationObjectsAsync(db)).Should().Be(5);
+            await RunMigrationAsync(db, "2026-10-04-patient-invitations.sql");
+            (await InvitationObjectsAsync(db)).Should().Be(5);
+        }
+    }
+
+    // The table's partial unique index, its two checks and its two foreign keys.
+    private static async Task<long> InvitationObjectsAsync(NpgsqlConnection db) =>
+        await ScalarAsync<long>(db, """
+            SELECT (SELECT count(*) FROM pg_indexes WHERE indexname = 'PatientInvitations_OnePending_key')
+                 + (SELECT count(*) FROM pg_constraint WHERE conname IN (
+                       'PatientInvitations_Closed_ck', 'PatientInvitations_Accepted_ck',
+                       'PatientInvitations_PatientId_fkey', 'PatientInvitations_AcceptedAccountId_fkey'))
+            """);
+
+    private static async Task RunMigrationAsync(NpgsqlConnection db, string file = "2026-10-03-patient-accounts.sql")
+    {
+        var sql = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Migrations", file), Ct);
         await using var command = new NpgsqlCommand(sql, db);
         await command.ExecuteNonQueryAsync(Ct);
     }

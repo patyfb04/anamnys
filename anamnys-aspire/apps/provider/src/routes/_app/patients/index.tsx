@@ -124,9 +124,9 @@ function PatientListPage() {
         <PatientFormModal
           mode={{ kind: "create" }}
           onClose={() => setCreating(false)}
-          onSaved={(patientId) => {
+          onSaved={(patientId, inviteError) => {
             setCreating(false);
-            openPatient(patientId);
+            navigate({ to: "/patients/$patientId", params: { patientId }, state: { inviteError } });
           }}
         />
       )}

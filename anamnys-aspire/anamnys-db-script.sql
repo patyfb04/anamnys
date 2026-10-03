@@ -496,6 +496,19 @@ CREATE TABLE "Patients" (
 	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId"),
 	CONSTRAINT "Patients_Account_Provider_key" UNIQUE("AccountId","ProviderId")
 );
+CREATE TABLE "PatientInvitations" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"PatientId" uuid NOT NULL,
+	"Email" text NOT NULL,
+	"TokenHash" bytea NOT NULL CONSTRAINT "PatientInvitations_TokenHash_key" UNIQUE,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ExpiresAt" timestamp with time zone NOT NULL,
+	"AcceptedAt" timestamp with time zone,
+	"AcceptedAccountId" uuid,
+	"RevokedAt" timestamp with time zone,
+	CONSTRAINT "PatientInvitations_Closed_ck" CHECK (("AcceptedAt" IS NULL) OR ("RevokedAt" IS NULL)),
+	CONSTRAINT "PatientInvitations_Accepted_ck" CHECK (("AcceptedAccountId" IS NULL) OR ("AcceptedAt" IS NOT NULL))
+);
 CREATE TABLE "PatientDiagnoses" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"PatientId" uuid NOT NULL,
@@ -866,6 +879,7 @@ CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
 CREATE UNIQUE INDEX "PatientAccounts_Email_key" ON "PatientAccounts" (lower("Email"));
+CREATE UNIQUE INDEX "PatientInvitations_OnePending_key" ON "PatientInvitations" ("PatientId") WHERE "AcceptedAt" IS NULL AND "RevokedAt" IS NULL;
 CREATE INDEX "PatientDiagnoses_PatientId_idx" ON "PatientDiagnoses" ("PatientId");
 CREATE INDEX "PlanObjectives_PlanId_idx" ON "PlanObjectives" ("PlanId");
 CREATE INDEX "ProfileListingEvents_ProfileId_At_idx" ON "ProfileListingEvents" ("ProfileId","At");
@@ -953,6 +967,8 @@ ALTER TABLE "PatientDiagnoses" ADD CONSTRAINT "PatientDiagnoses_PatientId_fkey" 
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_TermId_fkey" FOREIGN KEY ("TermId") REFERENCES "ThemeTerms"("Id") ON DELETE SET NULL;
 ALTER TABLE "Patients" ADD CONSTRAINT "Patients_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "Patients" ADD CONSTRAINT "Patients_AccountId_fkey" FOREIGN KEY ("AccountId") REFERENCES "PatientAccounts"("Id") ON DELETE SET NULL;
+ALTER TABLE "PatientInvitations" ADD CONSTRAINT "PatientInvitations_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
+ALTER TABLE "PatientInvitations" ADD CONSTRAINT "PatientInvitations_AcceptedAccountId_fkey" FOREIGN KEY ("AcceptedAccountId") REFERENCES "PatientAccounts"("Id") ON DELETE SET NULL;
 ALTER TABLE "PlanFeatures" ADD CONSTRAINT "PlanFeatures_PlanId_fkey" FOREIGN KEY ("PlanId") REFERENCES "Plans"("Id") ON DELETE CASCADE;
 ALTER TABLE "PlanObjectives" ADD CONSTRAINT "PlanObjectives_PlanId_fkey" FOREIGN KEY ("PlanId") REFERENCES "TreatmentPlans"("Id") ON DELETE CASCADE;
 ALTER TABLE "PlanObjectives" ADD CONSTRAINT "PlanObjectives_Session_fk" FOREIGN KEY ("LastRecordedSessionId") REFERENCES "Sessions"("Id") ON DELETE SET NULL;

@@ -46,10 +46,12 @@ patient with `Id == id && ProviderId == <session provider>`, so another provider
 is a 404. See `design/specs/2026-10-01-patient-records-design.md`.
 
 Every provider record requires a **contact email** (`Patients.ContactEmail`), used for
-scheduling notices only. It is deliberately not the portal login: `Patients.Email` holds
-that, exists only on a row bound to a Keycloak subject (`Patients_Login_ck`), and a portal
-sign-up is never attached to a provider record by matching emails. Linking the two will go
-through an explicit invitation (spec §8).
+scheduling notices only. It is deliberately not the portal login: that is
+`PatientAccounts.Email`, on a separate table (Chapter 8), and a portal sign-up is never
+attached to a provider record by matching emails. A record is linked to an account
+(`Patients.AccountId`) only through an invitation the provider sends from the record's
+*Portal do paciente* block, accepted by the account with the invited email
+(`design/specs/2026-10-03-portal-invitation-design.md`).
 
 Forms read field errors from `ApiError.errors` (`packages/shared/src/api/client.ts`), the
 server's `ValidationProblem` body, and show them next to each field.
