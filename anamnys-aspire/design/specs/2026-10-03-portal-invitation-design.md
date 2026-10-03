@@ -48,7 +48,7 @@ CREATE TABLE "PatientInvitations" (
 	"AcceptedAccountId" uuid,
 	"RevokedAt" timestamp with time zone,
 	CONSTRAINT "PatientInvitations_Closed_ck" CHECK (("AcceptedAt" IS NULL) OR ("RevokedAt" IS NULL)),
-	CONSTRAINT "PatientInvitations_Accepted_ck" CHECK ((("AcceptedAt" IS NULL) = ("AcceptedAccountId" IS NULL)))
+	CONSTRAINT "PatientInvitations_Accepted_ck" CHECK (("AcceptedAccountId" IS NULL) OR ("AcceptedAt" IS NOT NULL))
 );
 CREATE UNIQUE INDEX "PatientInvitations_OnePending_key" ON "PatientInvitations" ("PatientId")
 	WHERE "AcceptedAt" IS NULL AND "RevokedAt" IS NULL;
