@@ -4,11 +4,19 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.Extensions.Options;
 
 namespace Anamnys.Server.Auth;
 
+// Refreshes a cookie session's Keycloak tokens. The refresh goes to the token endpoint
+// the realm's OIDC handler discovered, over that handler's own backchannel: Keycloak only
+// accepts a refresh token at the address that issued it (the handler's Authority), and a
+// separately configured Keycloak address (Aspire service discovery resolved a different
+// port) made every refresh fail with "Invalid token issuer" — ending every session when
+// its first access token expired.
 public sealed class TokenRefresher(
-    IHttpClientFactory httpClientFactory,
+    IOptionsMonitor<OpenIdConnectOptions> oidcOptions,
     ILogger<TokenRefresher> logger)
 {
     private sealed record TokenResponse(
@@ -18,6 +26,7 @@ public sealed class TokenRefresher(
 
     public async Task ValidateAsync(
         CookieValidatePrincipalContext context,
+        string oidcScheme,
         string realm,
         string clientId,
         string clientSecret)
@@ -56,9 +65,10 @@ public sealed class TokenRefresher(
         TokenResponse? tokens;
         try
         {
-            var client = httpClientFactory.CreateClient("keycloak");
-            using var response = await client.PostAsync(
-                $"realms/{realm}/protocol/openid-connect/token",
+            var options = oidcOptions.Get(oidcScheme);
+            var configuration = await options.ConfigurationManager!.GetConfigurationAsync(context.HttpContext.RequestAborted);
+            using var response = await options.Backchannel.PostAsync(
+                configuration.TokenEndpoint,
                 new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     ["grant_type"] = "refresh_token",
@@ -78,9 +88,11 @@ public sealed class TokenRefresher(
 
             tokens = await response.Content.ReadFromJsonAsync<TokenResponse>(context.HttpContext.RequestAborted);
         }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException)
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException or InvalidOperationException)
         {
-            // Keycloak being unreachable or returning a non-JSON error body
+            // Keycloak being unreachable (InvalidOperationException is how the OIDC
+            // configuration manager reports a failed discovery fetch) or returning a non-JSON
+            // error body
             // must not propagate out of OnValidatePrincipal — that would turn
             // every authenticated request into a 500 for the duration of the
             // outage. Fail the same way an explicit refresh rejection does:
