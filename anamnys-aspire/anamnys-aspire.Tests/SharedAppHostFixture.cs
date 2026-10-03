@@ -37,7 +37,11 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         var appHost = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.anamnys_aspire_AppHost>(TestContext.Current.CancellationToken);
+            .CreateAsync<Projects.anamnys_aspire_AppHost>(
+                // Never send real email from tests: an empty Resend key makes the AppHost
+                // route both Keycloak and the server to Mailpit.
+                ["--Parameters:resend-api-key="],
+                TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();
         KeycloakAdminUsername = await keycloakResource.AdminUserNameParameter!.GetValueAsync(TestContext.Current.CancellationToken)

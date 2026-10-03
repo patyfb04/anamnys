@@ -178,6 +178,34 @@ server
     // plain string, not something Aspire resolves.
     .WithEnvironment("KEYCLOAK_PUBLIC_HTTPS_ADDRESS", "https://localhost:8443");
 
+// The server's own outgoing email (portal invitations — see
+// design/specs/2026-10-03-portal-invitation-design.md §5), through the same choice the
+// Keycloak SMTP block above makes: the developer's Resend account when its key is set,
+// otherwise Mailpit's HTTP send API (the server is a host process, so Mailpit's published
+// localhost port, not the container alias). Outside a dev run nothing is configured here:
+// a deployment supplies Email__* itself, and without it invitations answer 503.
+if (useResend)
+{
+    server
+        .WithEnvironment("Email__Provider", "resend")
+        .WithEnvironment("Email__ResendApiKey", resendApiKey)
+        .WithEnvironment("Email__From", "onboarding@resend.dev");
+}
+else if (mailpit is not null)
+{
+    server
+        .WithEnvironment("Email__Provider", "mailpit")
+        .WithEnvironment("Email__MailpitBaseUrl", "http://localhost:8025")
+        .WithEnvironment("Email__From", "noreply@anamnys.dev")
+        .WaitFor(mailpit);
+}
+if (isDevRun)
+{
+    // Where invitation links point: the patient app's pinned dev origin (see `patient`
+    // below). A deployment serves the patient app same-origin under /patient.
+    server.WithEnvironment("PatientPortal__BaseUrl", "http://localhost:5274/patient");
+}
+
 // Three SPAs, one server. Each is published into a sub-path of the server's
 // wwwroot so all three stay same-origin with the API — which is what lets the
 // BFF cookie auth work without CORS. The sub-paths must match the `base` option
