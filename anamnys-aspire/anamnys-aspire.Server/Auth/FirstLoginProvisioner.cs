@@ -171,18 +171,18 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
         return existing.Id;
     }
 
-    // A Patients row can exist two ways: a provider already created and invited this
-    // patient (bind-by-subject or bind-by-unclaimed-email below), or nobody has —
-    // in which case this login is a genuine self-registration and falls through to the
-    // create branch at the end.
+    // A patient login resolves to a PatientAccount, never to a clinical record: records
+    // belong to providers and are linked to an account only through Patient.AccountId
+    // (design/specs/2026-10-02-patient-accounts-design.md). The returned id is the
+    // account's, and becomes the patient realm's LocalId.
     private async Task<Guid> ResolvePatientAsync(
         ClaimsPrincipal principal,
         Guid subject,
         string email,
         CancellationToken cancellationToken)
     {
-        var bySubject = await db.Patients
-            .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
+        var bySubject = await db.PatientAccounts
+            .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken);
         if (bySubject is not null)
         {
             if (bySubject.DisabledAt is not null)
@@ -200,53 +200,45 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
             throw new InvalidOperationException("Cannot register a patient account with an unverified email.");
         }
 
-        // No row is bound to this subject, so this is a self-registration. There is
-        // deliberately no "bind the unclaimed record with the same email" step: a provider's
-        // record carries a ContactEmail for notices, and matching on it would attach any
-        // later portal sign-up to that provider's record without an invitation (see
-        // design/specs/2026-10-01-patient-records-design.md §8). Linking a login to a
-        // provider record will go through an explicit, token-based invitation. No provider
-        // relationship exists yet (ProviderId stays null until some future flow, e.g.
-        // booking a first appointment, sets it). given_name/family_name come from the same
-        // profile scope the provider realm already relies on for its own name claim; a
-        // missing claim here is a realm-config gap to notice later, not a reason to fail
-        // the login (mirrors how ProvisionProviderAsync tolerates missing crpNumber/
-        // crpRegion).
-        var givenName = principal.FindFirstValue("given_name") ?? "";
-        var familyName = principal.FindFirstValue("family_name") ?? "";
-
+        // First login for this subject: a self-registration. There is deliberately no "link
+        // the record whose email matches" step: a provider's record carries a ContactEmail
+        // for notices, and matching on it would attach any later portal sign-up to that
+        // provider's record without an invitation (see
+        // design/specs/2026-10-01-patient-records-design.md §8). given_name/family_name come
+        // from the same profile scope the provider realm relies on for its name claim; a
+        // missing claim is a realm-config gap to notice later, not a reason to fail the login
+        // (mirrors how ProvisionProviderAsync tolerates missing crpNumber/crpRegion).
         var now = DateTimeOffset.UtcNow;
-        var patient = new Patient
+        var account = new PatientAccount
         {
             Id = Guid.NewGuid(),
             ExternalSubject = subject,
             Email = email,
-            FirstName = givenName,
-            LastName = familyName,
+            FirstName = principal.FindFirstValue("given_name") ?? "",
+            LastName = principal.FindFirstValue("family_name") ?? "",
             CreatedAt = now,
             UpdatedAt = now,
         };
 
-        db.Patients.Add(patient);
+        db.PatientAccounts.Add(account);
 
-        // Two concurrent first logins for the same subject both miss every lookup above
-        // and both try to insert; the unique index on ExternalSubject lets exactly one
-        // succeed. Rather than 500 the loser, re-read: the winner's row is now there.
+        // Two concurrent first logins for the same subject both miss the lookup above and
+        // both try to insert; the unique index on ExternalSubject lets exactly one succeed.
+        // Rather than 500 the loser, re-read: the winner's row is now there.
         try
         {
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateException)
         {
-            db.Entry(patient).State = EntityState.Detached;
-            var afterCreateRace = await db.Patients
-                .SingleOrDefaultAsync(p => p.ExternalSubject == subject, cancellationToken);
+            db.Entry(account).State = EntityState.Detached;
+            var afterCreateRace = await db.PatientAccounts
+                .SingleOrDefaultAsync(a => a.ExternalSubject == subject, cancellationToken);
             if (afterCreateRace is null)
             {
-                // A genuine same-subject race would always succeed on the re-query above
-                // (the winning insert used this same ExternalSubject) — reaching here means
-                // the actual constraint that fired was Patients.Email's uniqueness, not
-                // ExternalSubject's, i.e. this email already belongs to some other row.
+                // A genuine same-subject race would always succeed on the re-query above —
+                // reaching here means the constraint that fired was the account email's
+                // uniqueness: this email already belongs to another account.
                 throw new InvalidOperationException(
                     "Cannot self-register: an account with this email already exists.");
             }
@@ -254,14 +246,14 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
             return afterCreateRace.Id;
         }
 
-        return patient.Id;
+        return account.Id;
     }
 
     // Keycloak owns the login email; it changes through its UPDATE_EMAIL action, which
     // only applies the new address once the user confirms it. A returning user's row
-    // follows it here. A clash with another row (in practice an unclaimed patient invite
-    // holding that address) keeps the old value: the login itself must never fail over
-    // this. Logged by row id only — an email address is PHI.
+    // follows it here. A clash with another row of the same realm (an account deleted and
+    // re-created in Keycloak, say) keeps the old value: the login itself must never fail
+    // over this. Logged by row id only — an email address is PHI.
     private async Task SyncProviderEmailAsync(
         Provider row, ClaimsPrincipal principal, string email, CancellationToken cancellationToken)
     {
@@ -283,7 +275,7 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
     }
 
     private async Task SyncPatientEmailAsync(
-        Patient row, ClaimsPrincipal principal, string email, CancellationToken cancellationToken)
+        PatientAccount row, ClaimsPrincipal principal, string email, CancellationToken cancellationToken)
     {
         if (!NeedsEmailSync(row.Email, principal, email))
         {
@@ -291,10 +283,9 @@ public sealed class FirstLoginProvisioner(AnamnysDbContext db, ILogger<FirstLogi
         }
 
         var normalized = email.Trim().ToUpperInvariant();
-        if (await db.Patients.AnyAsync(
-                p => p.Id != row.Id && p.Email != null && p.Email.ToUpper() == normalized, cancellationToken))
+        if (await db.PatientAccounts.AnyAsync(a => a.Id != row.Id && a.Email.ToUpper() == normalized, cancellationToken))
         {
-            logger.LogWarning("Email sync skipped for patient {PatientId}: another patient row holds that email.", row.Id);
+            logger.LogWarning("Email sync skipped for patient account {AccountId}: another account holds that email.", row.Id);
             return;
         }
 

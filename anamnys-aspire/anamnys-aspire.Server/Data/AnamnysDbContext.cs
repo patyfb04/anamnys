@@ -7,6 +7,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
 {
     public DbSet<Provider> Providers => Set<Provider>();
     public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<PatientAccount> PatientAccounts => Set<PatientAccount>();
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
@@ -27,12 +28,19 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasIndex(x => x.Email).IsUnique();
         });
 
+        modelBuilder.Entity<PatientAccount>(e =>
+        {
+            e.ToTable("PatientAccounts");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.ExternalSubject).IsUnique();
+        });
+
         modelBuilder.Entity<Patient>(e =>
         {
             e.ToTable("Patients");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => x.ExternalSubject).IsUnique();
-            e.HasIndex(x => x.Email).IsUnique();
+            e.HasOne<PatientAccount>().WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.AccountId, x.ProviderId }).IsUnique();
         });
 
         modelBuilder.Entity<Staff>(e =>

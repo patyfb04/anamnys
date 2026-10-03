@@ -103,7 +103,16 @@ public static class PatientRecords
                 .Select(o => new ObjectiveItem(o.Id, o.Description, o.CreatedAt))
                 .ToListAsync(cancellationToken);
 
-        var canDelete = patient.ExternalSubject is null && !await HasClinicalRecordsAsync(db, patientId, cancellationToken);
+        // The linked portal account, unless it was disabled: providers see only its login
+        // email, never the personal data the person keeps on it.
+        var portalEmail = patient.AccountId is { } accountId
+            ? await db.PatientAccounts.AsNoTracking()
+                .Where(a => a.Id == accountId && a.DisabledAt == null)
+                .Select(a => a.Email)
+                .SingleOrDefaultAsync(cancellationToken)
+            : null;
+
+        var canDelete = patient.AccountId is null && !await HasClinicalRecordsAsync(db, patientId, cancellationToken);
 
         return new PatientDetailResponse(
             patient.Id,
@@ -111,9 +120,9 @@ public static class PatientRecords
             patient.LastName,
             patient.DateOfBirth,
             patient.ContactEmail,
-            patient.Email,
+            portalEmail,
             patient.Phone,
-            patient.ExternalSubject is not null,
+            portalEmail is not null,
             patient.ArchivedAt,
             patient.LastVisit,
             nextAppointmentAt,
@@ -150,13 +159,13 @@ public static class PatientRecords
     {
         var patient = await db.Patients.AsNoTracking()
             .Where(p => p.Id == patientId && p.ProviderId == providerId)
-            .Select(p => new { p.ExternalSubject })
+            .Select(p => new { p.AccountId })
             .SingleOrDefaultAsync(cancellationToken);
         if (patient is null)
         {
             return RecordOutcome.NotFound;
         }
-        if (patient.ExternalSubject is not null || await HasClinicalRecordsAsync(db, patientId, cancellationToken))
+        if (patient.AccountId is not null || await HasClinicalRecordsAsync(db, patientId, cancellationToken))
         {
             return RecordOutcome.Conflict;
         }

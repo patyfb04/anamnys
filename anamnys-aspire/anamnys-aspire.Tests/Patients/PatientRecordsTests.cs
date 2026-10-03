@@ -82,6 +82,25 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         detail.CanDelete.Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Get_PortalStatusComesFromLinkedAccount(bool accountDisabled)
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var id = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var accountId = await seed.BindPortalAccountAsync(id, Ct, disabled: accountDisabled);
+
+        // Act
+        var detail = await GetAsync(seed, id);
+
+        // Assert — a disabled account is shown as no portal access.
+        detail!.HasPortalAccount.Should().Be(!accountDisabled);
+        detail.PortalEmail.Should().Be(accountDisabled ? null : $"{accountId:N}@portal.test");
+        detail.CanDelete.Should().BeFalse("a record linked to an account must be archived, not deleted");
+    }
+
     [Fact]
     public async Task EveryOperation_OnAnotherProvidersPatient_IsNotFound()
     {

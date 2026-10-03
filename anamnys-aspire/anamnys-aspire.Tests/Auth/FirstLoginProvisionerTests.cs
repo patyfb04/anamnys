@@ -138,7 +138,7 @@ public class FirstLoginProvisionerTests
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenNoPatientMatches_CreatesNewRowWithNullProviderId()
+    public async Task ProvisionAsync_WhenPatientLogsInFirstTime_CreatesAccountAndNoRecord()
     {
         // Arrange
         await using var db = NewContext();
@@ -151,46 +151,45 @@ public class FirstLoginProvisionerTests
             Realms.Patients,
             TestContext.Current.CancellationToken);
 
-        // Assert
-        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
-        row.Id.Should().Be(localId);
-        row.ExternalSubject.Should().Be(subject);
-        row.Email.Should().Be("newpatient@example.com");
-        row.ProviderId.Should().BeNull();
-        row.FirstName.Should().Be("A");
-        row.LastName.Should().Be("Patient");
+        // Assert — a portal login is an account only; records belong to providers
+        // (design/specs/2026-10-02-patient-accounts-design.md).
+        var account = await db.PatientAccounts.SingleAsync(TestContext.Current.CancellationToken);
+        account.Id.Should().Be(localId);
+        account.ExternalSubject.Should().Be(subject);
+        account.Email.Should().Be("newpatient@example.com");
+        account.FirstName.Should().Be("A");
+        account.LastName.Should().Be("Patient");
+        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
     [Fact]
     public async Task ProvisionAsync_WhenPatientTokenCarriesNoNameClaims_LeavesNamesEmpty()
     {
         // Arrange — mirrors ProvisionAsync_WhenProviderTokenCarriesNoCrpClaims_LeavesBothNull:
-        // a missing claim must not throw, it's a realm-config gap to notice later, not a
+        // a missing claim must not throw; it is a realm-config gap to notice later, not a
         // reason to fail the login.
         await using var db = NewContext();
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-        var subject = Guid.NewGuid();
 
         // Act
         await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "newpatient@example.com", "A Patient"),
+            PrincipalFor(Guid.NewGuid(), "newpatient@example.com", "A Patient"),
             Realms.Patients,
             TestContext.Current.CancellationToken);
 
         // Assert
-        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
-        row.FirstName.Should().Be("");
-        row.LastName.Should().Be("");
+        var account = await db.PatientAccounts.SingleAsync(TestContext.Current.CancellationToken);
+        account.FirstName.Should().Be("");
+        account.LastName.Should().Be("");
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenPatientSelfRegistersTwiceForSameSubject_DoesNotCreateSecondRow()
+    public async Task ProvisionAsync_WhenPatientLogsInTwiceForSameSubject_DoesNotCreateSecondAccount()
     {
         // Arrange
         await using var db = NewContext();
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-        var subject = Guid.NewGuid();
-        var principal = PrincipalFor(subject, "newpatient@example.com", "A Patient", givenName: "A", familyName: "Patient");
+        var principal = PrincipalFor(Guid.NewGuid(), "newpatient@example.com", "A Patient", givenName: "A", familyName: "Patient");
 
         // Act
         var first = await provisioner.ProvisionAsync(principal, Realms.Patients, TestContext.Current.CancellationToken);
@@ -198,14 +197,13 @@ public class FirstLoginProvisionerTests
 
         // Assert
         second.Should().Be(first);
-        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
+        (await db.PatientAccounts.CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenPatientEmailNotVerifiedAndNoRowMatches_ThrowsRatherThanCreating()
+    public async Task ProvisionAsync_WhenPatientEmailNotVerified_ThrowsRatherThanCreating()
     {
-        // Arrange — the emailVerified gate sits above the bind/create fork, so it must
-        // also block self-registration, not just binding to an existing unclaimed row.
+        // Arrange
         await using var db = NewContext();
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
@@ -217,15 +215,15 @@ public class FirstLoginProvisionerTests
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
-        (await db.Patients.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        (await db.PatientAccounts.CountAsync(TestContext.Current.CancellationToken)).Should().Be(0);
     }
 
     [Fact]
-    public async Task ProvisionAsync_WhenAProviderRecordHasTheSameContactEmail_DoesNotBindIt()
+    public async Task ProvisionAsync_WhenAProviderRecordHasTheSameContactEmail_LeavesItUnlinked()
     {
         // Arrange — a provider typed this email in for scheduling notices. That is not an
-        // invitation: a portal sign-up with the same verified email must not land in the
-        // provider's record (design/specs/2026-10-01-patient-records-design.md §8).
+        // invitation: a portal sign-up with the same verified email must not be linked to
+        // the provider's record (design/specs/2026-10-01-patient-records-design.md §8).
         await using var db = NewContext();
         var providerRecord = new Patient
         {
@@ -239,21 +237,16 @@ public class FirstLoginProvisionerTests
         db.Patients.Add(providerRecord);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-        var subject = Guid.NewGuid();
 
         // Act
-        var localId = await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "patient@example.com", "A Patient", emailVerified: true),
+        await provisioner.ProvisionAsync(
+            PrincipalFor(Guid.NewGuid(), "patient@example.com", "A Patient", emailVerified: true),
             Realms.Patients,
             TestContext.Current.CancellationToken);
 
         // Assert
-        localId.Should().NotBe(providerRecord.Id);
-        var record = await db.Patients.SingleAsync(p => p.Id == providerRecord.Id, TestContext.Current.CancellationToken);
-        record.ExternalSubject.Should().BeNull();
-        var own = await db.Patients.SingleAsync(p => p.Id == localId, TestContext.Current.CancellationToken);
-        own.ProviderId.Should().BeNull();
-        own.ExternalSubject.Should().Be(subject);
+        var record = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
+        record.AccountId.Should().BeNull();
     }
 
     [Fact]
@@ -262,15 +255,7 @@ public class FirstLoginProvisionerTests
         // Arrange
         await using var db = NewContext();
         var subject = Guid.NewGuid();
-        var disabled = new Patient
-        {
-            Id = Guid.NewGuid(),
-            Email = "patient@example.com",
-            ExternalSubject = subject,
-            DisabledAt = DateTimeOffset.UtcNow,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-        db.Patients.Add(disabled);
+        db.PatientAccounts.Add(NewAccount(subject, "patient@example.com", disabled: true));
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
 
@@ -283,6 +268,64 @@ public class FirstLoginProvisionerTests
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenPatientVerifiedEmailChanged_SyncsAccountEmail()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var subject = Guid.NewGuid();
+        var account = NewAccount(subject, "old@example.com");
+        db.PatientAccounts.Add(account);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+
+        // Act
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "new@example.com", "A Patient"),
+            Realms.Patients,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        localId.Should().Be(account.Id);
+        (await db.PatientAccounts.SingleAsync(TestContext.Current.CancellationToken)).Email.Should().Be("new@example.com");
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenNewPatientEmailBelongsToAnotherAccount_KeepsTheOldOne()
+    {
+        // Arrange
+        await using var db = NewContext();
+        var subject = Guid.NewGuid();
+        var account = NewAccount(subject, "old@example.com");
+        db.PatientAccounts.Add(account);
+        db.PatientAccounts.Add(NewAccount(Guid.NewGuid(), "Taken@Example.com"));
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
+
+        // Act
+        var localId = await provisioner.ProvisionAsync(
+            PrincipalFor(subject, "taken@example.com", "A Patient"),
+            Realms.Patients,
+            TestContext.Current.CancellationToken);
+
+        // Assert — the login still succeeds; only the sync is skipped.
+        localId.Should().Be(account.Id);
+        (await db.PatientAccounts.SingleAsync(a => a.Id == account.Id, TestContext.Current.CancellationToken))
+            .Email.Should().Be("old@example.com");
+    }
+
+    private static PatientAccount NewAccount(Guid subject, string email, bool disabled = false) => new()
+    {
+        Id = Guid.NewGuid(),
+        ExternalSubject = subject,
+        Email = email,
+        FirstName = "A",
+        LastName = "Patient",
+        DisabledAt = disabled ? DateTimeOffset.UtcNow : null,
+        CreatedAt = DateTimeOffset.UtcNow,
+        UpdatedAt = DateTimeOffset.UtcNow,
+    };
 
     [Fact]
     public async Task ProvisionAsync_WhenStaffTokenCarriesRealmRole_CreatesRowWithThatRole()
@@ -463,55 +506,6 @@ public class FirstLoginProvisionerTests
 
         // Assert
         var row = await db.Providers.SingleAsync(TestContext.Current.CancellationToken);
-        row.Email.Should().Be("old@example.com");
-    }
-
-    [Fact]
-    public async Task ProvisionAsync_WhenReturningPatientHasNewVerifiedEmail_UpdatesStoredEmail()
-    {
-        // Arrange
-        await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-        var subject = Guid.NewGuid();
-        await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "old@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
-
-        // Act
-        await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "new@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
-
-        // Assert
-        var row = await db.Patients.SingleAsync(TestContext.Current.CancellationToken);
-        row.Email.Should().Be("new@example.com");
-    }
-
-    [Fact]
-    public async Task ProvisionAsync_WhenNewPatientEmailBelongsToUnclaimedRow_KeepsStoredEmailAndStillLogsIn()
-    {
-        // Arrange
-        await using var db = NewContext();
-        var provisioner = new FirstLoginProvisioner(db, NullLogger<FirstLoginProvisioner>.Instance);
-        var subject = Guid.NewGuid();
-        var localId = await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "old@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
-        db.Patients.Add(new Patient
-        {
-            Id = Guid.NewGuid(),
-            FirstName = "Invited",
-            LastName = "Patient",
-            Email = "Taken@Example.com",
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow,
-        });
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-        // Act
-        var secondLoginId = await provisioner.ProvisionAsync(
-            PrincipalFor(subject, "taken@example.com", "A Patient"), Realms.Patients, TestContext.Current.CancellationToken);
-
-        // Assert
-        secondLoginId.Should().Be(localId);
-        var row = await db.Patients.SingleAsync(p => p.Id == localId, TestContext.Current.CancellationToken);
         row.Email.Should().Be("old@example.com");
     }
 }

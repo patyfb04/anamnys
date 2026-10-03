@@ -73,10 +73,38 @@ public sealed class PatientSearchSeed : IAsyncDisposable
     }
 
     // What a bound patient-portal login looks like on the row (see Patient.cs).
-    public Task BindPortalAccountAsync(Guid patientId, CancellationToken cancellationToken) =>
+    // Creates a portal account and links it to the record; returns the account id.
+    public async Task<Guid> BindPortalAccountAsync(Guid patientId, CancellationToken cancellationToken, bool disabled = false)
+    {
+        var accountId = Guid.NewGuid();
+        await ExecuteAsync(
+            """
+            INSERT INTO "PatientAccounts" ("Id", "ExternalSubject", "Email", "FirstName", "LastName", "DisabledAt")
+            VALUES (@account, @sub, @email, 'Portal', 'User', CASE WHEN @disabled THEN now() END);
+            UPDATE "Patients" SET "AccountId" = @account WHERE "Id" = @id;
+            """,
+            cancellationToken,
+            ("account", accountId), ("sub", Guid.NewGuid()), ("email", $"{accountId:N}@portal.test"),
+            ("disabled", disabled), ("id", patientId));
+        return accountId;
+    }
+
+    public async Task<Guid> AddAccountAsync(CancellationToken cancellationToken, string? email = null)
+    {
+        var accountId = Guid.NewGuid();
+        await ExecuteAsync(
+            """INSERT INTO "PatientAccounts" ("Id", "ExternalSubject", "Email", "FirstName", "LastName") VALUES (@id, @sub, @email, 'Portal', 'User')""",
+            cancellationToken, ("id", accountId), ("sub", Guid.NewGuid()), ("email", email ?? $"{accountId:N}@portal.test"));
+        return accountId;
+    }
+
+    public Task LinkAccountAsync(Guid patientId, Guid accountId, CancellationToken cancellationToken) =>
         ExecuteAsync(
-            """UPDATE "Patients" SET "Email" = @email, "ExternalSubject" = @sub WHERE "Id" = @id""",
-            cancellationToken, ("id", patientId), ("email", $"{patientId:N}@portal.test"), ("sub", Guid.NewGuid()));
+            """UPDATE "Patients" SET "AccountId" = @account WHERE "Id" = @id""",
+            cancellationToken, ("account", accountId), ("id", patientId));
+
+    public Task ExecuteSqlAsync(string sql, CancellationToken cancellationToken, params (string Name, object Value)[] parameters) =>
+        ExecuteAsync(sql, cancellationToken, parameters);
 
     public Task AddAppointmentAsync(
         Guid patientId,
