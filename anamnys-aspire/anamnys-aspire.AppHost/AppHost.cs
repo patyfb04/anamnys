@@ -195,7 +195,9 @@ else if (mailpit is not null)
 {
     server
         .WithEnvironment("Email__Provider", "mailpit")
-        .WithEnvironment("Email__MailpitBaseUrl", "http://localhost:8025")
+        // An endpoint reference, not a literal localhost:8025: under Aspire.Hosting.Testing
+        // DCP picks its own host port (see SharedAppHostFixture's Keycloak note).
+        .WithEnvironment("Email__MailpitBaseUrl", mailpit.GetEndpoint("http"))
         .WithEnvironment("Email__From", "noreply@anamnys.dev")
         .WaitFor(mailpit);
 }

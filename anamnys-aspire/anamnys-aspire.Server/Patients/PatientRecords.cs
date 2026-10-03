@@ -113,6 +113,7 @@ public static class PatientRecords
             : null;
 
         var canDelete = patient.AccountId is null && !await HasClinicalRecordsAsync(db, patientId, cancellationToken);
+        var portal = await PatientInvitations.StatusAsync(db, patientId, patient.AccountId, nowUtc, cancellationToken);
 
         return new PatientDetailResponse(
             patient.Id,
@@ -131,7 +132,10 @@ public static class PatientRecords
             diagnoses,
             medications,
             objectives,
-            recentNotes);
+            recentNotes,
+            portal.Status,
+            portal.InvitationSentAt,
+            portal.InvitationExpiresAt);
     }
 
     public static async Task<bool> UpdateAsync(

@@ -93,6 +93,7 @@ phi.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = pr
 phi.MapProfileEndpoints();
 phi.MapPatientEndpoints();
 phi.MapPatientRecordEndpoints();
+phi.MapPatientInvitationEndpoints();
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401

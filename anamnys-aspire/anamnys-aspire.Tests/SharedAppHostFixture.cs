@@ -31,6 +31,9 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
 
     public HttpClient CreateServerClient() => _app!.CreateHttpClient("server");
 
+    // Mailpit's web/API endpoint at whatever host port this run got (see KeycloakBaseAddress).
+    public HttpClient CreateMailpitClient() => _app!.CreateHttpClient("mailpit", "http");
+
     public ValueTask<string?> GetConnectionStringAsync(string name, CancellationToken cancellationToken) =>
         _app!.GetConnectionStringAsync(name, cancellationToken);
 
