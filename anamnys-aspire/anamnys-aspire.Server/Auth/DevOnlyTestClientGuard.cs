@@ -68,10 +68,9 @@ public static class DevOnlyTestClientGuard
                 "configured outside Development. Refusing to start rather than skip this check.");
         }
 
-        // Deliberately not the "keycloak" named HttpClient the rest of the app
-        // uses: that client's BaseAddress is the Aspire service-discovery
-        // pseudo-scheme "https+http://keycloak", which only resolves under
-        // Aspire orchestration (Services__keycloak__* configuration). Outside
+        // Deliberately not an Aspire service-discovery address
+        // ("https+http://keycloak"), which only resolves under Aspire
+        // orchestration (Services__keycloak__* configuration). Outside
         // that, every request against it throws, and this gate would then
         // refuse to start in every environment regardless of whether the
         // test clients exist. KEYCLOAK_ADMIN_BASE_ADDRESS is a plain,

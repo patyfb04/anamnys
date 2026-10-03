@@ -146,7 +146,7 @@ public static class AuthenticationSetup
                 options.Events.OnValidatePrincipal = async context =>
                 {
                     var refresher = context.HttpContext.RequestServices.GetRequiredService<TokenRefresher>();
-                    await refresher.ValidateAsync(context, wiring.Realm, wiring.ClientId, clientSecret);
+                    await refresher.ValidateAsync(context, wiring.OidcScheme, wiring.Realm, wiring.ClientId, clientSecret);
                 };
             });
 
@@ -339,15 +339,9 @@ public static class AuthenticationSetup
                 .Configure<ITicketStore>((options, store) => options.SessionStore = store);
         }
 
-        // https+http:// (not a hardcoded http://) so Aspire service discovery
-        // resolves the scheme Keycloak is actually serving in this
-        // environment — https on port 8080. ConfigureHttpClientDefaults in
-        // Extensions.cs applies AddServiceDiscovery() to every HttpClient
-        // registered through the factory, this named client included.
-        builder.Services.AddHttpClient("keycloak", client =>
-        {
-            client.BaseAddress = new Uri("https+http://keycloak");
-        });
+        // No separately configured Keycloak HttpClient: token refresh reuses each OIDC
+        // handler's discovered endpoints and backchannel (see TokenRefresher), because
+        // Keycloak rejects a refresh token presented at any address but its issuer's.
 
         return builder;
     }
