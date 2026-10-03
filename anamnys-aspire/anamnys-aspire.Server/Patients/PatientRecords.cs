@@ -197,6 +197,8 @@ public static class PatientRecords
         {
             patient.ArchivedAt = nowUtc;
             patient.UpdatedAt = nowUtc;
+            // An archived record cannot be invited, so its pending link stops working too.
+            await PatientInvitations.RevokePendingAsync(db, patientId, nowUtc, cancellationToken);
         }
         else if (!archived && patient.ArchivedAt is not null)
         {
