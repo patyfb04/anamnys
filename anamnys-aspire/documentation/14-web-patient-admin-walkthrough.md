@@ -46,37 +46,34 @@ non-clinical table from Chapter 10's data model tour, `ContactMessages` — abou
 stakes as this codebase gets, and a useful contrast to keep in mind against everything
 else in this handbook.
 
-## `apps/patient` — explicitly a scaffold
+## `apps/patient` — the patient portal, early
 
-This one is refreshingly honest about its own state. Its entire home route:
+The patient portal is real but small. Its authenticated layout (`routes/_app.tsx`) is the
+same gate as the provider app's: no session means a full-page navigation to the BFF's
+patient login. Behind it are a placeholder home page and the shared account pages
+(*Dados pessoais*, *Acesso e segurança*). A signed-in patient is a `PatientAccount` (the
+portal login), never a provider's clinical record — see Chapter 8.
 
-```tsx
-// Scaffold only. The patient app will own booking, rescheduling and cancelling
-// appointments; those routes land once the appointment API exists.
-function Home() {
-  return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Anamnys</h1>
-      <p className="mt-3 text-slate-600">
-        Patient portal. Booking, rescheduling and cancelling appointments will live here.
-      </p>
-    </main>
-  );
-}
-```
+One route lives deliberately **outside** that gate: `routes/convite.$token.tsx`, the
+landing page of a provider's portal invitation
+(`design/specs/2026-10-03-portal-invitation-design.md`). A provider invites from the
+patient's record; the server emails a single-use link (`/patient/convite/{token}`, only the
+token's SHA-256 is stored). The page immediately tries
+`POST /api/phi/patients/me/invitations/accept`: a `401` means "no patient session", so it
+offers *Entrar* and *Criar conta*, both returning to the same link; success links the
+provider's record to the signed-in account and names the provider; failures explain
+`invalid`, `email_mismatch` (the invitation went to another address — only the account
+with that email can accept) or `already_linked`. It checks with the accept call rather than
+`/api/auth/me` because `/me` reports a provider session first when a browser holds both.
 
-That's the whole app today: `main.tsx`, `__root.tsx`, `index.tsx`, and the usual Vite
-scaffolding files — no components, no API calls, nothing wired to `useAuthStore`. The code
-comment tells you exactly what's blocking it: an appointment API. Chapter 10's tour of
-`Appointments`, `AppointmentSeries`, `BookingHolds`, and `BookingPolicies` shows you the
-schema this app is waiting on — it exists in the database, but not yet behind any
-`/api/phi/*` endpoint. If you're ever asked to start building out the patient portal, this
-is the dependency to check first.
+What the portal still waits for is an appointment API: `Appointments`, `AppointmentSeries`,
+`BookingHolds` and `BookingPolicies` (Chapter 10) exist in the schema but not behind any
+patient-facing endpoint.
 
 ## `apps/admin` — scaffolded, but with real authentication already wired
 
-This one sits in an interesting middle position, worth distinguishing carefully from
-`apps/patient`'s pure scaffold. Its home route is genuinely functional as far as
+Like `apps/patient`, this one has real authentication;
+unlike it, almost nothing behind the login yet. Its home route is genuinely functional as far as
 *authentication* goes:
 
 ```tsx
@@ -114,7 +111,7 @@ the auth wiring — it's everything an owner would actually *do* once logged in:
 management, no billing views, no provider administration, none of the surface Chapter 6
 described as the owners realm's eventual reach. This app is a good illustration of the fact
 that "scaffolded" isn't a single state — this one has working plumbing with no rooms built
-yet, where `apps/patient` doesn't have plumbing at all.
+yet.
 
 ## What this chapter should leave you with
 
