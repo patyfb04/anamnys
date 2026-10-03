@@ -64,11 +64,11 @@ public static class ProfileEndpoints
                 return Results.Unauthorized();
             }
 
-            var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == localId, cancellationToken);
-            return patient is null
+            var account = await db.PatientAccounts.SingleOrDefaultAsync(a => a.Id == localId, cancellationToken);
+            return account is null
                 ? Results.NotFound()
                 : Results.Ok(new PatientProfileResponse(
-                    patient.Email, patient.FirstName, patient.LastName, patient.Phone, patient.DateOfBirth));
+                    account.Email, account.FirstName, account.LastName, account.Phone, account.DateOfBirth));
         });
 
         phi.MapPut("patients/me/profile", async (
@@ -88,17 +88,17 @@ public static class ProfileEndpoints
                 return Results.ValidationProblem(errors);
             }
 
-            var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == localId, cancellationToken);
-            if (patient is null)
+            var account = await db.PatientAccounts.SingleOrDefaultAsync(a => a.Id == localId, cancellationToken);
+            if (account is null)
             {
                 return Results.NotFound();
             }
 
-            patient.FirstName = ProfileText.Clean(request.FirstName)!;
-            patient.LastName = ProfileText.Clean(request.LastName)!;
-            patient.Phone = ProfileText.Clean(request.Phone);
-            patient.DateOfBirth = request.DateOfBirth;
-            patient.UpdatedAt = DateTimeOffset.UtcNow;
+            account.FirstName = ProfileText.Clean(request.FirstName)!;
+            account.LastName = ProfileText.Clean(request.LastName)!;
+            account.Phone = ProfileText.Clean(request.Phone);
+            account.DateOfBirth = request.DateOfBirth;
+            account.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             return Results.NoContent();
         });

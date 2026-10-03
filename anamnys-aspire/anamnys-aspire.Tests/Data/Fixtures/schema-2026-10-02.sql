@@ -465,36 +465,26 @@ CREATE TABLE "PatientQuotes" (
 	"ExcerptRefId" uuid,
 	"RecordedAt" timestamp with time zone NOT NULL
 );
-CREATE TABLE "PatientAccounts" (
-	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"ExternalSubject" uuid NOT NULL CONSTRAINT "PatientAccounts_ExternalSubject_key" UNIQUE,
-	"Email" text NOT NULL,
-	"FirstName" text NOT NULL,
-	"LastName" text NOT NULL,
-	"Phone" text,
-	"DateOfBirth" date,
-	"LastLoginAt" timestamp with time zone,
-	"TermsAcceptedAt" timestamp with time zone,
-	"DisabledAt" timestamp with time zone,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL
-);
 CREATE TABLE "Patients" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-	"ProviderId" uuid NOT NULL,
-	"AccountId" uuid,
+	"ProviderId" uuid,
 	"FirstName" text NOT NULL,
 	"LastName" text NOT NULL,
 	"DateOfBirth" date,
 	"PreferredLanguage" text,
 	"LastVisit" timestamp with time zone,
 	"ContactEmail" text,
+	"Email" text CONSTRAINT "Patients_Email_key" UNIQUE,
 	"Phone" text,
+	"ExternalSubject" uuid CONSTRAINT "Patients_ExternalSubject_key" UNIQUE,
+	"LastLoginAt" timestamp with time zone,
+	"TermsAcceptedAt" timestamp with time zone,
+	"DisabledAt" timestamp with time zone,
 	"ArchivedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId"),
-	CONSTRAINT "Patients_Account_Provider_key" UNIQUE("AccountId","ProviderId")
+	CONSTRAINT "Patients_Login_ck" CHECK ((("Email" IS NULL) = ("ExternalSubject" IS NULL)))
 );
 CREATE TABLE "PatientDiagnoses" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -865,7 +855,6 @@ CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
-CREATE UNIQUE INDEX "PatientAccounts_Email_key" ON "PatientAccounts" (lower("Email"));
 CREATE INDEX "PatientDiagnoses_PatientId_idx" ON "PatientDiagnoses" ("PatientId");
 CREATE INDEX "PlanObjectives_PlanId_idx" ON "PlanObjectives" ("PlanId");
 CREATE INDEX "ProfileListingEvents_ProfileId_At_idx" ON "ProfileListingEvents" ("ProfileId","At");
@@ -952,7 +941,6 @@ ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_NoteId_fkey" FOREIGN K
 ALTER TABLE "PatientDiagnoses" ADD CONSTRAINT "PatientDiagnoses_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "PatientQuotes" ADD CONSTRAINT "PatientQuotes_TermId_fkey" FOREIGN KEY ("TermId") REFERENCES "ThemeTerms"("Id") ON DELETE SET NULL;
 ALTER TABLE "Patients" ADD CONSTRAINT "Patients_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
-ALTER TABLE "Patients" ADD CONSTRAINT "Patients_AccountId_fkey" FOREIGN KEY ("AccountId") REFERENCES "PatientAccounts"("Id") ON DELETE SET NULL;
 ALTER TABLE "PlanFeatures" ADD CONSTRAINT "PlanFeatures_PlanId_fkey" FOREIGN KEY ("PlanId") REFERENCES "Plans"("Id") ON DELETE CASCADE;
 ALTER TABLE "PlanObjectives" ADD CONSTRAINT "PlanObjectives_PlanId_fkey" FOREIGN KEY ("PlanId") REFERENCES "TreatmentPlans"("Id") ON DELETE CASCADE;
 ALTER TABLE "PlanObjectives" ADD CONSTRAINT "PlanObjectives_Session_fk" FOREIGN KEY ("LastRecordedSessionId") REFERENCES "Sessions"("Id") ON DELETE SET NULL;

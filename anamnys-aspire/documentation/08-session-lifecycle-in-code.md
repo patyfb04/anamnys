@@ -221,26 +221,25 @@ roles is treated as a misconfiguration and rejected outright, rather than silent
 defaulting to some baseline role. (This exception is what `OnRemoteFailure` in
 `AuthenticationSetup.cs` is there to turn into a clean redirect rather than a raw 500.)
 
-**Patients: bind first, create only as a last resort.** The binding logic looks first for
-an existing `Patients` row already bound to this subject; if none exists, it looks for an
-**unclaimed** row (`ExternalSubject == null`) matching the token's email — but only binds
-it if the token explicitly asserts `email_verified: true`. That check is not optional
-politeness: binding an unclaimed row to whoever merely *presents* a matching email would
-let anyone who controls an unverified address at the same identity provider claim someone
-else's patient record. As with provider provisioning, a race on the bind (two logins
-claiming the same row concurrently) is caught and resolved by re-reading rather than
-failing the request outright. Only when neither check finds a row does it create one —
-patient self-registration, with no `ProviderId` set — the same create-and-handle-the-race
-shape the Providers branch uses, on the same table.
+**Patients: an account, never a record.** A patient login resolves to a row in
+`PatientAccounts` — the portal credential — and the realm's `LocalId` is that account's
+id. The provisioner looks up the account by subject; if there is none, it creates one, but
+only when the token asserts `email_verified: true`, with the same create-and-handle-the-race
+shape the Providers branch uses. It never creates or binds a clinical record. A provider's
+record (`Patients`, always owned by a provider) is linked to an account only through
+`Patients.AccountId`, and never by matching emails: a record's `ContactEmail` is where
+scheduling notices go, and treating it as a login key would attach any later portal sign-up
+to that provider's record without an invitation. One account links to at most one record
+per provider (`UNIQUE (AccountId, ProviderId)`), and deleting an account sets the link to
+null — the clinical record outlives the credential. See
+`design/specs/2026-10-02-patient-accounts-design.md`.
 
-`Patients` and `PatientAccounts` used to be two tables (a clinical record and a separate
-portal-login row); they're one table now — `Patients` carries nullable `Email`/
-`ExternalSubject`/etc. columns directly, the same shape `Providers` already used. A row
-with all of those null is a provider's patient with no portal access; a row with `Email`
-and `ExternalSubject` both set is a bound, logged-in patient.
+The two tables were briefly merged into one (`Patients` carrying the login columns) and
+split again because one row per person could not represent a patient of two providers and
+mixed a five-year clinical record with a credential.
 
 Every one of these three paths also checks for `DisabledAt` where the entity supports it
-(`Staff`, `Patient`) and rejects a disabled account with an explicit exception rather
+(`Staff`, `PatientAccount`) and rejects a disabled account with an explicit exception rather
 than silently provisioning around it.
 
 ## `AuthEndpoints.cs`: the actual HTTP surface

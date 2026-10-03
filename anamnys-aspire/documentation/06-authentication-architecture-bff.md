@@ -144,13 +144,12 @@ genuinely can't tell the SPA and the API apart as different origins.
 One more principle worth internalizing before Chapter 8 shows you the code: **the
 application never stores a credential of any kind.** No password column, no hashing, no
 reset tokens, no recovery codes — all of that is Keycloak's job, entirely. What the
-application database *does* store, per provider/patient/staff row, is an `ExternalSubject`
-— the Keycloak user's UUID — and that's the only thing tying a local database row to a
-real identity. This mapping is populated by **first-login provisioning**: the first time
-someone successfully authenticates, if no local row exists yet for their subject, one gets
-created (or, for patients, an existing pre-created row gets bound to them if one exists
-(an invited patient), or a new one is created if not (self-registration) — see Chapter 8
-for the three-way logic).
+application database *does* store, per login row (`Providers`, `PatientAccounts`, `Staff`),
+is an `ExternalSubject` — the Keycloak user's UUID — and that's the only thing tying a local
+database row to a real identity. This mapping is populated by **first-login provisioning**:
+the first time someone successfully authenticates, if no local row exists yet for their
+subject, one gets created. For patients that row is a portal account, never a clinical
+record; a provider's record is linked to an account separately (see Chapter 8).
 
 Because this project is greenfield — no legacy accounts, no migration to reconcile — this
 mapping was designed correctly from the very first commit rather than retrofitted onto an

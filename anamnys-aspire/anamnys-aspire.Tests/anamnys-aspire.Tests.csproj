@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Data\Fixtures\*.sql" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\anamnys-db-script.sql" Link="anamnys-db-script.sql" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\design\migrations\*.sql" Link="Migrations\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

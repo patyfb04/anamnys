@@ -60,18 +60,15 @@ public static class AuthEndpoints
             {
                 return await LoadMe(patientAuth.Principal!, Realms.Patients, async localId =>
                 {
-                    var patient = await db.Patients.SingleOrDefaultAsync(p => p.Id == localId, cancellationToken);
-                    // Email is nullable on Patient (a provider-created, never-invited row has
-                    // none), but every row reachable through the patient cookie scheme was
-                    // bound or created by ResolvePatientAsync, both of which always set Email.
-                    return patient is null
+                    // The patient realm's LocalId is a PatientAccount id, never a record id.
+                    var account = await db.PatientAccounts.SingleOrDefaultAsync(a => a.Id == localId, cancellationToken);
+                    var name = account is null ? "" : $"{account.FirstName} {account.LastName}".Trim();
+                    return account is null
                         ? null
                         : new MeResponse(
-                            patient.Id,
-                            patient.Email!,
-                            string.IsNullOrWhiteSpace($"{patient.FirstName} {patient.LastName}".Trim())
-                                ? patient.Email!
-                                : $"{patient.FirstName} {patient.LastName}".Trim(),
+                            account.Id,
+                            account.Email,
+                            string.IsNullOrWhiteSpace(name) ? account.Email : name,
                             Realms.Patients,
                             []);
                 });
