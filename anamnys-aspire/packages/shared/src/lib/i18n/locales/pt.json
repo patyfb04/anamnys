@@ -352,6 +352,8 @@
       "lastName": "Sobrenome",
       "contactEmail": "E-mail",
       "contactEmailHint": "Para avisos e lembretes de sessão. Não dá acesso ao portal do paciente.",
+      "invitePortal": "Convidar para o portal do paciente",
+      "invitePortalHint": "Enviaremos um convite para o e-mail acima.",
       "dateOfBirth": "Data de nascimento",
       "diagnoses": "Diagnósticos",
       "addDiagnosis": "Adicionar diagnóstico",
@@ -389,8 +391,6 @@
       "contact": "Dados e contato",
       "contactEmail": "E-mail de contato",
       "phone": "Telefone",
-      "portalLinked": "Acesso ao portal do paciente ativo ({{email}}).",
-      "portalNotLinked": "Sem acesso ao portal do paciente.",
       "visits": "Atendimentos",
       "recentNotes": "Notas recentes",
       "noNotes": "Nenhuma nota ainda.",
@@ -408,6 +408,20 @@
       "objectives": "Objetivos do plano",
       "noObjectives": "Nenhum objetivo definido.",
       "add": "Adicionar"
+    },
+    "portal": {
+      "title": "Portal do paciente",
+      "none": "Sem acesso ao portal.",
+      "invited": "Convite enviado em {{sent}}, válido até {{until}}.",
+      "expired": "O convite expirou em {{until}}.",
+      "active": "Acesso ativo ({{email}}).",
+      "invite": "Convidar para o portal",
+      "resend": "Reenviar convite",
+      "cancel": "Cancelar convite",
+      "remove": "Remover acesso",
+      "removeTitle": "Remover acesso ao portal?",
+      "removeBody": "{{name}} deixará de ver você no portal. A conta e o prontuário continuam existindo, e você pode convidar de novo depois.",
+      "inviteFailed": "Não foi possível enviar o convite."
     },
     "notes": {
       "title": "Notas",

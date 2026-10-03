@@ -7,6 +7,7 @@ import { ApiError } from "@anamnys/shared/api/client";
 import type { PatientDetail } from "@anamnys/shared/lib/types";
 import Modal from "./Modal";
 import FormField from "./FormField";
+import Checkbox from "@anamnys/shared/ui/Checkbox";
 import { todayIso } from "./format";
 
 type Mode = { kind: "create" } | { kind: "edit"; patient: PatientDetail };
@@ -20,7 +21,7 @@ interface ObjectiveRow { key: number; description: string }
 interface Props {
   mode: Mode;
   onClose: () => void;
-  onSaved: (patientId: string) => void;
+  onSaved: (patientId: string, inviteError?: string) => void;
 }
 
 let nextKey = 0;
@@ -38,6 +39,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
   const [firstName, setFirstName] = useState(editing?.firstName ?? "");
   const [lastName, setLastName] = useState(editing?.lastName ?? "");
   const [contactEmail, setContactEmail] = useState(editing?.contactEmail ?? "");
+  const [invitePortal, setInvitePortal] = useState(false);
   const [dateOfBirth, setDateOfBirth] = useState(editing?.dateOfBirth ?? "");
   const [diagnoses, setDiagnoses] = useState<DiagnosisRow[]>([]);
   const [medications, setMedications] = useState<MedicationRow[]>([]);
@@ -60,7 +62,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
     mutationFn: async () => {
       if (editing) {
         await patientsApi.update(editing.id, { firstName, lastName, contactEmail, dateOfBirth: dateOfBirth || null });
-        return editing.id;
+        return { id: editing.id, inviteError: undefined };
       }
       // Rows left completely blank are dropped, so server indexes match the rows shown.
       const keptDiagnoses = diagnoses.filter((d) => d.description.trim() || d.icdCode.trim());
@@ -69,7 +71,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
       setDiagnoses(keptDiagnoses);
       setMedications(keptMedications);
       setObjectives(keptObjectives);
-      return patientsApi.create({
+      const id = await patientsApi.create({
         firstName,
         lastName,
         contactEmail,
@@ -83,11 +85,23 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
         })),
         treatmentObjectives: keptObjectives.map((o) => o.description),
       });
+
+      // A separate request on purpose: a failed send must never undo the saved record.
+      // The record page shows the failure with a retry.
+      let inviteError: string | undefined;
+      if (invitePortal) {
+        try {
+          await patientsApi.invite(id);
+        } catch (e) {
+          inviteError = e instanceof Error ? e.message : t("patients.portal.inviteFailed");
+        }
+      }
+      return { id, inviteError };
     },
-    onSuccess: async (id) => {
+    onSuccess: async ({ id, inviteError }) => {
       await queryClient.invalidateQueries({ queryKey: ["patients"] });
       await queryClient.invalidateQueries({ queryKey: ["patient", id] });
-      onSaved(id);
+      onSaved(id, inviteError);
     },
     onError: (e: Error) => {
       if (e instanceof ApiError && e.errors) {
@@ -194,6 +208,16 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
               onChange={(e) => setDateOfBirth(e.target.value)}
               error={errors.dateOfBirth}
             />
+            {!editing && (
+              <div className="md:col-span-2">
+                <Checkbox checked={invitePortal} onToggle={() => setInvitePortal((v) => !v)}>
+                  <span className="flex flex-col">
+                    <span className="text-body-md text-onSurface">{t("patients.form.invitePortal")}</span>
+                    <span className="text-label-md text-outline">{t("patients.form.invitePortalHint")}</span>
+                  </span>
+                </Checkbox>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-6">
