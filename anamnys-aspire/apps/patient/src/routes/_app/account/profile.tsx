@@ -43,7 +43,7 @@ function ProfileForm({ initial }: { initial: PatientProfile }) {
     onMutate: () => setErrors({}),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["profile", "patient"] });
-      await loadUser();
+      await loadUser("patient");
     },
     onError: (error) => {
       if (error instanceof ProfileValidationError) setErrors(error.errors);

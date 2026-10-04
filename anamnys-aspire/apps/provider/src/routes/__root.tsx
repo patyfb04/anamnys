@@ -15,7 +15,7 @@ function RootLayout() {
 
   useEffect(() => {
     loadLanguage();
-    loadUser();
+    loadUser("provider");
   }, [loadLanguage, loadUser]);
 
   return (

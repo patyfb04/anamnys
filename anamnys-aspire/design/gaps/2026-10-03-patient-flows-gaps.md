@@ -12,10 +12,9 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
 1. **Delivery 3 — patient portal.** After accepting an invitation the patient lands on the
    placeholder home. Build "Meus profissionais" with past and upcoming sessions per linked
    provider, scheduling data only, never clinical content (third spec of the portal work).
-2. **Provider app accepts a patient-only session.** `apps/provider/src/routes/_app.tsx`
-   gates on `/api/auth/me`, which answers for any realm. A browser holding only a patient
-   session opens the provider app; every PHI call returns 401, so nothing leaks, but the gate
-   should require the providers realm and send the user to provider login otherwise.
+2. ~~**Provider app accepts a patient-only session.**~~ Fixed (`fix/realm-scoped-session`):
+   `/api/auth/me?realm=…` answers only for that realm's session, and each app asks for its
+   own; the patient portal and admin app had the same flaw.
 3. **Email in production.** Verify a sending domain in Resend and configure `Email__*` in the
    deployed environment. Keycloak has no production SMTP either: account verification and
    password reset do not work outside dev. Until a domain is verified, Resend's sandbox only

@@ -20,10 +20,31 @@ public static class AuthEndpoints
         MapRealm(app, "owner", AuthSchemes.OwnerOidc, AuthSchemes.OwnerCookie, "/admin/");
 
         app.MapGet("/api/auth/me", async (
+            string? realm,
             HttpContext httpContext,
             AnamnysDbContext db,
             CancellationToken cancellationToken) =>
         {
+            // Each app asks for its own realm (?realm=provider|patient|owner): one browser
+            // can hold sessions in several realms at once (distinct cookies, all sent to
+            // /api), and an app that took "whichever session comes first" accepted another
+            // realm's user — the provider app opened for a patient-only session, the patient
+            // portal showed a provider. Without the parameter it still answers for the first
+            // session it finds, which is all the public site needs.
+            string? onlyScheme = realm switch
+            {
+                null => null,
+                "provider" => AuthSchemes.ProviderCookie,
+                "patient" => AuthSchemes.PatientCookie,
+                "owner" => AuthSchemes.OwnerCookie,
+                _ => "",
+            };
+            if (onlyScheme == "")
+            {
+                return Results.BadRequest(new { message = "Unknown realm." });
+            }
+            bool Wants(string scheme) => onlyScheme is null || onlyScheme == scheme;
+
             // Which realm this session belongs to has to come from which
             // cookie scheme actually authenticated the request, not from
             // principal.Identity.AuthenticationType: that value is whatever
@@ -31,7 +52,9 @@ public static class AuthEndpoints
             // handed to the cookie's SignInAsync (typically the federation
             // authentication type), so it does not carry the cookie scheme
             // name and cannot be used to tell the three realms apart.
-            var providerAuth = await httpContext.AuthenticateAsync(AuthSchemes.ProviderCookie);
+            var providerAuth = Wants(AuthSchemes.ProviderCookie)
+                ? await httpContext.AuthenticateAsync(AuthSchemes.ProviderCookie)
+                : AuthenticateResult.NoResult();
             if (providerAuth.Succeeded)
             {
                 return await LoadMe(providerAuth.Principal!, Realms.Providers, async localId =>
@@ -43,7 +66,9 @@ public static class AuthEndpoints
                 });
             }
 
-            var ownerAuth = await httpContext.AuthenticateAsync(AuthSchemes.OwnerCookie);
+            var ownerAuth = Wants(AuthSchemes.OwnerCookie)
+                ? await httpContext.AuthenticateAsync(AuthSchemes.OwnerCookie)
+                : AuthenticateResult.NoResult();
             if (ownerAuth.Succeeded)
             {
                 return await LoadMe(ownerAuth.Principal!, Realms.Owners, async localId =>
@@ -55,7 +80,9 @@ public static class AuthEndpoints
                 });
             }
 
-            var patientAuth = await httpContext.AuthenticateAsync(AuthSchemes.PatientCookie);
+            var patientAuth = Wants(AuthSchemes.PatientCookie)
+                ? await httpContext.AuthenticateAsync(AuthSchemes.PatientCookie)
+                : AuthenticateResult.NoResult();
             if (patientAuth.Succeeded)
             {
                 return await LoadMe(patientAuth.Principal!, Realms.Patients, async localId =>

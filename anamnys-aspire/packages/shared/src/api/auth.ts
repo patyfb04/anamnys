@@ -23,8 +23,10 @@ export const authApi = {
     document.body.appendChild(form);
     form.submit();
   },
-  me: async (): Promise<AuthUser> => {
-    const { data } = await api.get<AuthUser>("/auth/me");
+  // Pass the calling app's realm: without it the server answers for whichever session it
+  // finds first, which may belong to another realm held by the same browser.
+  me: async (realm?: Realm): Promise<AuthUser> => {
+    const { data } = await api.get<AuthUser>("/auth/me", { params: realm ? { realm } : undefined });
     return data;
   },
 };
