@@ -19,7 +19,7 @@ function AdminHome() {
   const authError = hasAuthError();
 
   useEffect(() => {
-    void loadUser();
+    void loadUser("owner");
   }, [loadUser]);
 
   // No auto-redirect to login: anonymous visitors choose between Entrar and Criar conta.

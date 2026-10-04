@@ -11,7 +11,8 @@ interface AuthState {
 
   login: (realm: Realm, returnUrl?: string) => void;
   logout: (realm: Realm) => void;
-  loadUser: () => Promise<void>;
+  // An app passes its own realm; only the public site (any session will do) omits it.
+  loadUser: (realm?: Realm) => Promise<void>;
   clearError: () => void;
 }
 
@@ -39,10 +40,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     authApi.logout(realm);
   },
 
-  loadUser: async () => {
+  loadUser: async (realm) => {
     set({ isLoading: true });
     try {
-      const user = await authApi.me();
+      const user = await authApi.me(realm);
       set({ user, isLoading: false });
     } catch {
       set({ user: null, isLoading: false });
