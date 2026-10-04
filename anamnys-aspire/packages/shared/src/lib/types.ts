@@ -247,3 +247,29 @@ export interface PatientSearchResponse {
   page: number;
   pageSize: number;
 }
+
+// Patient portal (design/specs/2026-10-04-patient-portal-sessions-design.md): schedule
+// fields only, never clinical content.
+export type SessionStatus = "scheduled" | "confirmed" | "attended" | "cancelled" | "no_show";
+
+export interface PortalSession {
+  startsAt: string;
+  endsAt: string;
+  timezone: string;
+  modality: string; // "online" | "presencial"
+  status: SessionStatus;
+}
+
+export interface PortalProvider {
+  providerId: string;
+  name: string;
+  crp: string | null;
+  nextSession: PortalSession | null;
+}
+
+export interface PortalSessionsPage {
+  items: PortalSession[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

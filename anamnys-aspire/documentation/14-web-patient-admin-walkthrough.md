@@ -49,10 +49,18 @@ else in this handbook.
 ## `apps/patient` — the patient portal, early
 
 The patient portal is real but small. Its authenticated layout (`routes/_app.tsx`) is the
-same gate as the provider app's: no session means a full-page navigation to the BFF's
-patient login. Behind it are a placeholder home page and the shared account pages
-(*Dados pessoais*, *Acesso e segurança*). A signed-in patient is a `PatientAccount` (the
-portal login), never a provider's clinical record — see Chapter 8.
+same gate as the provider app's: no patient session (`/api/auth/me?realm=patient`) means a
+full-page navigation to the BFF's patient login. A signed-in patient is a `PatientAccount`
+(the portal login), never a provider's clinical record — see Chapter 8.
+
+Behind the gate: **"Meus profissionais"** (the home page) lists the providers whose records
+are linked to the account, each with the next session, and `/profissionais/$providerId`
+shows that provider's upcoming sessions and paged history with status badges
+(`GET /api/phi/patients/me/providers[/{id}/sessions]`,
+`design/specs/2026-10-04-patient-portal-sessions-design.md`). Every read starts from
+`Patients.AccountId`, and only schedule fields (start, end, time zone, modality, status)
+leave the server — the portal never reaches the clinical record. Then the shared account
+pages (*Dados pessoais*, *Acesso e segurança*).
 
 One route lives deliberately **outside** that gate: `routes/convite.$token.tsx`, the
 landing page of a provider's portal invitation
@@ -63,12 +71,12 @@ token's SHA-256 is stored). The page immediately tries
 offers *Entrar* and *Criar conta*, both returning to the same link; success links the
 provider's record to the signed-in account and names the provider; failures explain
 `invalid`, `email_mismatch` (the invitation went to another address — only the account
-with that email can accept) or `already_linked`. It checks with the accept call rather than
-`/api/auth/me` because `/me` reports a provider session first when a browser holds both.
+with that email can accept) or `already_linked`. The accept call itself answers "signed in as
+a patient?", so the page needs no separate session check.
 
-What the portal still waits for is an appointment API: `Appointments`, `AppointmentSeries`,
-`BookingHolds` and `BookingPolicies` (Chapter 10) exist in the schema but not behind any
-patient-facing endpoint.
+What the portal still waits for is a way to create appointments: `Appointments`, `AppointmentSeries`,
+`BookingHolds` and `BookingPolicies` (Chapter 10) exist in the schema but have no
+write path yet, so the session lists show whatever already exists (seeded data in dev).
 
 ## `apps/admin` — scaffolded, but with real authentication already wired
 

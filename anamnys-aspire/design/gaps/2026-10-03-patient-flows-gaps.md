@@ -9,9 +9,9 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
 
 ## To call these flows complete
 
-1. **Delivery 3 — patient portal.** After accepting an invitation the patient lands on the
-   placeholder home. Build "Meus profissionais" with past and upcoming sessions per linked
-   provider, scheduling data only, never clinical content (third spec of the portal work).
+1. ~~**Delivery 3 — patient portal.**~~ Done (`2026-10-04-patient-portal-sessions`): "Meus
+   profissionais" and per-provider upcoming/history. Sessions only appear once appointments
+   can be created (see "Appointments have no write path" below).
 2. ~~**Provider app accepts a patient-only session.**~~ Fixed (`fix/realm-scoped-session`):
    `/api/auth/me?realm=…` answers only for that realm's session, and each app asks for its
    own; the patient portal and admin app had the same flaw.
@@ -29,7 +29,8 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
 - **Patient rights (LGPD).** The portal cannot list or remove provider links, and the
   patient cannot delete their account. `Patients.AccountId ON DELETE SET NULL` is ready.
 - **PHI read logging.** `AccessLogs` exists; nothing writes to it.
-- **Mobile check** of the "Portal do paciente" block and the invitation page at 390px.
+- **Mobile check** of the provider-side "Portal do paciente" block and the invitation page at
+  390px (the portal session pages were checked).
 - **No frontend automated tests**; UI is verified manually in the browser only.
 - **Invitations:** no re-send rate limit; no reminder before expiry; the registration form
   does not prefill the invited email.
