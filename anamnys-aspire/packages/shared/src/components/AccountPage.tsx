@@ -11,7 +11,7 @@ export default function AccountPage({
   children: ReactNode;
 }) {
   return (
-    <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 md:py-10">
+    <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 md:py-10">
       <h1 className="text-headline-md text-onSurface">{title}</h1>
       <p className="mt-1 mb-6 text-body-lg text-onSurfaceVariant">{subtitle}</p>
       <div className="bg-surfaceContainerLowest rounded-radii-lg border border-outlineVariant p-5 md:p-6">

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import Button from "@anamnys/shared/ui/Button";
 import TextField from "@anamnys/shared/ui/TextField";
+import { toast } from "@anamnys/shared/ui/Toaster";
 import AccountPage from "@anamnys/shared/components/AccountPage";
 import ProfileEmailRow from "@anamnys/shared/components/ProfileEmailRow";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
@@ -36,10 +37,12 @@ function ProfileForm({ initial }: { initial: ProviderProfile }) {
     onMutate: () => setErrors({}),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["profile", "provider"] });
+      toast.success(t("accountPages.profile.saved"));
       await loadUser("provider");
     },
     onError: (error) => {
       if (error instanceof ProfileValidationError) setErrors(error.errors);
+      else toast.error(t("accountPages.profile.saveError"));
     },
   });
 
@@ -70,7 +73,9 @@ function ProfileForm({ initial }: { initial: ProviderProfile }) {
           />
         </Field>
       </div>
-      <SaveFooter saving={save.isPending} saved={save.isSuccess} failed={save.isError && !(save.error instanceof ProfileValidationError)} />
+      <div className="mt-2">
+        <Button type="submit" title={t("accountPages.profile.save")} loading={save.isPending} fullWidth={false} rounded="md" />
+      </div>
     </form>
   );
 }
@@ -80,17 +85,6 @@ function Field({ error, children }: { error?: string; children: ReactNode }) {
     <div className="mb-4">
       {children}
       {error && <p className="mt-1 text-body-md text-error">{error}</p>}
-    </div>
-  );
-}
-
-function SaveFooter({ saving, saved, failed }: { saving: boolean; saved: boolean; failed: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <div className="flex items-center gap-4 mt-2">
-      <Button type="submit" title={t("accountPages.profile.save")} loading={saving} fullWidth={false} rounded="md" />
-      {saved && <span className="text-body-md text-onSurfaceVariant">{t("accountPages.profile.saved")}</span>}
-      {failed && <span className="text-body-md text-error">{t("accountPages.profile.saveError")}</span>}
     </div>
   );
 }
