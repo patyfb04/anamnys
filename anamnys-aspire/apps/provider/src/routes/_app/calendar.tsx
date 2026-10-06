@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import type { AppointmentStatus } from "@anamnys/shared/lib/types";
+import type { Appointment, AppointmentStatus } from "@anamnys/shared/lib/types";
 import CalendarHeader from "@/components/calendar/CalendarHeader";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
+import AppointmentFormModal, { type FormMode } from "@/components/calendar/AppointmentFormModal";
+import AppointmentDetailsModal from "@/components/calendar/AppointmentDetailsModal";
 import { PRACTICE_ZONE, addDays, todayIn, visibleDays, type CalendarView } from "@/components/calendar/calendarTime";
 import { isStatus } from "@/components/calendar/status";
 import { useAppointmentsQuery } from "@/hooks/useAppointments";
@@ -35,6 +38,13 @@ function CalendarPage() {
   const date = search.date ?? todayIn(PRACTICE_ZONE);
   const days = visibleDays(view, date);
   const query = useAppointmentsQuery(days, search.status);
+  const [form, setForm] = useState<FormMode | null>(null);
+  const [selected, setSelected] = useState<Appointment | null>(null);
+  // "Nova consulta" from the header: today at 09:00 when today is visible, else the first visible day.
+  const defaultSlot = (): FormMode => {
+    const today = todayIn(PRACTICE_ZONE);
+    return { kind: "create", date: days.includes(today) ? today : days[0], minutes: 9 * 60 };
+  };
 
   const setSearch = (next: Partial<CalendarSearch>) =>
     navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
@@ -52,15 +62,26 @@ function CalendarPage() {
         onToday={() => setSearch({ date: undefined })}
         onViewChange={(v) => setSearch({ view: v })}
         onStatusChange={(s) => setSearch({ status: s })}
-        onNew={() => {}}
+        onNew={() => setForm(defaultSlot())}
       />
       {query.isError && <p className="mb-4 text-body-md text-error">{t("calendar.loadFailed")}</p>}
       <CalendarGrid
         days={days}
         appointments={query.data ?? []}
-        onSlotClick={() => {}}
-        onAppointmentClick={() => {}}
+        onSlotClick={(d, minutes) => setForm({ kind: "create", date: d, minutes })}
+        onAppointmentClick={setSelected}
       />
+      {form && <AppointmentFormModal mode={form} onClose={() => setForm(null)} />}
+      {selected && (
+        <AppointmentDetailsModal
+          appointment={selected}
+          onClose={() => setSelected(null)}
+          onEdit={() => {
+            setForm({ kind: "edit", appointment: selected });
+            setSelected(null);
+          }}
+        />
+      )}
     </div>
   );
 }
