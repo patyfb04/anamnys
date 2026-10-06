@@ -13,8 +13,8 @@ type Props = {
   children: ReactNode;
 };
 
-// The Anamnys shell for the three pages this theme overrides (login, login-otp,
-// login-reset-password). Ported from apps/provider/src/routes/_auth.tsx.
+// The Anamnys shell for every page this theme overrides (see KcPage.tsx).
+// Ported from apps/provider/src/routes/_auth.tsx.
 // Every other Keycloak page falls through to keycloakify's default Template, which
 // keeps its own default CSS — deliberately not reskinned here.
 export function Template({ kcContext, i18n, headline, subhead, children }: Props) {

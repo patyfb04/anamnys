@@ -4,8 +4,9 @@ import type { KcContext } from './KcContext';
 import { useI18n } from './i18n';
 import DefaultPage from 'keycloakify/login/DefaultPage';
 // The stock keycloakify Template (with its default CSS) backs every page this theme does
-// not override — only login.ftl, login-otp.ftl, login-reset-password.ftl, register.ftl
-// and login-verify-email.ftl get the Anamnys shell (./Template).
+// not override — only login.ftl, login-otp.ftl, login-reset-password.ftl, register.ftl,
+// login-verify-email.ftl, login-update-password.ftl, login-config-totp.ftl and
+// update-email.ftl get the Anamnys shell (./Template).
 import DefaultTemplate from 'keycloakify/login/Template';
 
 const UserProfileFormFields = lazy(() => import('keycloakify/login/UserProfileFormFields'));
@@ -14,6 +15,9 @@ const LoginOtp = lazy(() => import('./pages/LoginOtp'));
 const LoginResetPassword = lazy(() => import('./pages/LoginResetPassword'));
 const Register = lazy(() => import('./pages/Register'));
 const LoginVerifyEmail = lazy(() => import('./pages/LoginVerifyEmail'));
+const LoginUpdatePassword = lazy(() => import('./pages/LoginUpdatePassword'));
+const LoginConfigTotp = lazy(() => import('./pages/LoginConfigTotp'));
+const UpdateEmail = lazy(() => import('./pages/UpdateEmail'));
 
 const doMakeUserConfirmPassword = true;
 
@@ -43,6 +47,19 @@ export default function KcPage(props: { kcContext: KcContext }) {
             );
           case 'login-verify-email.ftl':
             return <LoginVerifyEmail kcContext={kcContext} i18n={i18n} />;
+          case 'login-update-password.ftl':
+            return <LoginUpdatePassword kcContext={kcContext} i18n={i18n} />;
+          case 'login-config-totp.ftl':
+            return <LoginConfigTotp kcContext={kcContext} i18n={i18n} />;
+          case 'update-email.ftl':
+            return (
+              <UpdateEmail
+                kcContext={kcContext}
+                i18n={i18n}
+                UserProfileFormFields={UserProfileFormFields}
+                doMakeUserConfirmPassword={doMakeUserConfirmPassword}
+              />
+            );
           default:
             return (
               <DefaultPage

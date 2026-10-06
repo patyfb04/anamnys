@@ -18,7 +18,9 @@
       "enabled": true,
       "defaultAction": false,
       "priority": 10,
-      "config": {}
+      "config": {
+        "max_auth_age": "7200"
+      }
     },
     {
       "alias": "TERMS_AND_CONDITIONS",
@@ -36,7 +38,9 @@
       "enabled": true,
       "defaultAction": false,
       "priority": 30,
-      "config": {}
+      "config": {
+        "max_auth_age": "7200"
+      }
     },
     {
       "alias": "UPDATE_PROFILE",
@@ -72,7 +76,9 @@
       "enabled": true,
       "defaultAction": false,
       "priority": 70,
-      "config": {}
+      "config": {
+        "max_auth_age": "7200"
+      }
     },
     {
       "alias": "webauthn-register",

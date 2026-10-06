@@ -21,6 +21,10 @@ const { useI18n, ofTypeI18n } = i18nBuilder
       navAboutUs: 'About us',
       navSignIn: 'Sign in',
       navGetStarted: 'Get started',
+      // Subheads for the required-action pages started from "Access & security".
+      updatePasswordSubhead: 'Choose a new password for your Anamnys account.',
+      totpSubhead: 'Protect your account with a code from an authenticator app.',
+      updateEmailSubhead: 'We will send a confirmation link to the new address.',
     },
     // The realm's defaultLocale/supportedLocales (keycloak/realms/anamnys-providers.json)
     // is pt-BR, matching every other app in this repo — Keycloak's own built-in message
@@ -35,6 +39,9 @@ const { useI18n, ofTypeI18n } = i18nBuilder
       navAboutUs: 'Sobre nós',
       navSignIn: 'Entrar',
       navGetStarted: 'Começar',
+      updatePasswordSubhead: 'Escolha uma nova senha para sua conta Anamnys.',
+      totpSubhead: 'Proteja sua conta com um código gerado por um aplicativo autenticador.',
+      updateEmailSubhead: 'Enviaremos um link de confirmação para o novo endereço.',
     },
   })
   .build();
