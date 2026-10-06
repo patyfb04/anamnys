@@ -6,6 +6,7 @@ import { I18nextProvider } from "react-i18next";
 import i18n from "@anamnys/shared/lib/i18n";
 import { useSettingsStore } from "@anamnys/shared/lib/store/settingsStore";
 import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
+import Toaster from "@anamnys/shared/ui/Toaster";
 
 // Root document shell. index.html owns html/body; this is the provider tree.
 function RootLayout() {
@@ -22,6 +23,7 @@ function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
         <Outlet />
+        <Toaster />
         <TanStackRouterDevtools position="bottom-right" />
       </I18nextProvider>
     </QueryClientProvider>
