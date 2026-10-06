@@ -855,5 +855,54 @@
     "topBar": {
       "internal": "Interno"
     }
+  },
+  "calendar": {
+    "title": "Agenda",
+    "today": "Hoje",
+    "previous": "Período anterior",
+    "next": "Próximo período",
+    "views": { "day": "Dia", "week": "Semana" },
+    "newAppointment": "Nova consulta",
+    "statusFilter": { "label": "Status", "all": "Todos os status" },
+    "status": {
+      "scheduled": "Agendada",
+      "confirmed": "Confirmada",
+      "attended": "Realizada",
+      "cancelled": "Cancelada",
+      "no_show": "Falta"
+    },
+    "modality": { "online": "Online", "presencial": "Presencial" },
+    "loadFailed": "Falha ao carregar a agenda.",
+    "form": {
+      "createTitle": "Nova consulta",
+      "editTitle": "Editar consulta",
+      "patient": "Paciente",
+      "patientSearch": "Buscar paciente por nome…",
+      "patientNone": "Nenhum paciente encontrado.",
+      "patientRequired": "Escolha o paciente.",
+      "patientChange": "Trocar",
+      "date": "Data",
+      "time": "Início",
+      "duration": "Duração (min)",
+      "modality": "Modalidade",
+      "save": "Salvar consulta",
+      "created": "Consulta agendada.",
+      "updated": "Consulta atualizada.",
+      "saveFailed": "Não foi possível salvar a consulta."
+    },
+    "details": {
+      "openRecord": "Abrir prontuário",
+      "reason": "Motivo do cancelamento",
+      "confirm": "Confirmar",
+      "attended": "Realizada",
+      "noShow": "Falta",
+      "cancel": "Cancelar consulta",
+      "cancelConfirm": "Confirmar cancelamento",
+      "reasonPlaceholder": "Motivo (opcional)",
+      "undo": "Desfazer",
+      "edit": "Editar",
+      "statusChanged": "Status atualizado.",
+      "statusFailed": "Não foi possível alterar o status."
+    }
   }
 }

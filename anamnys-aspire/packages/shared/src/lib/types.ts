@@ -273,3 +273,29 @@ export interface PortalSessionsPage {
   page: number;
   pageSize: number;
 }
+
+// Provider calendar (design/specs/2026-10-05-provider-calendar-design.md).
+export type AppointmentStatus = "scheduled" | "confirmed" | "attended" | "cancelled" | "no_show";
+export type AppointmentModality = "online" | "presencial";
+
+export interface Appointment {
+  id: string;
+  patientId: string;
+  patientName: string;
+  startsAt: string; // ISO instant
+  endsAt: string;
+  timezone: string;
+  modality: AppointmentModality;
+  status: AppointmentStatus;
+  cancellationReason: string | null;
+}
+
+export interface UpdateAppointmentRequest {
+  startsAt: string; // ISO instant
+  durationMinutes: number;
+  modality: AppointmentModality;
+}
+
+export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
+  patientId: string;
+}
