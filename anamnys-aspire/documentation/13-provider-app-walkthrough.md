@@ -63,6 +63,57 @@ user-facing text. `NoteCard` backs its list, and `AccountMenu` backs the account
 the app shell. The notes it lists come from `notesApi`, whose server routes do not exist
 yet.
 
+## Agenda
+
+`calendar.tsx` is the provider's agenda, reached from the *Agenda* item in the side
+navigation (always enabled). It is backed by four endpoints under
+`/api/phi/providers/me/appointments` (`anamnys-aspire.Server/Appointments/`): list a date
+range, create, reschedule, and change status. As everywhere in the `phi` group, the provider
+comes from the session and every query filters by it, so another provider's appointment or
+patient is a 404. See `design/specs/2026-10-05-provider-calendar-design.md`.
+
+The page has a week view and a day view, with the grid in `components/calendar/`. On narrow
+screens (`hooks/useIsMobile.ts`) it always renders the day view and hides the toggle. Its
+state lives in the URL, unlike the patient list, because nothing in it is PHI: `view`
+(`week` or `day`, default `week`), `date` (`YYYY-MM-DD`, default today in the practice time
+zone) and an optional `status` filter. Data comes from `hooks/useAppointments.ts`, and every
+mutation invalidates the visible range.
+
+Clicking an empty cell opens the *Nova consulta* dialog prefilled with that day and the time
+rounded down to 15 minutes; the header button does the same for today at 09:00. Clicking a
+card opens the details panel, which links to the patient record and offers the actions
+allowed for the current status, plus *Editar*, which reopens the dialog in edit mode.
+Status changes follow this table, enforced on the server:
+
+| From | Allowed to |
+|---|---|
+| `scheduled` | `confirmed`, `attended`, `no_show`, `cancelled` |
+| `confirmed` | `scheduled`, `attended`, `no_show`, `cancelled` |
+| `attended`, `no_show` | `scheduled` (undo a misclick) |
+| `cancelled` | nothing |
+
+`attended` and `no_show` also require the appointment to have started. Cancelling records
+who cancelled and an optional reason (up to 500 characters). Marking an appointment
+*Realizada* sets `Patients.LastVisit` to the latest of its current value and the
+appointment's start; moving it away from `attended` recomputes `LastVisit` from the patient's
+remaining attended appointments, all in the same transaction as the status change. Only
+`scheduled` and `confirmed` appointments can be rescheduled.
+
+Two kinds of rejection reach the user. A `409` carries a Portuguese `message`, shown as a
+toast: *Horário já ocupado.* for an overlap, *Esta alteração não é permitida no status
+atual.* for a transition outside the table, and *A consulta ainda não começou.* for
+`attended`/`no_show` on a future appointment. A `422` on create means the patient is
+archived and shows *Paciente arquivado.* Validation failures (duration outside 5-480
+minutes, unknown modality, an invalid range) are a `400` `ValidationProblem`, like the other
+forms.
+
+Overlap is not checked in application code. The database enforces it through the
+`Appointments_no_overlap` constraint (`UNIQUE ("ProviderId", "Slot" WITHOUT OVERLAPS)`), so
+two concurrent requests cannot both win; `Appointments.cs` only translates that constraint
+violation into the `409`. Back-to-back appointments are allowed, and a cancelled appointment
+frees its slot. Availability, recurrence, patient self-booking and Google Calendar sync are
+not built yet.
+
 ## What's explicitly a placeholder
 
 `notes/$noteId.tsx` — the actual note editor, where reviewing and signing a note would

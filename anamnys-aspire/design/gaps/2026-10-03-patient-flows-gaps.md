@@ -22,8 +22,10 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
 
 ## Gaps inside the existing flows
 
-- **Appointments have no write path.** "Próximo atendimento" and "Último atendimento" only
-  show seeded data; there is no scheduling UI, and nothing updates `Patients.LastVisit`.
+- ~~**Appointments have no write path.**~~ Done (`2026-10-05-provider-calendar`): the provider
+  calendar creates, reschedules and changes status; "Realizada" updates `Patients.LastVisit`.
+  Still open for scheduling: availability, recurrence, patient self-booking and Google
+  Calendar sync (deliveries 2–5 of that spec).
 - **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
   `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.
 - **Patient rights (LGPD).** The portal cannot list or remove provider links, and the
