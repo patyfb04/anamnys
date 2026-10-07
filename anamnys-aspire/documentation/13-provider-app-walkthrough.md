@@ -80,7 +80,7 @@ zone) and an optional `status` filter. Data comes from `hooks/useAppointments.ts
 mutation invalidates the visible range.
 
 Clicking an empty cell opens the *Nova consulta* dialog prefilled with that day and the time
-rounded down to 15 minutes; the header button does the same for today at 09:00. Clicking a
+rounded down to 15 minutes; the header button does the same at 09:00 on today when today is visible, otherwise on the first visible day. Clicking a
 card opens the details panel, which links to the patient record and offers the actions
 allowed for the current status, plus *Editar*, which reopens the dialog in edit mode.
 Status changes follow this table, enforced on the server:
