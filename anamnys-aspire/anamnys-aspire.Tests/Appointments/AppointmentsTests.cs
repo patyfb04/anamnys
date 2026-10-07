@@ -245,10 +245,32 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         var id = await db.Appointments.Where(a => a.PatientId == patient).Select(a => a.Id).SingleAsync(Ct);
 
         // Act
-        await Appointments.SetStatusAsync(db, seed.ProviderId, id, new ChangeAppointmentStatusRequest("attended", null), Now, Ct);
+        var outcome = await Appointments.SetStatusAsync(db, seed.ProviderId, id, new ChangeAppointmentStatusRequest("attended", null), Now, Ct);
 
         // Assert
+        outcome.Should().Be(AppointmentOutcome.Ok);
+        await using var fresh = seed.CreateDbContext();
+        (await fresh.Appointments.AsNoTracking().Where(a => a.Id == id).Select(a => a.Status).SingleAsync(Ct)).Should().Be("attended");
         (await LastVisitAsync(seed, patient)).Should().Be(Now.AddHours(-1));
+    }
+
+    [Fact]
+    public async Task UndoAttended_WithNoOtherAttendedVisit_LeavesLastVisitUnchanged()
+    {
+        // Arrange — spec section 3: with no remaining attended visit, LastVisit is left as it was.
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var startsAt = Now.AddHours(-2);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", lastVisit: startsAt, cancellationToken: Ct);
+        await seed.AddAppointmentAsync(patient, startsAt, "attended", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var id = await db.Appointments.Where(a => a.PatientId == patient).Select(a => a.Id).SingleAsync(Ct);
+
+        // Act
+        var outcome = await Appointments.SetStatusAsync(db, seed.ProviderId, id, new ChangeAppointmentStatusRequest("scheduled", null), Now, Ct);
+
+        // Assert
+        outcome.Should().Be(AppointmentOutcome.Ok);
+        (await LastVisitAsync(seed, patient)).Should().Be(startsAt);
     }
 
     [Theory]
@@ -329,6 +351,23 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         all.Items[0].PatientName.Should().Be("Ana Silva");
         all.Items[0].PatientId.Should().Be(patient);
         scheduledOnly.Items.Should().ContainSingle().Which.StartsAt.Should().Be(Tomorrow10);
+    }
+
+    [Fact]
+    public async Task List_AtTheSameStart_ReturnsCancelledBeforeLive()
+    {
+        // Arrange — a live appointment inserted first, then a cancelled one in the same slot.
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await seed.AddAppointmentAsync(patient, Tomorrow10, "scheduled", cancellationToken: Ct);
+        await seed.AddAppointmentAsync(patient, Tomorrow10, "cancelled", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await Appointments.ListAsync(db, seed.ProviderId, Tomorrow10.AddHours(-1), Tomorrow10.AddDays(1), [], Ct);
+
+        // Assert
+        result.Items.Select(i => i.Status).Should().Equal("cancelled", "scheduled");
     }
 
     private static async Task<DateTimeOffset?> LastVisitAsync(PatientSearchSeed seed, Guid patientId)

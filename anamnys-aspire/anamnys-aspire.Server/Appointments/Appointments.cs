@@ -36,6 +36,8 @@ public static class Appointments
 
         var items = await query
             .OrderBy(x => x.a.StartsAt)
+            .ThenBy(x => x.a.Status == "cancelled" ? 0 : 1)
+            .ThenBy(x => x.a.Id)
             .Select(x => new AppointmentItem(
                 x.a.Id, x.a.PatientId, x.p.FirstName + " " + x.p.LastName,
                 x.a.StartsAt, x.a.EndsAt, x.a.Timezone, x.a.Modality, x.a.Status, x.a.CancellationReason))

@@ -26,6 +26,13 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
   calendar creates, reschedules and changes status; "Realizada" updates `Patients.LastVisit`.
   Still open for scheduling: availability, recurrence, patient self-booking and Google
   Calendar sync (deliveries 2–5 of that spec).
+- **Patients with appointments cannot be deleted.** Any appointment, even a cancelled one,
+  makes a patient undeletable (`PatientRecords.HasClinicalRecordsAsync` counts appointments),
+  so archiving is the only option left.
+- **Archiving leaves future appointments live.** An archived patient keeps their future
+  appointments in their slots, and the portal still shows them as the next session.
+- **Undoing "Realizada" may leave `LastVisit` stale.** When no other attended visit exists,
+  `LastVisit` stays on the undone date (spec section 3 semantics); revisit.
 - **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
   `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.
 - **Patient rights (LGPD).** The portal cannot list or remove provider links, and the

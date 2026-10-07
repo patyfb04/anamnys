@@ -96,7 +96,7 @@ export default function AppointmentFormModal({ mode, onClose }: Props) {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <FormField label={t("calendar.form.date")} type="date" required value={state.date}
             onChange={(e) => setState((s) => ({ ...s, date: e.target.value }))} error={errors.startsAt} />
-          <FormField label={t("calendar.form.time")} type="time" step={900} required value={state.time}
+          <FormField label={t("calendar.form.time")} type="time" step={60} required value={state.time}
             onChange={(e) => setState((s) => ({ ...s, time: e.target.value }))} />
           <FormField label={t("calendar.form.duration")} type="number" min={5} max={480} required value={state.duration}
             onChange={(e) => setState((s) => ({ ...s, duration: Number(e.target.value) }))} error={errors.durationMinutes} />

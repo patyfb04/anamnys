@@ -24,7 +24,7 @@ export default function AppointmentCard({ appointment: a, top, height, onClick }
         onClick();
       }}
       style={{ top, height }}
-      className={`absolute inset-x-1 overflow-hidden rounded-radii-md border-l-4 px-2 py-1 text-left text-label-md shadow-sm hover:brightness-95 ${STATUS_STYLE[a.status]}`}
+      className={`absolute inset-x-1 ${a.status === "cancelled" ? "z-[1]" : "z-[2]"} overflow-hidden rounded-radii-md border-l-4 px-2 py-1 text-left text-label-md shadow-sm hover:brightness-95 ${STATUS_STYLE[a.status]}`}
     >
       <div className="flex items-center justify-between gap-1">
         <span className="font-semibold">{start}–{end}</span>

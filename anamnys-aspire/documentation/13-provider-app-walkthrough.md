@@ -77,7 +77,7 @@ screens (`hooks/useIsMobile.ts`) it always renders the day view and hides the to
 state lives in the URL, unlike the patient list, because nothing in it is PHI: `view`
 (`week` or `day`, default `week`), `date` (`YYYY-MM-DD`, default today in the practice time
 zone) and an optional `status` filter. Data comes from `hooks/useAppointments.ts`, and every
-mutation invalidates the visible range.
+mutation invalidates every `["appointments"]` query.
 
 Clicking an empty cell opens the *Nova consulta* dialog prefilled with that day and the time
 rounded down to 15 minutes; the header button does the same at 09:00 on today when today is visible, otherwise on the first visible day. Clicking a
