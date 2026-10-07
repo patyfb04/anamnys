@@ -96,9 +96,10 @@ One row per confirmation e-mail.
 
 Checks: `ConfirmedBy` in (`patient`, `provider`) and present exactly when `ConfirmedAt` is;
 not both `ConfirmedAt` and `ClosedAt`. Index on `DeadlineAt` where
-`ConfirmedAt IS NULL AND ClosedAt IS NULL AND DeadlineAt IS NOT NULL`. At most one open row per
-appointment (partial unique index on `AppointmentId` where `ConfirmedAt IS NULL AND
-ClosedAt IS NULL`).
+`ConfirmedAt IS NULL AND ClosedAt IS NULL AND DeadlineAt IS NOT NULL`. There is deliberately no unique
+index for "at most one open row per appointment": closing the old row and inserting the new one
+happen in one `SaveChanges`, whose statement order EF does not guarantee, so such an index would
+fail intermittently. The rule is enforced in code by `AppointmentNotifications` and covered by tests.
 
 ### New table `AppointmentConfirmationTokens`
 

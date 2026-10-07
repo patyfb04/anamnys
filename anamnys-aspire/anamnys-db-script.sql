@@ -19,6 +19,24 @@ CREATE TABLE "AccountExports" (
 	"Format" text DEFAULT 'zip' NOT NULL,
 	"Scope" text DEFAULT 'full' NOT NULL
 );
+CREATE TABLE "AppointmentConfirmations" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"AppointmentId" uuid NOT NULL,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ExpiresAt" timestamp with time zone NOT NULL,
+	"DeadlineAt" timestamp with time zone,
+	"ConfirmedAt" timestamp with time zone,
+	"ConfirmedBy" text,
+	"ClosedAt" timestamp with time zone,
+	CONSTRAINT "AppointmentConfirmations_ConfirmedBy_ck" CHECK ((("ConfirmedBy" IS NULL) = ("ConfirmedAt" IS NULL)) AND (("ConfirmedBy" IS NULL) OR ("ConfirmedBy" = ANY (ARRAY['patient'::text, 'provider'::text])))),
+	CONSTRAINT "AppointmentConfirmations_Closed_ck" CHECK (("ConfirmedAt" IS NULL) OR ("ClosedAt" IS NULL))
+);
+CREATE TABLE "AppointmentConfirmationTokens" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"ConfirmationId" uuid NOT NULL,
+	"TokenHash" bytea NOT NULL CONSTRAINT "AppointmentConfirmationTokens_TokenHash_key" UNIQUE,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL
+);
 CREATE TABLE "Appointments" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"ProviderId" uuid NOT NULL,
@@ -146,8 +164,11 @@ CREATE TABLE "BookingPolicies" (
 	"RescheduleLeadHours" integer DEFAULT 24 NOT NULL,
 	"MaxOpenAppointments" integer DEFAULT 4 NOT NULL,
 	"AllowNewPatients" boolean DEFAULT false NOT NULL,
+	"AutoCancelMode" text DEFAULT 'after_email' NOT NULL,
+	"AutoCancelHours" integer DEFAULT 1 NOT NULL,
 	"RequiresConfirmation" boolean DEFAULT true NOT NULL,
-	CONSTRAINT "BookingPolicies_Windows_ck" CHECK ((("MinLeadHours" >= 0) AND ("MaxHorizonDays" > 0) AND ("CancelLeadHours" >= 0) AND ("RescheduleLeadHours" >= 0) AND ("MaxOpenAppointments" > 0)))
+	CONSTRAINT "BookingPolicies_Windows_ck" CHECK ((("MinLeadHours" >= 0) AND ("MaxHorizonDays" > 0) AND ("CancelLeadHours" >= 0) AND ("RescheduleLeadHours" >= 0) AND ("MaxOpenAppointments" > 0))),
+	CONSTRAINT "BookingPolicies_AutoCancel_ck" CHECK (("AutoCancelMode" = ANY (ARRAY['off'::text, 'after_email'::text, 'before_session'::text])) AND ("AutoCancelHours" >= 1) AND ("AutoCancelHours" <= 168))
 );
 CREATE TABLE "BreakGlassGrants" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -625,6 +646,8 @@ CREATE TABLE "Reminders" (
 	"ScheduledFor" timestamp with time zone NOT NULL,
 	"SentAt" timestamp with time zone,
 	"DeliveryStatus" text DEFAULT 'pending' NOT NULL,
+	"Attempts" integer DEFAULT 0 NOT NULL,
+	"ConfirmationId" uuid,
 	CONSTRAINT "Reminders_Channel_ck" CHECK (("Channel" = ANY (ARRAY['whatsapp'::text, 'email'::text, 'sms'::text]))),
 	CONSTRAINT "Reminders_Status_ck" CHECK (("DeliveryStatus" = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text, 'cancelled'::text])))
 );
@@ -835,6 +858,9 @@ CREATE TABLE "WebhookEvents" (
 );
 CREATE INDEX "AccessLogs_ProviderId_At_idx" ON "AccessLogs" ("ProviderId","At");
 CREATE INDEX "AccountExports_ProviderId_idx" ON "AccountExports" ("ProviderId","RequestedAt");
+CREATE INDEX "AppointmentConfirmations_AppointmentId_idx" ON "AppointmentConfirmations" ("AppointmentId");
+CREATE INDEX "AppointmentConfirmations_Deadline_idx" ON "AppointmentConfirmations" ("DeadlineAt") WHERE "ConfirmedAt" IS NULL AND "ClosedAt" IS NULL AND "DeadlineAt" IS NOT NULL;
+CREATE INDEX "AppointmentConfirmationTokens_ConfirmationId_idx" ON "AppointmentConfirmationTokens" ("ConfirmationId");
 CREATE INDEX "Appointments_ExternalEventId_idx" ON "Appointments" ("ExternalEventId");
 CREATE INDEX "Appointments_Patient_Starts_idx" ON "Appointments" ("PatientId","StartsAt");
 CREATE INDEX "Appointments_Provider_Starts_idx" ON "Appointments" ("ProviderId","StartsAt");
@@ -876,6 +902,7 @@ CREATE INDEX "Notes_ProviderId_idx" ON "Notes" ("ProviderId");
 CREATE INDEX "Notes_Status_idx" ON "Notes" ("Status");
 CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
+CREATE INDEX "Notifications_Provider_Scheduled_idx" ON "Notifications" ("ProviderId", "ScheduledFor" DESC);
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
 CREATE UNIQUE INDEX "PatientAccounts_Email_key" ON "PatientAccounts" (lower("Email"));
@@ -905,6 +932,8 @@ CREATE INDEX "TreatmentPlans_PatientId_idx" ON "TreatmentPlans" ("PatientId");
 CREATE INDEX "WebhookEvents_unprocessed_idx" ON "WebhookEvents" ("ReceivedAt");
 ALTER TABLE "AccessLogs" ADD CONSTRAINT "AccessLogs_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "AccountExports" ADD CONSTRAINT "AccountExports_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
+ALTER TABLE "AppointmentConfirmations" ADD CONSTRAINT "AppointmentConfirmations_Appointment_fk" FOREIGN KEY ("AppointmentId") REFERENCES "Appointments"("Id") ON DELETE CASCADE;
+ALTER TABLE "AppointmentConfirmationTokens" ADD CONSTRAINT "AppointmentConfirmationTokens_Confirmation_fk" FOREIGN KEY ("ConfirmationId") REFERENCES "AppointmentConfirmations"("Id") ON DELETE CASCADE;
 ALTER TABLE "Appointments" ADD CONSTRAINT "Appointments_Connection_fk" FOREIGN KEY ("ConnectionId") REFERENCES "CalendarConnections"("Id") ON DELETE SET NULL;
 ALTER TABLE "Appointments" ADD CONSTRAINT "Appointments_Hold_fk" FOREIGN KEY ("HoldId") REFERENCES "BookingHolds"("Id") ON DELETE SET NULL;
 ALTER TABLE "Appointments" ADD CONSTRAINT "Appointments_Offering_fk" FOREIGN KEY ("OfferingId") REFERENCES "ServiceOfferings"("Id") ON DELETE SET NULL;
@@ -982,6 +1011,7 @@ ALTER TABLE "ProviderProfiles" ADD CONSTRAINT "ProviderProfiles_ProviderId_fkey"
 ALTER TABLE "RecordingConsents" ADD CONSTRAINT "RecordingConsents_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "RecordingConsents" ADD CONSTRAINT "RecordingConsents_TreatmentPlanId_fkey" FOREIGN KEY ("TreatmentPlanId") REFERENCES "TreatmentPlans"("Id") ON DELETE SET NULL;
 ALTER TABLE "Reminders" ADD CONSTRAINT "Reminders_AppointmentId_fkey" FOREIGN KEY ("AppointmentId") REFERENCES "Appointments"("Id") ON DELETE CASCADE;
+ALTER TABLE "Reminders" ADD CONSTRAINT "Reminders_Confirmation_fk" FOREIGN KEY ("ConfirmationId") REFERENCES "AppointmentConfirmations"("Id") ON DELETE SET NULL;
 ALTER TABLE "RetentionRules" ADD CONSTRAINT "RetentionRules_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "RoomSessions" ADD CONSTRAINT "RoomSessions_AppointmentId_fkey" FOREIGN KEY ("AppointmentId") REFERENCES "Appointments"("Id") ON DELETE CASCADE;
 ALTER TABLE "ScaleApplications" ADD CONSTRAINT "ScaleApplications_InstrumentId_fkey" FOREIGN KEY ("InstrumentId") REFERENCES "Instruments"("Id") ON DELETE RESTRICT;
