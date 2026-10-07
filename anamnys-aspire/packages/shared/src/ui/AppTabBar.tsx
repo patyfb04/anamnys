@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Users, Mic, Settings, type LucideIcon } from "lucide-react";
+import { Users, Calendar, Mic, Settings, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 interface Tab {
@@ -11,6 +11,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
+  { href: "/calendar", Icon: Calendar, labelKey: "nav.calendar", matchPrefix: "/calendar" },
   { href: "/patients", Icon: Mic, labelKey: "nav.newNote", matchPrefix: "/notes" },
   { href: "/settings", Icon: Settings, labelKey: "nav.settings", matchPrefix: "/settings" },
 ];

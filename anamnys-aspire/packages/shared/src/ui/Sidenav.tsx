@@ -30,7 +30,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", Icon: LayoutDashboard, labelKey: "nav.dashboard", matchPrefix: "/dashboard" },
   { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
-  { href: "/calendar", Icon: Calendar, labelKey: "nav.calendar", matchPrefix: "/calendar", feature: "calendar" },
+  { href: "/calendar", Icon: Calendar, labelKey: "nav.calendar", matchPrefix: "/calendar" },
   { href: "/live-session", Icon: Mic, labelKey: "nav.liveSession", matchPrefix: "/live-session", feature: "liveSession" },
   { href: "/note-editor", Icon: FileEdit, labelKey: "nav.noteEditor", matchPrefix: "/note-editor", feature: "noteEditor" },
   {

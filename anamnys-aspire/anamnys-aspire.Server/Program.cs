@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Email;
@@ -96,6 +97,7 @@ phi.MapPatientEndpoints();
 phi.MapPatientRecordEndpoints();
 phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
+phi.MapAppointmentEndpoints();
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401
