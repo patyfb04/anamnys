@@ -46,7 +46,40 @@ Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patien
 - **Dev only:** patient registration must start from the patient app origin (5274); from
   5273 Keycloak refuses the `redirect_uri`.
 
+## Provider calendar — deferred review items
+
+Found during the review of `2026-10-05-provider-calendar`; none blocks use, all to revisit.
+
+- **Appointments crossing midnight** are drawn only on their start day and cut at 24:00;
+  one that started the day before the visible range is returned but not drawn.
+- **Flaky test:** the first full suite run on the branch had one failure whose name was not
+  captured; five later runs passed. If it recurs, keep the full log and name it.
+- **Accessibility:** the Dia/Semana toggle has no `aria-pressed`, today's header no
+  `aria-current="date"`, the modality icon no `role="img"`; the patient search field and the
+  cancellation reason have no label; creating by clicking the grid is mouse-only (the "Nova
+  consulta" button is the keyboard path); cancelled cards have low contrast.
+- **Grid layout:** with a visible scrollbar (Windows) the header columns drift from the body
+  columns (`scrollbar-gutter: stable` on both); while a new week loads, the previous week's
+  appointments can briefly stretch the hour range.
+- **Form errors:** a 400 on a field with no visible error slot (time, modality) shows
+  nothing; status changes show a generic toast for 400/422 instead of the server message;
+  an empty duration field becomes 0.
+- **Time zone helpers:** `zonedToInstant` corrects the offset once, so it can be an hour off
+  inside a DST transition, and `offsetLabel` prints half-hour zones as "GMT+5.5". Harmless
+  while everything is `America/Sao_Paulo` (no DST since 2019).
+- **Tests to add:** exact boundaries (42-day range, 500-character reason, empty patient id);
+  success paths for Confirmar, Falta and Falta → Agendada; another provider's patient through
+  the list join; the HTTP list filtering by repeated `status` keys.
+- **Hardening:** `AppointmentStatus.All` and `AppointmentRules.Modalities` are public mutable
+  arrays; the `LastVisit` update has no concurrency guard.
+- **`anamnys-aspire.Server.http`** has no requests for the appointment (or patient)
+  endpoints.
+
 ## Documentation and housekeeping
+
+- **`anamnys-aspire/CLAUDE.md` route tree gotcha is stale:** it says each app's
+  `src/routeTree.gen.ts` must stay committed, but `.gitignore` ignores `**/src/routeTree.gen.ts`
+  and no app tracks one. Decide which is right and align the other.
 
 - **Notion "Modelo de Dados":** add `PatientAccounts` (split from `Patients`),
   `PatientDiagnoses`, `PatientInvitations` and `Patients.ArchivedAt` / `ContactEmail`.
