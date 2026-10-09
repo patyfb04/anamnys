@@ -136,6 +136,8 @@ public sealed record AppointmentItem(
     string Timezone,
     string Modality,
     string Status,
-    string? CancellationReason);
+    string? CancellationReason,
+    DateTimeOffset? ConfirmationDeadlineAt,
+    bool PatientHasEmail);
 
 public sealed record AppointmentListResponse(IReadOnlyList<AppointmentItem> Items);

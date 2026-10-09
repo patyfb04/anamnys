@@ -43,7 +43,9 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
             .CreateAsync<Projects.anamnys_aspire_AppHost>(
                 // Never send real email from tests: an empty Resend key makes the AppHost
                 // route both Keycloak and the server to Mailpit.
-                ["--Parameters:resend-api-key="],
+                // Tests drive the notification steps with a fake clock; a live worker would act
+                // on test rows with the real clock.
+                ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false"],
                 TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();

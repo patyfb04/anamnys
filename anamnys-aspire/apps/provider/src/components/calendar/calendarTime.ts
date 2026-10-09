@@ -67,3 +67,12 @@ export function isWeekend(date: string): boolean {
   const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   return weekday === 0 || weekday === 6;
 }
+
+// "14:00" when the instant falls on the reference instant's day in the zone, otherwise
+// "qui., 8 de out. 14:00".
+export function formatTimeWithDate(instant: Date, reference: Date, zone: string): string {
+  const dayKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: zone }).format(d);
+  if (dayKey(instant) === dayKey(reference)) return formatTime(instant, zone);
+  const date = new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short", timeZone: zone }).format(instant);
+  return `${date} ${formatTime(instant, zone)}`;
+}

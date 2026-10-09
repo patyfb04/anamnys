@@ -35,7 +35,11 @@ public sealed class PatientSearchSeed : IAsyncDisposable
     // The original string, not _connection.ConnectionString: Npgsql drops the password
     // from the latter once the connection is open.
     public AnamnysDbContext CreateDbContext() =>
-        new(new DbContextOptionsBuilder<AnamnysDbContext>().UseNpgsql(_connectionString).Options);
+        // EnableRetryOnFailure: the same retrying execution strategy AddNpgsqlDbContext turns on
+        // in the server, so code that opens its own transactions is tested as it really runs.
+        new(new DbContextOptionsBuilder<AnamnysDbContext>()
+            .UseNpgsql(_connectionString, npgsql => npgsql.EnableRetryOnFailure())
+            .Options);
 
     public async Task<Guid> AddProviderAsync(CancellationToken cancellationToken)
     {
@@ -152,5 +156,29 @@ public sealed class PatientSearchSeed : IAsyncDisposable
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    public ValueTask DisposeAsync() => _connection.DisposeAsync();
+    // Test rows live in the shared dev database: leave nothing pending that a later dev run's
+    // live worker would e-mail or auto-cancel.
+    public async Task QuiesceNotificationsAsync(CancellationToken cancellationToken)
+    {
+        await ExecuteAsync(
+            """
+            UPDATE "Reminders" SET "DeliveryStatus" = 'cancelled'
+            WHERE "DeliveryStatus" = 'pending'
+              AND "AppointmentId" IN (SELECT "Id" FROM "Appointments" WHERE "ProviderId" = @p)
+            """,
+            cancellationToken, ("p", ProviderId));
+        await ExecuteAsync(
+            """
+            UPDATE "AppointmentConfirmations" SET "ClosedAt" = now()
+            WHERE "ConfirmedAt" IS NULL AND "ClosedAt" IS NULL
+              AND "AppointmentId" IN (SELECT "Id" FROM "Appointments" WHERE "ProviderId" = @p)
+            """,
+            cancellationToken, ("p", ProviderId));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await QuiesceNotificationsAsync(CancellationToken.None);
+        await _connection.DisposeAsync();
+    }
 }

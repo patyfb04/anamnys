@@ -253,6 +253,7 @@ export interface PatientSearchResponse {
 export type SessionStatus = "scheduled" | "confirmed" | "attended" | "cancelled" | "no_show";
 
 export interface PortalSession {
+  id: string;
   startsAt: string;
   endsAt: string;
   timezone: string;
@@ -288,6 +289,18 @@ export interface Appointment {
   modality: AppointmentModality;
   status: AppointmentStatus;
   cancellationReason: string | null;
+  confirmationDeadlineAt: string | null;
+  patientHasEmail: boolean;
+}
+
+// Public confirmation link (design/specs/2026-10-07-appointment-notifications-design.md).
+export interface ConfirmationView {
+  status: "pending" | "confirmed" | "invalid";
+  providerName: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  timezone: string | null;
+  modality: string | null;
 }
 
 export interface UpdateAppointmentRequest {
@@ -298,4 +311,31 @@ export interface UpdateAppointmentRequest {
 
 export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
   patientId: string;
+}
+
+// Provider notifications and booking policy (/api/phi/providers/me/...).
+export type NotificationKind = "appointment_confirmed" | "appointment_auto_cancelled";
+
+export interface ProviderNotification {
+  id: string;
+  kind: NotificationKind;
+  appointmentId: string;
+  patientName: string;
+  startsAt: string; // ISO instant
+  createdAt: string;
+  readAt: string | null;
+}
+
+export interface NotificationsPage {
+  items: ProviderNotification[];
+  unreadCount: number;
+  page: number;
+  pageSize: number;
+}
+
+export type AutoCancelMode = "off" | "after_email" | "before_session";
+
+export interface BookingPolicy {
+  autoCancelMode: AutoCancelMode;
+  autoCancelHours: number;
 }

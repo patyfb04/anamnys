@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="anamnys-aspire.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Aspire.Keycloak.Authentication" Version="13.5.3-preview.1.26425.3" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.5.3" />
     <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.5.2" />

@@ -18,6 +18,11 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<MedicationEntry> MedicationEntries => Set<MedicationEntry>();
     public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
     public DbSet<PlanObjective> PlanObjectives => Set<PlanObjective>();
+    public DbSet<AppointmentConfirmation> AppointmentConfirmations => Set<AppointmentConfirmation>();
+    public DbSet<AppointmentConfirmationToken> AppointmentConfirmationTokens => Set<AppointmentConfirmationToken>();
+    public DbSet<Reminder> Reminders => Set<Reminder>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<BookingPolicy> BookingPolicies => Set<BookingPolicy>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,6 +121,40 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("PlanObjectives");
             e.HasKey(x => x.Id);
             e.HasOne<TreatmentPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppointmentConfirmation>(e =>
+        {
+            e.ToTable("AppointmentConfirmations");
+            e.HasKey(x => x.Id);
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppointmentConfirmationToken>(e =>
+        {
+            e.ToTable("AppointmentConfirmationTokens");
+            e.HasKey(x => x.Id);
+            e.HasOne<AppointmentConfirmation>().WithMany().HasForeignKey(x => x.ConfirmationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Reminder>(e =>
+        {
+            e.ToTable("Reminders");
+            e.HasKey(x => x.Id);
+            e.HasOne<Appointment>().WithMany().HasForeignKey(x => x.AppointmentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<AppointmentConfirmation>().WithMany().HasForeignKey(x => x.ConfirmationId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Notification>(e =>
+        {
+            e.ToTable("Notifications");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<BookingPolicy>(e =>
+        {
+            e.ToTable("BookingPolicies");
+            e.HasKey(x => x.Id);
         });
     }
 }

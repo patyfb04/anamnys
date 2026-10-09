@@ -149,7 +149,7 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         AppointmentOutcome outcome;
         await using (var db = seed.CreateDbContext())
         {
-            outcome = await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10.AddHours(2), 30, "presencial"), Ct);
+            outcome = await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10.AddHours(2), 30, "presencial"), Now, Ct);
         }
 
         // Assert
@@ -176,7 +176,7 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         await using var db2 = seed.CreateDbContext();
 
         // Act
-        var outcome = await Appointments.UpdateAsync(db2, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10.AddHours(2), 50, "online"), Ct);
+        var outcome = await Appointments.UpdateAsync(db2, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10.AddHours(2), 50, "online"), Now, Ct);
 
         // Assert
         outcome.Should().Be(AppointmentOutcome.Overlap);
@@ -195,7 +195,7 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         var id = await db.Appointments.Where(a => a.PatientId == patient).Select(a => a.Id).SingleAsync(Ct);
 
         // Act
-        var outcome = await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10, 50, "online"), Ct);
+        var outcome = await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10, 50, "online"), Now, Ct);
 
         // Assert
         outcome.Should().Be(AppointmentOutcome.InvalidTransition);
@@ -321,7 +321,7 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
         var id = await db.Appointments.Where(a => a.PatientId == foreignPatient).Select(a => a.Id).SingleAsync(Ct);
 
         // Act + Assert
-        (await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10, 50, "online"), Ct))
+        (await Appointments.UpdateAsync(db, seed.ProviderId, id, new UpdateAppointmentRequest(Tomorrow10, 50, "online"), Now, Ct))
             .Should().Be(AppointmentOutcome.NotFound);
         (await Appointments.SetStatusAsync(db, seed.ProviderId, id, new ChangeAppointmentStatusRequest("confirmed", null), Now, Ct))
             .Should().Be(AppointmentOutcome.NotFound);

@@ -7,7 +7,7 @@ public enum SessionScope { Upcoming, Past }
 
 // Only schedule fields ever leave the server through the portal: the portal never reaches
 // the clinical record (design/specs/2026-10-04-patient-portal-sessions-design.md).
-public sealed record PortalSession(DateTimeOffset StartsAt, DateTimeOffset EndsAt, string Timezone, string Modality, string Status);
+public sealed record PortalSession(Guid Id, DateTimeOffset StartsAt, DateTimeOffset EndsAt, string Timezone, string Modality, string Status);
 
 public sealed record PortalProvider(Guid ProviderId, string Name, string? Crp, PortalSession? NextSession);
 
@@ -35,7 +35,7 @@ public static class PatientPortalQueries
                     .Where(a => a.PatientId == p.Id && a.ProviderId == p.ProviderId
                         && a.StartsAt > nowUtc && (a.Status == "scheduled" || a.Status == "confirmed"))
                     .OrderBy(a => a.StartsAt)
-                    .Select(a => new PortalSession(a.StartsAt, a.EndsAt, a.Timezone, a.Modality, a.Status))
+                    .Select(a => new PortalSession(a.Id, a.StartsAt, a.EndsAt, a.Timezone, a.Modality, a.Status))
                     .FirstOrDefault(),
             })
             .OrderBy(r => r.Name)
@@ -79,7 +79,7 @@ public static class PatientPortalQueries
         var items = await selected
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(a => new PortalSession(a.StartsAt, a.EndsAt, a.Timezone, a.Modality, a.Status))
+            .Select(a => new PortalSession(a.Id, a.StartsAt, a.EndsAt, a.Timezone, a.Modality, a.Status))
             .ToListAsync(cancellationToken);
 
         return new PortalSessionsPage(items, total, page, pageSize);

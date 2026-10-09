@@ -13,4 +13,7 @@ export const portalApi = {
     });
     return data;
   },
+  confirm: async (appointmentId: string): Promise<void> => {
+    await api.post(`/phi/patients/me/appointments/${appointmentId}/confirm`);
+  },
 };
