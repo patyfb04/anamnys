@@ -56,7 +56,7 @@ public static class AppointmentEndpoints
             {
                 return Results.ValidationProblem(errors);
             }
-            return ToResult(await Appointments.UpdateAsync(db, providerId, appointmentId, request, ct));
+            return ToResult(await Appointments.UpdateAsync(db, providerId, appointmentId, request, DateTimeOffset.UtcNow, ct));
         });
 
         appointments.MapPost("{appointmentId:guid}/status", async (Guid appointmentId, ChangeAppointmentStatusRequest request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
@@ -79,6 +79,7 @@ public static class AppointmentEndpoints
         AppointmentOutcome.Ok => Results.NoContent(),
         AppointmentOutcome.Overlap => Results.Conflict(new { message = "Horário já ocupado." }),
         AppointmentOutcome.InvalidTransition => Results.Conflict(new { message = "Esta alteração não é permitida no status atual." }),
+        AppointmentOutcome.Changed => Results.Conflict(new { message = "A consulta mudou enquanto você editava. Atualize e tente de novo." }),
         AppointmentOutcome.NotStarted => Results.Conflict(new { message = "A consulta ainda não começou." }),
         AppointmentOutcome.PatientArchived => Results.UnprocessableEntity(new { message = "Paciente arquivado." }),
         _ => Results.NotFound(),

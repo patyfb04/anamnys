@@ -7,7 +7,7 @@ import { toast } from "@anamnys/shared/ui/Toaster";
 import Modal from "@/components/patients/Modal";
 import { inputClass } from "@/components/patients/FormField";
 import { useAppointmentMutations } from "@/hooks/useAppointments";
-import { formatTime } from "./calendarTime";
+import { formatTime, formatTimeWithDate } from "./calendarTime";
 import { NEXT_STATUSES, STATUS_STYLE } from "./status";
 
 interface Props {
@@ -57,6 +57,14 @@ export default function AppointmentDetailsModal({ appointment: a, onClose, onEdi
           <span className={`self-start rounded-radii-full border-l-4 px-3 py-0.5 text-label-md ${STATUS_STYLE[a.status]}`}>
             {t(`calendar.status.${a.status}`)}
           </span>
+          {a.confirmationDeadlineAt && a.status === "scheduled" && (
+            <span className="text-onSurfaceVariant">
+              {t("calendar.details.awaitingConfirmation", { time: formatTimeWithDate(new Date(a.confirmationDeadlineAt), new Date(a.startsAt), a.timezone) })}
+            </span>
+          )}
+          {!a.patientHasEmail && (a.status === "scheduled" || a.status === "confirmed") && (
+            <span className="text-onSurfaceVariant">{t("calendar.details.noEmail")}</span>
+          )}
           {a.cancellationReason && (
             <span className="text-onSurfaceVariant">{t("calendar.details.reason")}: {a.cancellationReason}</span>
           )}

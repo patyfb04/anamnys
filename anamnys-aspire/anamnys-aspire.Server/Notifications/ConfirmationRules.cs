@@ -37,11 +37,8 @@ public static class ConfirmationRules
         {
             return null;
         }
-        if (deadline > startsAt)
-        {
-            deadline = startsAt;
-        }
-        return deadline > sentAt ? deadline : null;
+        // Never cancel at or after the session start: such a deadline means no automatic cancellation.
+        return deadline > sentAt && deadline < startsAt ? deadline : null;
     }
 
     public static DateTimeOffset? ReminderAt(DateTimeOffset startsAt, DateTimeOffset queuedAt)

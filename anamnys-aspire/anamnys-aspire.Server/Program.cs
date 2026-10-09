@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Email;
+using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
@@ -21,6 +23,22 @@ builder.Services.AddHostedService<DatabaseInitializer>();
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
 
+builder.Services.AddSingleton(TimeProvider.System);
+if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
+{
+    builder.Services.AddHostedService<AppointmentNotificationWorker>();
+}
+
+// Public routes (/api/public/...) are anonymous: 30 requests per minute per client IP.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(ConfirmationEndpoints.RateLimitPolicy, http =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+});
+
 // Add services to the container.
 builder.Services.AddProblemDetails();
 
@@ -28,6 +46,15 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Appointment e-mails carry a link into the patient portal: with a sender configured the
+// base URL is required (design/specs/2026-10-07-appointment-notifications-design.md §4).
+if (app.Services.GetService<IEmailSender>() is not null
+    && string.IsNullOrWhiteSpace(app.Configuration["PatientPortal:BaseUrl"]))
+{
+    throw new InvalidOperationException(
+        "PatientPortal:BaseUrl must be set when an e-mail sender is configured (Email:Provider).");
+}
 
 // Fails closed outside Development if either dev-only Keycloak service-account
 // client (anamnys-test-provider, anamnys-test-owner) still exists in its realm.
@@ -51,6 +78,7 @@ app.UseExceptionHandler();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
@@ -98,6 +126,8 @@ phi.MapPatientRecordEndpoints();
 phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
 phi.MapAppointmentEndpoints();
+phi.MapProviderNotificationEndpoints();
+app.MapConfirmationEndpoints(phi);
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401

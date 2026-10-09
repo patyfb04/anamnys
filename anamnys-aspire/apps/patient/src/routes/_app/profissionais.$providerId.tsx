@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import { portalApi } from "@anamnys/shared/api/portal";
 import { ApiError } from "@anamnys/shared/api/client";
 import Avatar from "@anamnys/shared/ui/Avatar";
+import { toast } from "@anamnys/shared/ui/Toaster";
 import SessionLine from "@/components/portal/SessionLine";
 
 export const Route = createFileRoute("/_app/profissionais/$providerId")({ component: ProviderPage });
@@ -29,6 +30,16 @@ function ProviderPage() {
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page * last.pageSize < last.totalCount ? last.page + 1 : undefined),
     retry: (count, error) => !(error instanceof ApiError && error.status === 404) && count < 2,
+  });
+
+  const queryClient = useQueryClient();
+  const confirm = useMutation({
+    mutationFn: (appointmentId: string) => portalApi.confirm(appointmentId),
+    onSuccess: () => {
+      toast.success(t("patientPortal.sessions.confirmed"));
+      queryClient.invalidateQueries({ queryKey: ["portal"] });
+    },
+    onError: () => toast.error(t("patientPortal.sessions.confirmFailed")),
   });
 
   const notFound =
@@ -87,7 +98,12 @@ function ProviderPage() {
           <>
             <ul className="divide-y divide-outlineVariant">
               {items.map((session) => (
-                <SessionLine key={`${session.startsAt}-${session.status}`} session={session} />
+                <SessionLine
+                  key={`${session.startsAt}-${session.status}`}
+                  session={session}
+                  onConfirm={tab === "upcoming" ? (s) => confirm.mutate(s.id) : undefined}
+                  confirming={confirm.isPending && confirm.variables === session.id}
+                />
               ))}
             </ul>
             {sessions.hasNextPage && (

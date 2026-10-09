@@ -1,8 +1,9 @@
-import { Bell, Settings, HelpCircle } from "lucide-react";
+import { Settings, HelpCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import logo from "../assets/logo1.png";
 import { useTranslation } from "react-i18next";
 import AccountMenu from "./AccountMenu";
+import NotificationBell from "./NotificationBell";
 
 export default function TopBar({ title }: { title?: string }) {
   const { t } = useTranslation();
@@ -26,9 +27,7 @@ export default function TopBar({ title }: { title?: string }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button className="p-2 rounded-full hover:bg-surfaceContainerLow">
-            <Bell size={22} className="text-primary" />
-          </button>
+          <NotificationBell className="p-2 rounded-full text-primary hover:bg-surfaceContainerLow" />
           <AccountMenu realm="provider" />
         </div>
       </div>
@@ -38,9 +37,7 @@ export default function TopBar({ title }: { title?: string }) {
           security and sign-out. Settings is the gear icon (and AppTabBar on mobile). */}
       <div className="hidden md:flex h-16 items-center justify-end gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-surfaceVariant sticky top-0 z-30">
         <div className="flex items-center gap-1.5 shrink-0">
-          <button className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors">
-            <Bell size={22} />
-          </button>
+          <NotificationBell className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors" />
           <Link
             to="/settings"
             aria-label={t("nav.settings")}

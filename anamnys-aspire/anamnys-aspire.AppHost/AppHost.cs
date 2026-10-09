@@ -69,6 +69,8 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     .WithEnvironment("ANAMNYS_PROVIDER_CLIENT_SECRET", providerClientSecret)
     .WithEnvironment("ANAMNYS_PATIENT_CLIENT_SECRET", patientClientSecret)
     .WithEnvironment("ANAMNYS_OWNER_CLIENT_SECRET", ownerClientSecret)
+    // The appointment e-mail worker; the test fixture turns it off (SharedAppHostFixture).
+    .WithEnvironment("Notifications__WorkerEnabled", builder.Configuration["Notifications:WorkerEnabled"] ?? "true")
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
 

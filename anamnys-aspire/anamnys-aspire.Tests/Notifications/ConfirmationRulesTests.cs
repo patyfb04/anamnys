@@ -19,9 +19,11 @@ public class ConfirmationRulesTests
     public void BeforeSession_SubtractsHoursFromStart() =>
         ConfirmationRules.DeadlineAt("before_session", 24, Sent, Sent.AddDays(3)).Should().Be(Sent.AddDays(2));
 
-    [Fact]
-    public void Deadline_IsCappedAtStart() =>
-        ConfirmationRules.DeadlineAt("after_email", 5, Sent, Sent.AddHours(3)).Should().Be(Sent.AddHours(3));
+    [Theory]
+    [InlineData(5, 3)] // would fall after the start
+    [InlineData(3, 3)] // exactly at the start
+    public void Deadline_AtOrAfterStart_HasNoDeadline(int hours, int startsInHours) =>
+        ConfirmationRules.DeadlineAt("after_email", hours, Sent, Sent.AddHours(startsInHours)).Should().BeNull();
 
     [Theory]
     [InlineData(24, 3)] // "24 h before" for a session 3 h away: already past

@@ -59,6 +59,9 @@
       "loadMore": "Carregar mais",
       "failed": "Não foi possível carregar as sessões.",
       "notFound": "Profissional não encontrado.",
+      "confirm": "Confirmar",
+      "confirmed": "Presença confirmada.",
+      "confirmFailed": "Não foi possível confirmar.",
       "modality": {
         "online": "Online",
         "presencial": "Presencial"
@@ -70,6 +73,16 @@
         "cancelled": "Cancelada",
         "no_show": "Falta"
       }
+    },
+    "confirmation": {
+      "title": "Confirmar consulta",
+      "loading": "Carregando…",
+      "details": "Consulta com {{provider}}",
+      "confirm": "Confirmar presença",
+      "confirmed": "Presença confirmada. Até lá!",
+      "invalid": "Este link não é mais válido. Se precisar, fale com o profissional.",
+      "failed": "Não foi possível confirmar agora. Tente de novo.",
+      "retry": "Tentar de novo"
     },
     "invite": {
       "title": "Convite para o portal Anamnys",
@@ -276,8 +289,30 @@
       "totpAction": "Configurar 2FA"
     }
   },
+  "notifications": {
+    "title": "Avisos",
+    "empty": "Nenhum aviso.",
+    "markAll": "Marcar todas como lidas",
+    "confirmed": "{{patient}} confirmou a consulta de {{when}}",
+    "autoCancelled": "Consulta de {{patient}} em {{when}} cancelada por falta de confirmação",
+    "open": "Abrir avisos"
+  },
   "settings": {
     "title": "Ajustes",
+    "pageTitle": "Configurações",
+    "bookingPolicy": {
+      "title": "Confirmação de consultas",
+      "description": "Defina quando uma consulta sem confirmação do paciente é cancelada.",
+      "mode": {
+        "off": "Não cancelar automaticamente",
+        "after_email": "Horas após o envio do e-mail",
+        "before_session": "Horas antes da sessão"
+      },
+      "hours": "Horas",
+      "save": "Salvar",
+      "saved": "Regra salva.",
+      "saveFailed": "Não foi possível salvar."
+    },
     "accountSecurity": "Conta e Segurança",
     "notifications": "Notificações",
     "transcriptionLanguage": "Idioma de transcrição",
@@ -902,7 +937,9 @@
       "undo": "Desfazer",
       "edit": "Editar",
       "statusChanged": "Status atualizado.",
-      "statusFailed": "Não foi possível alterar o status."
+      "statusFailed": "Não foi possível alterar o status.",
+      "awaitingConfirmation": "Aguardando confirmação até {{time}}",
+      "noEmail": "Paciente sem e-mail: não receberá confirmação."
     }
   }
 }

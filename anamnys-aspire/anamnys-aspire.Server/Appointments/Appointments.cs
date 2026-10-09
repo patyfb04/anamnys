@@ -1,12 +1,13 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Notifications;
 using Anamnys.Server.Profile;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Anamnys.Server.Appointments;
 
-public enum AppointmentOutcome { Ok, NotFound, Overlap, PatientArchived, InvalidTransition, NotStarted }
+public enum AppointmentOutcome { Ok, NotFound, Overlap, PatientArchived, InvalidTransition, NotStarted, Changed }
 
 // Provider-scoped appointment operations. See
 // design/specs/2026-10-05-provider-calendar-design.md §3. Every call resolves the
@@ -17,6 +18,8 @@ public static class Appointments
 {
     public const string PracticeTimezone = "America/Sao_Paulo";
     private const string OverlapConstraint = "Appointments_no_overlap";
+    private const string CancelConstraint = "Appointments_Cancel_ck";
+    private const string ClosedConstraint = "AppointmentConfirmations_Closed_ck";
 
     public static async Task<AppointmentListResponse> ListAsync(
         AnamnysDbContext db, Guid providerId, DateTimeOffset from, DateTimeOffset to, string[] statuses, CancellationToken cancellationToken)
@@ -40,7 +43,11 @@ public static class Appointments
             .ThenBy(x => x.a.Id)
             .Select(x => new AppointmentItem(
                 x.a.Id, x.a.PatientId, x.p.FirstName + " " + x.p.LastName,
-                x.a.StartsAt, x.a.EndsAt, x.a.Timezone, x.a.Modality, x.a.Status, x.a.CancellationReason))
+                x.a.StartsAt, x.a.EndsAt, x.a.Timezone, x.a.Modality, x.a.Status, x.a.CancellationReason,
+                db.AppointmentConfirmations
+                    .Where(c => c.AppointmentId == x.a.Id && c.ConfirmedAt == null && c.ClosedAt == null)
+                    .Select(c => c.DeadlineAt).FirstOrDefault(),
+                x.p.ContactEmail != null))
             .ToListAsync(cancellationToken);
         return new AppointmentListResponse(items);
     }
@@ -50,7 +57,7 @@ public static class Appointments
     {
         var patient = await db.Patients.AsNoTracking()
             .Where(p => p.Id == request.PatientId && p.ProviderId == providerId)
-            .Select(p => new { p.ArchivedAt })
+            .Select(p => new { p.ArchivedAt, p.ContactEmail })
             .SingleOrDefaultAsync(cancellationToken);
         if (patient is null)
         {
@@ -76,13 +83,15 @@ public static class Appointments
             CreatedAt = now.ToUniversalTime(),
         };
         db.Appointments.Add(appointment);
+        await AppointmentNotifications.OnScheduledAsync(
+            db, appointment, patient.ContactEmail is not null, now.ToUniversalTime(), cancellationToken);
 
         var outcome = await SaveAsync(db, cancellationToken);
         return (outcome, outcome == AppointmentOutcome.Ok ? appointment.Id : null);
     }
 
     public static async Task<AppointmentOutcome> UpdateAsync(
-        AnamnysDbContext db, Guid providerId, Guid appointmentId, UpdateAppointmentRequest request, CancellationToken cancellationToken)
+        AnamnysDbContext db, Guid providerId, Guid appointmentId, UpdateAppointmentRequest request, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var appointment = await db.Appointments
             .SingleOrDefaultAsync(a => a.Id == appointmentId && a.ProviderId == providerId, cancellationToken);
@@ -96,9 +105,19 @@ public static class Appointments
         }
 
         var startsAt = request.StartsAt!.Value.ToUniversalTime();
+        var endsAt = startsAt.AddMinutes(request.DurationMinutes!.Value);
+        if (appointment.StartsAt == startsAt && appointment.EndsAt == endsAt && appointment.Modality == request.Modality)
+        {
+            return AppointmentOutcome.Ok;
+        }
+
+        var hasEmail = await PatientHasEmailAsync(db, providerId, appointment.PatientId, cancellationToken);
         appointment.StartsAt = startsAt;
-        appointment.EndsAt = startsAt.AddMinutes(request.DurationMinutes!.Value);
+        appointment.EndsAt = endsAt;
         appointment.Modality = request.Modality!;
+        // A new time needs a new confirmation, even if the old one was already confirmed.
+        appointment.Status = AppointmentStatus.Scheduled;
+        await AppointmentNotifications.OnScheduledAsync(db, appointment, hasEmail, now.ToUniversalTime(), cancellationToken);
         return await SaveAsync(db, cancellationToken);
     }
 
@@ -132,6 +151,20 @@ public static class Appointments
             appointment.CancellationReason = ProfileText.Clean(request.Reason);
         }
 
+        switch (to)
+        {
+            case AppointmentStatus.Confirmed:
+                await AppointmentNotifications.OnConfirmedAsync(db, appointment, "provider", nowUtc, cancellationToken);
+                break;
+            case AppointmentStatus.Cancelled:
+                var hasEmail = await PatientHasEmailAsync(db, providerId, appointment.PatientId, cancellationToken);
+                await AppointmentNotifications.OnCancelledAsync(db, appointment, hasEmail, nowUtc, cancellationToken);
+                break;
+            case AppointmentStatus.Attended or AppointmentStatus.NoShow:
+                await AppointmentNotifications.OnLeftActiveAsync(db, appointment.Id, nowUtc, cancellationToken);
+                break;
+        }
+
         if (to == AppointmentStatus.Attended || from == AppointmentStatus.Attended)
         {
             var patient = await db.Patients
@@ -161,9 +194,13 @@ public static class Appointments
         return await SaveAsync(db, cancellationToken);
     }
 
+    private static Task<bool> PatientHasEmailAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken) =>
+        db.Patients.AsNoTracking()
+            .AnyAsync(p => p.Id == patientId && p.ProviderId == providerId && p.ContactEmail != null, cancellationToken);
+
     // The constraint is "UNIQUE ... WITHOUT OVERLAPS" (PostgreSQL 18); match it by name rather
     // than by SQLSTATE so the exact code the server reports for it does not matter.
-    private static async Task<AppointmentOutcome> SaveAsync(AnamnysDbContext db, CancellationToken cancellationToken)
+    internal static async Task<AppointmentOutcome> SaveAsync(AnamnysDbContext db, CancellationToken cancellationToken)
     {
         try
         {
@@ -174,6 +211,12 @@ public static class Appointments
         {
             db.ChangeTracker.Clear();
             return AppointmentOutcome.Overlap;
+        }
+        catch (DbUpdateException e) when (e.InnerException is PostgresException { ConstraintName: CancelConstraint or ClosedConstraint })
+        {
+            // A provider edit raced the worker's auto-cancel or a patient's confirmation.
+            db.ChangeTracker.Clear();
+            return AppointmentOutcome.Changed;
         }
     }
 }

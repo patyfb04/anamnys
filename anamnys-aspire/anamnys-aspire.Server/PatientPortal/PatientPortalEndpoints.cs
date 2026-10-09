@@ -42,7 +42,7 @@ public static class PatientPortalEndpoints
         });
     }
 
-    private static async Task<Guid?> AccountIdAsync(HttpContext http)
+    internal static async Task<Guid?> AccountIdAsync(HttpContext http)
     {
         var auth = await http.AuthenticateAsync(AuthSchemes.PatientCookie);
         return auth.Succeeded ? auth.Principal!.LocalIdOrNull() : null;
