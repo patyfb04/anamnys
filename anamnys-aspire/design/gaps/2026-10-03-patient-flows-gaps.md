@@ -1,12 +1,13 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-06
+**Started:** 2026-10-03 · **Last updated:** 2026-10-07
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
 Covers what is still missing after `2026-09-27-patient-list`, `2026-10-01-patient-records`,
 `2026-10-02-patient-accounts`, `2026-10-03-portal-invitation`,
-`2026-10-04-patient-portal-sessions` and `2026-10-05-provider-calendar`. New gaps found during
+`2026-10-04-patient-portal-sessions`, `2026-10-05-provider-calendar` and
+`2026-10-07-appointment-notifications`. New gaps found during
 feature work are appended to the matching section.
 
 ## Pacientes
@@ -80,8 +81,38 @@ feature work are appended to the matching section.
 
 ## Notificações
 
-Being designed (2026-10-06): e-mail confirmation with a one-time link, configurable
-auto-cancel, reminder 1h before, cancellation e-mails, and an in-app bell for the provider.
+Shipped in `2026-10-07-appointment-notifications`: e-mail confirmation with a one-time link
+(public page and portal "Confirmar" button), configurable automatic cancellation, reminder 1h
+before, cancellation e-mails, the provider's in-app bell and the "Confirmação de consultas"
+setting. Pending: the manual browser check with Mailpit (create, confirm through the link,
+automatic cancellation past the deadline, reminder, "Paciente sem e-mail" hint, portal button).
+
+- **Dev worker acts on test leftovers.** `Notifications:WorkerEnabled` is `false` in tests, and
+  the tests quiesce their appointment and outbox rows when they dispose. Leftovers only remain
+  if a test process is killed before dispose; with the dev AppHost running, the worker would
+  then process them (test providers only): it may cancel their appointments and try to send
+  their e-mails.
+- **Row lock held during the HTTP send.** The worker keeps the reminder row (and its
+  transaction) locked while it calls the e-mail provider, so a provider edit of the same
+  appointment waits for the send to finish.
+- **Cancellation e-mail without a prior notice.** A cancellation e-mail is queued even when the
+  patient was never e-mailed about the appointment (for example it was cancelled before the
+  confirmation e-mail went out).
+- **Undoing Confirmada to Agendada leaves the old link "invalid".** The portal's "Confirmar"
+  button still works, but the e-mailed link no longer does until a new confirmation is issued.
+- **Adding an e-mail to a patient later queues nothing.** Existing appointments of a patient who
+  gets an e-mail address after being booked receive no confirmation or reminder.
+- **Confirmation token in the API URL path.** The token travels in `/api/.../confirmations/{token}`
+  and so lands in OpenTelemetry spans (and any access log). Redact it in the telemetry or move
+  it to the request body.
+- **Time zone and clock assumptions.** `NotificationBell` assumes America/Sao_Paulo, and the
+  provider notification endpoints use `DateTimeOffset.UtcNow` instead of `TimeProvider`.
+- **Rate limiter needs ForwardedHeaders.** The confirmation endpoints' limiter is keyed on
+  `RemoteIpAddress`; behind a proxy it needs `ForwardedHeaders` configured before any
+  production deploy, or every client shares one bucket.
+- **Production must set `PatientPortal__BaseUrl`.** The server refuses to start when an e-mail
+  sender is configured and no base URL is set.
+
 Left for later:
 
 - **WhatsApp channel.** Delivery 1 sends e-mail only, but reminders are modelled per channel
@@ -137,6 +168,26 @@ Not built yet; planned for after the calendar deliveries.
   deployed environment. Keycloak has no production SMTP either: account verification and
   password reset do not work outside dev. Until a domain is verified, Resend's sandbox only
   delivers to the account owner's own address.
+- **Login theme hides Keycloak's global messages** (found 2026-10-08). No page nor
+  `Template.tsx` renders `kcContext.message`, only per-field errors, so errors Keycloak sends
+  as a page message — a rejected new password (password policy), a temporary lockout — show
+  nothing and the page just reloads. Render `kcContext.message` (error/warning/info) in
+  `Template.tsx`.
+- **2FA with several authenticators breaks login** (found 2026-10-08). `LoginOtp.tsx` does
+  not render the credential selector (`otpLogin.userOtpCredentials` / `selectedCredentialId`),
+  so Keycloak always checks the code against the first OTP credential. The forgot-password
+  flow asked to scan a new QR code and added a third OTP credential instead of replacing the
+  old ones, so the phone's current code never matched. Fixed by hand for the dev account
+  (old OTP credentials deleted); still to do: the selector in `LoginOtp.tsx`, and decide
+  whether the reset flow should replace the existing OTP instead of adding one.
+- **OTP policy:** all three realms use `HmacSHA256`; the running providers realm also has
+  `otpPolicyLookAheadWindow: 0` (the realm files do not set it). Google
+  Authenticator and some other apps ignore the algorithm and generate SHA1 codes, and a zero
+  window fails codes typed near the end of their 30 s. Consider `HmacSHA1` with look-ahead 1
+  (Keycloak's defaults); changing the algorithm invalidates existing authenticator setups.
+- **Password history removed from the providers realm** (2026-10-08, user's decision): the
+  policy is now `length(12) and notUsername and notEmail`. The owners realm still has
+  `passwordHistory(10)`.
 
 ## LGPD e segurança
 

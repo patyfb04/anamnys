@@ -63,7 +63,7 @@ The plan is ordered in two phases so phase A is usable on its own:
 | Case | Behaviour |
 |---|---|
 | Appointment starts in less than 1 hour | Confirmation e-mail only; no reminder. |
-| Deadline falls after the session starts | The deadline is capped at the session's start. |
+| Deadline would fall at or after the session start | No automatic cancellation for that appointment; it stays `scheduled` and the provider decides. |
 | Deadline is already past when the e-mail is sent (e.g. "24 h before" for a session 3 h away), or the rule is off | No automatic cancellation for that appointment; it stays `scheduled` and the provider decides. |
 | Patient has no `ContactEmail` | No e-mails and no automatic cancellation. The calendar shows "Paciente sem e-mail: não receberá confirmação." |
 | No e-mail sender configured, or the confirmation e-mail fails for good | Rows stay `pending` (or become `failed`); the worker logs once per run that sending is disabled. The deadline only starts when the confirmation e-mail is actually sent, so nothing is cancelled for a patient who never got the e-mail. |
@@ -149,8 +149,8 @@ New folder `Notifications/`.
 ### `ConfirmationRules` (pure)
 
 `DeadlineAt(mode, hours, sentAt, startsAt)`: `off` → null; `after_email` →
-`sentAt + hours`; `before_session` → `startsAt − hours`; then capped at `startsAt`; null if
-the result is not after `sentAt`. The worker calls it when the confirmation e-mail is sent,
+`sentAt + hours`; `before_session` → `startsAt − hours`; no cap: null if the result is at or after `startsAt` (never cancel at or after the start), or
+not after `sentAt`. The worker calls it when the confirmation e-mail is sent,
 with the provider's current policy. `ReminderAt(startsAt, queuedAt)`: `startsAt − 1 h`, or
 null if that is not after `queuedAt`.
 
@@ -163,7 +163,7 @@ null if that is not after `queuedAt`.
   `by = patient`, add an `appointment_confirmed` notification.
 - `OnCancelled`: close the open confirmation; cancel pending reminders; queue `cancellation`
   now if the patient has an e-mail.
-- `OnLeftActive` (`attended`, `no_show`): cancel pending reminders.
+- `OnLeftActive` (`attended`, `no_show`): cancel pending reminders and close the open confirmation, so that undoing back to `scheduled` cannot lead to an automatic cancellation.
 
 `Appointments.CreateAsync`, `UpdateAsync` and `SetStatusAsync` call these, so the existing
 overlap handling and transactions stay as they are. Moving to `confirmed` through
@@ -174,7 +174,7 @@ overlap handling and transactions stay as they are. Moving to `confirmed` throug
 Every 60 seconds, each step in its own transaction, rows taken with `FOR UPDATE SKIP LOCKED`:
 
 1. **Automatic cancellation:** open confirmations with `DeadlineAt <= now` whose appointment is
-   still `scheduled` → appointment `cancelled` (`CancelledBy = 'system'`,
+   still `scheduled` and `StartsAt > now` (a session that has started is never cancelled, e.g. after a worker outage) → appointment `cancelled` (`CancelledBy = 'system'`,
    `CancellationReason = 'Não confirmada no prazo'`), then `OnCancelled`, plus an
    `appointment_auto_cancelled` notification.
 2. **Send due e-mails:** `Reminders` with `DeliveryStatus = 'pending'` and
@@ -242,7 +242,7 @@ All strings in `pt.json`.
 
 ## 6. Testing
 
-- Unit: `ConfirmationRules` (each mode, cap at start, already-past deadline, short-notice
+- Unit: `ConfirmationRules` (each mode, deadline at or after start gives none, already-past deadline, short-notice
   reminder); request validation for the booking policy; e-mail templates contain no clinical
   data and show the appointment's time zone.
 - Postgres (shared AppHost fixture), with a fake `TimeProvider` and a recording

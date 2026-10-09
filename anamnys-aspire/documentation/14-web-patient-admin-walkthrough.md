@@ -74,9 +74,29 @@ provider's record to the signed-in account and names the provider; failures expl
 with that email can accept) or `already_linked`. The accept call itself answers "signed in as
 a patient?", so the page needs no separate session check.
 
-What the portal still waits for is a way to create appointments: `Appointments`, `AppointmentSeries`,
-`BookingHolds` and `BookingPolicies` (Chapter 10) exist in the schema but have no
-write path yet, so the session lists show whatever already exists (seeded data in dev).
+A second route outside the gate is `routes/confirmar.$token.tsx`, the page behind the link in
+the appointment confirmation and reminder e-mails (`/patient/confirmar/{token}`,
+`design/specs/2026-10-07-appointment-notifications-design.md`). It reads
+`GET /api/public/appointment-confirmations/{token}` and shows the provider, date, time and
+modality with a *Confirmar presença* button. Opening the link confirms nothing, because mail
+scanners open links; only the button's `POST` does, and it answers `204`, or `410` when the link
+no longer works (reschedule, cancellation, or the session already started), which the page
+shows as *Este link não é mais válido.* The same `status` also drives *Presença confirmada*.
+Both API routes need no login and are limited to 30 requests per minute per IP. The
+server stores only the token's SHA-256.
+
+A patient with a portal account does not need the e-mail: upcoming `scheduled` sessions in
+the provider's session list (`SessionLine.tsx`) have a *Confirmar* button that calls
+`POST /api/phi/patients/me/appointments/{id}/confirm`. It answers `404` unless the
+appointment belongs to a record linked to the account, and `409` unless it is `scheduled` and
+in the future. The effect is the same as the link: the appointment becomes `confirmed` and the
+provider's bell gets a notice.
+
+What the portal still waits for is a way for patients to book appointments: `AppointmentSeries`
+and `BookingHolds` (Chapter 10) exist in the schema but have no write path yet. Providers create
+appointments from their calendar, and `BookingPolicies` now has a write path
+(`PUT /api/phi/providers/me/booking-policy`, Chapter 13), so the session lists show what the
+provider has scheduled (plus seeded data in dev).
 
 ## `apps/admin` — scaffolded, but with real authentication already wired
 

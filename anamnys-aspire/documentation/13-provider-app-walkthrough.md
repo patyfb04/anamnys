@@ -114,6 +114,84 @@ violation into the `409`. Back-to-back appointments are allowed, and a cancelled
 frees its slot. Availability, recurrence, patient self-booking and Google Calendar sync are
 not built yet.
 
+## Confirmação e avisos
+
+Every new or rescheduled appointment asks the patient to confirm by e-mail. The server code
+is in `anamnys-aspire.Server/Notifications/`, the schema in
+`design/migrations/2026-10-07-appointment-notifications.sql`, and the decisions in
+`design/specs/2026-10-07-appointment-notifications-design.md`.
+
+**Nothing is sent inside the request.** `Appointments.cs` calls `AppointmentNotifications`
+(`OnScheduledAsync` for create and reschedule, `OnConfirmedAsync`, `OnCancelledAsync`, `OnLeftActiveAsync`) in the same
+`SaveChanges` as the appointment change. These calls write rows, never mail: an
+`AppointmentConfirmations` row per confirmation, and `Reminders` rows that work as the e-mail
+outbox (`TemplateKey` `confirmation`, `reminder_1h` or `cancellation`). A mail failure can
+therefore never fail the appointment change. A patient without `ContactEmail` gets no rows at
+all.
+
+**The worker sends.** `AppointmentNotificationWorker` is a `BackgroundService` that wakes every
+60 seconds and calls `NotificationWorkerSteps`, one transaction per e-mail row, rows taken
+with `FOR UPDATE SKIP LOCKED`:
+
+1. Automatic cancellation: an open confirmation whose `DeadlineAt` has passed, on an
+   appointment still `scheduled` and not yet started (`StartsAt` after now), cancels it (`CancelledBy = 'system'`, reason *Não
+   confirmada no prazo*), queues the cancellation e-mail and adds a bell notice.
+2. Sending: due `pending` outbox rows, 50 at a time. The worker creates the link's token at
+   send time and stores only its SHA-256 (`AppointmentConfirmationTokens`), so no usable token
+   exists in the database. A failure adds one to `Attempts` and retries on the next run with a
+   new token; the third failure makes the row `failed`. A reminder for an appointment that is
+   no longer `scheduled` or `confirmed` becomes `cancelled`, and one for an already confirmed
+   appointment goes without a link.
+
+The automatic-cancellation deadline starts only when the confirmation e-mail is actually
+sent, in the same transaction as the send. A patient who never received the e-mail is never
+cancelled for not confirming. If no e-mail sender is configured the rows simply stay
+`pending` and the worker logs that sending is disabled.
+
+Time comes from `TimeProvider` (registered as `TimeProvider.System`), so tests move a fake
+clock and call the steps directly instead of waiting a minute.
+
+**Configuration.**
+
+- `Notifications:WorkerEnabled` (default `true`) turns the worker off. The test fixture sets
+  it to `false` (`SharedAppHostFixture`), and `AppHost.cs` forwards it to the server as
+  `Notifications__WorkerEnabled`.
+- `PatientPortal:BaseUrl` is the base of the links in the e-mails
+  (`{PatientPortal:BaseUrl}/confirmar/{token}`; the base already ends in `/patient`, and it is the same setting the invitation links use). The
+  server refuses to start when an e-mail sender is configured (`Email:Provider`) and this is
+  empty (`Program.cs`).
+
+**The rule.** *Configurações* has a *Confirmação de consultas* section
+(`components/settings/BookingPolicySection.tsx`), backed by
+`GET`/`PUT /api/phi/providers/me/booking-policy`. The provider picks off, *N horas após o
+e-mail* or *N horas antes da sessão*, with N from 1 to 168. A provider with no saved row
+uses the default, 1 hour after the e-mail. Only these two fields (`BookingPolicies.AutoCancelMode`
+and `AutoCancelHours`) are exposed. `ConfirmationRules.DeadlineAt` turns the rule into a
+moment; if that moment is already past when the e-mail is sent, or falls at or after the session start
+(for example *24 horas antes* on a session 3 hours away, or *5 horas após* on a session 3 hours away), there is no automatic
+cancellation and the appointment stays `scheduled` for the provider to decide. The reminder
+goes 1 hour before the session, and only when the appointment was created more than 1 hour
+ahead.
+
+**Hints on the calendar.** The details panel shows *Aguardando confirmação até {hora}* when
+the appointment has an open deadline (`confirmationDeadlineAt` in the list response), and
+*Paciente sem e-mail: não receberá confirmação.* when `patientHasEmail` is false. The
+provider's own *Confirmar* button has the same effect as the patient confirming, except that
+it creates no bell notice, because the provider did it.
+
+**The bell.** `NotificationBell` (`packages/shared/src/ui/`) sits in `TopBar` and replaces the
+icon that used to do nothing. It shows a badge with `unreadCount`, lists the notices
+(*{paciente} confirmou a consulta de {data}* and *Consulta de {paciente} em {data} cancelada
+por falta de confirmação*, each linking to that calendar day), offers *Marcar todas como
+lidas*, and refreshes every 60 seconds while the app is open. It is backed by
+`GET /api/phi/providers/me/notifications?page=1` (20 per page, newest first) and
+`POST .../{id}/read` and `.../read-all`, all scoped to the signed-in provider. The notices are
+`Notifications` rows with channel `in_app`; there is no e-mail to the provider.
+
+E-mails are in Portuguese and carry the minimum: the provider's name, date, time (in the
+appointment's time zone), modality and, when there is one, the link. Nothing clinical leaves
+the server.
+
 ## What's explicitly a placeholder
 
 `notes/$noteId.tsx` — the actual note editor, where reviewing and signing a note would
