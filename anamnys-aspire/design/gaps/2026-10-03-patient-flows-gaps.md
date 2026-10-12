@@ -151,9 +151,33 @@ Not built yet; planned for after the calendar deliveries.
 
 - **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
   `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.
-- **Appointment → session → note chain is unbuilt.** The schema links them through
-  `Appointments.SessionId` and `Notes.SessionId` (and `Transcripts.SessionId`); nothing
-  creates a `Sessions` row yet.
+- **Appointment → session → note chain is only built for live sessions.** Finalizing a live
+  recording creates the `Sessions` row (`attended`, `ActualStart`/`ActualEnd`) and links it
+  to the appointment (`Appointments.SessionId`) and the note (`Notes.SessionId`). Notes
+  from other inputs, and `Transcripts.SessionId`, are not wired.
+- **Structuring is not built** (live session delivery 2): the note keeps the raw transcript.
+- **Note editor and signing are not built** (delivery 3).
+- **No `AccessLogs`/`AuditEntries` writes for notes yet.**
+- **Production model directory must be a persistent volume**, or each deploy re-downloads
+  the Whisper model.
+- **Production `LiveSession:ModelSha256` must be set before deploy.** The `medium` SHA-256
+  in `appsettings.json` came from the Hugging Face LFS pointer and was not computed
+  locally; verify it before production.
+- **Live session has no automated frontend tests** (no runner); verified manually only.
+- **No cap on concurrent live recordings per provider.** Each 90-minute job holds ~270 MB of
+  buffer plus ~345 MB of samples in memory; size the container, or add a limit.
+- **Hub connections are not closed when the session expires**
+  (`CloseOnAuthenticationExpiration` is not set on the hubs).
+- **The appointment `Status` is not moved to attended** when its session becomes attended.
+- **`Sessions.ActualStart` resets to the reconnect time** if a recording begins again after
+  its buffer expired or the server restarted.
+- **`BeginRecording` does not check the appointment's status or date**; only the UI filters.
+- **Two concurrent recordings on one appointment orphan the first session** (concurrent
+  finalizes each create a session; the appointment keeps the last link).
+- **The `2026-10-10-live-session.sql` migration must run before the server starts**:
+  `OrphanNoteSweep` fails startup otherwise.
+- **Each test-suite AppHost run's `OrphanNoteSweep` fails in-progress live notes** in the
+  shared dev database.
 
 ## Portal do paciente e convites
 
@@ -200,6 +224,11 @@ Not built yet; planned for after the calendar deliveries.
 
 - **No frontend automated tests**; UI is verified manually in the browser only.
 - **`anamnys-aspire.Server.http`** has no requests for the appointment or patient endpoints.
+- **Tests load `appsettings.Development.json`**, so the server under test downloads
+  `ggml-base.bin` on the first transcription job if it is not in the model directory; this
+  may slow CI.
+- **`.gitignore` ignores `**/src/routeTree.gen.ts`**, contradicting the CLAUDE.md gotcha that
+  it must stay committed (see also "Documentação"); one of them is wrong.
 
 ## Documentação
 

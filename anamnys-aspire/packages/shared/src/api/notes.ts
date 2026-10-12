@@ -1,9 +1,13 @@
 import api from "@anamnys/shared/api/client";
-import type { Note } from "@anamnys/shared/lib/types";
+import type { Note, NoteDetail } from "@anamnys/shared/lib/types";
 
 export const notesApi = {
   list: async (patientId: string): Promise<Note[]> => {
     const { data } = await api.get<Note[]>(`/notes`, { params: { patientId } });
+    return data;
+  },
+  getDetail: async (noteId: string): Promise<NoteDetail> => {
+    const { data } = await api.get<NoteDetail>(`/phi/providers/me/notes/${noteId}`);
     return data;
   },
   get: async (noteId: string): Promise<Note> => {

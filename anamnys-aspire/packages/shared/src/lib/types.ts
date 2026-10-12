@@ -339,3 +339,30 @@ export interface BookingPolicy {
   autoCancelMode: AutoCancelMode;
   autoCancelHours: number;
 }
+
+// Live session (design/specs/2026-10-10-live-session-transcription-design.md).
+export type LiveNoteFormat = "DAP" | "SOAP" | "Biopsychosocial";
+// Portuguese only while the product serves Brazil.
+export type LiveLanguage = "pt";
+
+// Server status strings, as stored in Notes.Status.
+export type NoteDetailStatus = "Draft" | "Processing" | "ReadyForReview" | "Signed" | "Exported" | "Failed";
+export type NoteFailureReason = "no_speech" | "transcription_error" | "server_restart";
+
+export interface NoteDetail {
+  id: string;
+  patientId: string;
+  patientName: string;
+  status: NoteDetailStatus;
+  inputMode: string;
+  format: string;
+  rawTranscript: string | null;
+  failureReason: NoteFailureReason | null;
+  createdAt: string;
+}
+
+export interface NoteSnapshot {
+  status: NoteDetailStatus;
+  queuePosition: number;
+  failureReason: NoteFailureReason | null;
+}

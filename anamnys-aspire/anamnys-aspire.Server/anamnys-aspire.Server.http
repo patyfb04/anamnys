@@ -69,3 +69,8 @@ Content-Type: application/json
 { "firstName": "Ana", "lastName": "Souza", "phone": "+55 11 91234-5678", "dateOfBirth": "1990-01-02" }
 
 ###
+### Note detail (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Status, raw transcript and failure reason of one note. Replace the id with a real note id.
+GET {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000
+
+###

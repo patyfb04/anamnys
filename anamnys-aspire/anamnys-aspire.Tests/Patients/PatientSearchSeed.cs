@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 
 namespace Anamnys.Tests.Patients;
@@ -34,11 +35,12 @@ public sealed class PatientSearchSeed : IAsyncDisposable
 
     // The original string, not _connection.ConnectionString: Npgsql drops the password
     // from the latter once the connection is open.
-    public AnamnysDbContext CreateDbContext() =>
+    public AnamnysDbContext CreateDbContext(params IInterceptor[] interceptors) =>
         // EnableRetryOnFailure: the same retrying execution strategy AddNpgsqlDbContext turns on
         // in the server, so code that opens its own transactions is tested as it really runs.
         new(new DbContextOptionsBuilder<AnamnysDbContext>()
             .UseNpgsql(_connectionString, npgsql => npgsql.EnableRetryOnFailure())
+            .AddInterceptors(interceptors)
             .Options);
 
     public async Task<Guid> AddProviderAsync(CancellationToken cancellationToken)

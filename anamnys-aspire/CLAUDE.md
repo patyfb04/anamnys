@@ -71,6 +71,8 @@ planned package without adding the reference first.
 - Keycloak for identity — three realms (providers, patients, owners), seeded from
   committed realm JSON baked into a custom image at `keycloak/Dockerfile`. See
   `design/specs/2026-09-05-keycloak-implementation-design.md`.
+- Whisper.net (CPU runtime) for in-process transcription; models downloaded on first use to `LiveSession:ModelDirectory`, verified by `LiveSession:ModelSha256`
+- ASP.NET Core SignalR hubs `/hubs/transcription` and `/hubs/progress`
 
 ### Backend — planned
 

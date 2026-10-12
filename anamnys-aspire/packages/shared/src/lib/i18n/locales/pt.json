@@ -21,6 +21,50 @@
       "symbol": "Um símbolo"
     }
   },
+  "liveSession": {
+    "title": "Sessão ao Vivo",
+    "consent": "A transcrição registra o que você dita. Se o paciente estiver audível na gravação, é necessário o consentimento dele.",
+    "patient": "Paciente",
+    "appointment": "Consulta de hoje (opcional)",
+    "noAppointment": "Sem consulta vinculada",
+    "format": "Formato da nota",
+    "formats": { "DAP": "DAP", "SOAP": "SOAP", "Biopsychosocial": "Biopsicossocial" },
+    "start": "Iniciar gravação",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "stop": "Parar e gerar nota",
+    "paused": "Pausado",
+    "connected": "Conectado",
+    "connecting": "Reconectando… a gravação continua no seu navegador.",
+    "warnLimit": "A gravação termina automaticamente em 5 minutos (limite de 90 minutos).",
+    "leaveWarning": "A gravação ainda não foi enviada. Se sair agora, o áudio será perdido.",
+    "sending": "Enviando o áudio…",
+    "queued": "Na fila para transcrição (posição {{position}}).",
+    "transcribing": "Transcrevendo…",
+    "failed": {
+      "no_speech": "Nenhuma fala foi detectada. Grave novamente.",
+      "transcription_error": "Não foi possível transcrever esta gravação.",
+      "server_restart": "O servidor reiniciou durante o processamento e o áudio foi descartado. Grave novamente."
+    },
+    "recordAgain": "Gravar novamente",
+    "errors": {
+      "permission": "É necessário acesso ao microfone.",
+      "device": "Nenhum microfone encontrado.",
+      "connect": "Não foi possível conectar ao serviço de transcrição.",
+      "invalid": "Formato ou idioma inválido.",
+      "not_found": "Paciente ou consulta não encontrados.",
+      "forbidden": "Acesso negado a esta gravação.",
+      "too_long": "Limite de 90 minutos atingido.",
+      "finalize": "Não foi possível concluir a gravação."
+    }
+  },
+  "noteView": {
+    "processing": "Esta nota ainda está sendo processada.",
+    "failed": "Falha ao processar esta nota.",
+    "transcript": "Transcrição",
+    "editorSoon": "A estruturação e a edição da nota chegam nas próximas entregas.",
+    "notFound": "Nota não encontrada."
+  },
   "nav": {
     "dashboard": "Painel",
     "patients": "Pacientes",
