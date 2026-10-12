@@ -36,9 +36,10 @@ public static class NotePrompt
         }
         system
             .AppendLine("3. Remova vícios de fala (é, hum, né, tipo), repetições e hesitações; corrija a pontuação; escreva em português, em tom de prontuário, em terceira pessoa.")
-            .AppendLine("4. Preserve nomes, números, doses e datas exatamente como foram ditados.")
-            .AppendLine("5. Se nada foi ditado para uma seção, deixe-a vazia (\"\").")
-            .Append("6. Responda somente com o objeto JSON com essas chaves, nessa ordem.");
+            .AppendLine("4. Preserve nomes, números, doses e datas exatamente como foram ditados. Nunca transforme um número solto em data, horário, dose ou quantidade.")
+            .AppendLine("5. O ditado vem de transcrição automática e pode ter erros. Se um trecho estiver confuso, truncado ou sem sentido, copie-o como foi ditado; nunca o reinterprete nem deduza fatos a partir dele.")
+            .AppendLine("6. Se nada foi ditado para uma seção, deixe-a vazia (\"\").")
+            .Append("7. Responda somente com o objeto JSON com essas chaves, nessa ordem.");
         // AppendLine writes \r\n on Windows; ChatML is \n throughout.
         return $"<|im_start|>system\n{system.ToString().ReplaceLineEndings("\n")}<|im_end|>\n<|im_start|>user\nDitado:\n{StripControl(transcript)}<|im_end|>\n<|im_start|>assistant\n";
     }

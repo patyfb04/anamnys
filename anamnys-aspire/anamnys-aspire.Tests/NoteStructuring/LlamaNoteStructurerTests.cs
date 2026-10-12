@@ -40,6 +40,8 @@ public class LlamaNoteStructurerTests
 
         prompt.Should().StartWith("<|im_start|>system");
         prompt.Should().Contain("Não acrescente fatos");
+        prompt.Should().Contain("Nunca transforme um número solto em data");
+        prompt.Should().Contain("copie-o como foi ditado");
         prompt.Should().Contain("\"assessment\"");
         prompt.Should().Contain("Paciente relata insônia.");
         prompt.Should().EndWith("<|im_start|>assistant\n");
@@ -118,5 +120,25 @@ public class LlamaNoteStructurerTests
         sections.Select(s => s.Key).Should().Equal(Dap);
         var digits = string.Concat(sections.SelectMany(s => s.Content).Where(char.IsDigit));
         digits.Should().BeEmpty("the transcript has no digits, so any digit was invented");
+    }
+
+    // Regression for a real transcription error: Whisper heard "paciente Test 2" as "paciente deste 2"
+    // and the model turned it into "a sessão ocorreu no dia 2" — an invented date. Runs only with
+    // ANAMNYS_LLM_MODEL set.
+    [Fact]
+    public async Task Structure_RealModel_GarbledNumberIsNotTurnedIntoADate()
+    {
+        var model = Environment.GetEnvironmentVariable("ANAMNYS_LLM_MODEL");
+        Assert.SkipWhen(model is null, "ANAMNYS_LLM_MODEL is not set.");
+        const string transcript =
+            "Essa é a sessão muito com o paciente deste 2. Vamos discutir a última sessão quando o paciente reportou dificuldades em dormir.";
+        var (structurer, weights) = LlamaNoteStructurer.ForModelFile(model!, new NoteStructuringOptions());
+        using var _ = weights;
+
+        var sections = await structurer.StructureAsync(transcript, "DAP", TestContext.Current.CancellationToken);
+
+        var text = string.Join(" ", sections.Select(s => s.Content));
+        text.Should().NotMatchRegex(@"(?i)\b(dia|data|em)\s+\d", "a stray number must not become a date");
+        text.Should().NotMatchRegex(@"\d+\s*(h|horas?|min|mg|ml|vezes)\b", "a stray number must not become a time, dose or count");
     }
 }
