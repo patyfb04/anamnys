@@ -19,6 +19,10 @@ feature work are appended to the matching section.
   appointments in their slots, and the portal still shows them as the next session.
 - **Mobile check** of the provider-side "Portal do paciente" block and the invitation page at
   390px (the portal session pages were checked).
+- **Record actions from the reference mockups not built** (2026-10-12 redesign kept only working
+  features): document upload, patient dossier, clinical theme progression chart. "Agendar
+  consulta" only opens the calendar; it does not preselect the patient in the new-appointment
+  form.
 
 ## Calendário
 
@@ -148,6 +152,11 @@ Not built yet; planned for after the calendar deliveries.
   meets "Notas clínicas" through the clinical `Sessions` row.
 
 ## Notas clínicas
+
+- **Live session ideas from the reference mockups not built:** timestamped bookmarks during
+  recording ("Mark Clinical Moment"), session consent instrument and audio-destruction record
+  (flow 04, blocked by D-03), billing procedure target (D-04), named-entity redaction (F-27),
+  extra note formats (intake, custom evaluation).
 
 - **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
   `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.

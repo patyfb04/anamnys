@@ -120,7 +120,8 @@ export default function Sidenav() {
 
   return (
     <nav className="hidden md:flex h-screen flex-col py-6 border-r border-outlineVariant bg-surfaceContainerLow fixed left-0 top-0 z-40 w-72">
-      <div className="px-6 mb-8">
+      {/* w-fit + items-center: logo and slogan share one centre line, whichever is wider. */}
+      <div className="px-6 mb-8 flex w-fit flex-col items-center">
         <div className="w-[170px] h-[34px]">
           <img
             src={logo}
@@ -130,7 +131,7 @@ export default function Sidenav() {
             className="w-full h-full object-contain"
           />
         </div>
-        <p className="text-label-md text-onSurfaceVariant mt-1 text-center">
+        <p className="text-label-md text-onSurfaceVariant mt-1 text-center whitespace-nowrap">
           {t("auth.login.subtitle")}
         </p>
       </div>

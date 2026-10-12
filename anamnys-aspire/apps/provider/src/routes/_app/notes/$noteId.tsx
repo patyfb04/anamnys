@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, ScrollText } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
-import type { LiveNoteFormat } from "@anamnys/shared/lib/types";
+import type { LiveNoteFormat, NoteDetail } from "@anamnys/shared/lib/types";
+import Avatar from "@anamnys/shared/ui/Avatar";
+import Badge from "@anamnys/shared/ui/Badge";
+import DetailCard from "@/components/patients/detail/DetailCard";
 import NoteSections from "@/components/notes/NoteSections";
 import RestructureControl from "@/components/notes/RestructureControl";
 
@@ -11,12 +15,11 @@ export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
 });
 
-// Delivery 2 of the live session: raw transcript plus AI-structured sections. The editor is delivery 3
-// (design/specs/2026-10-10-live-session-transcription-design.md).
+// The note produced by a live session: AI sections, raw transcript and regeneration. Editing and
+// signing are delivery 3 (design/specs/2026-10-12-note-structuring-design.md §6).
 function NotePage() {
   const { t } = useTranslation();
   const { noteId } = Route.useParams();
-  const [retrying, setRetrying] = useState(false);
   const query = useQuery({
     queryKey: ["note", noteId],
     queryFn: () => notesApi.getDetail(noteId),
@@ -24,9 +27,12 @@ function NotePage() {
       q.state.data?.status === "Processing" || q.state.data?.structureStatus === "pending" ? 5000 : false,
   });
 
-  if (!query.data) return query.isError ? <p className="p-8 text-center text-body-lg text-error">{t("noteView.notFound")}</p> : null;
+  if (!query.data) {
+    return query.isError ? <p className="p-8 text-body-lg text-error">{t("noteView.notFound")}</p> : null;
+  }
   const note = query.data;
   const hasSections = note.sections.length > 0;
+  const aiDraft = hasSections && note.sections.every((s) => !s.editedAt);
   const canRestructure =
     note.status === "ReadyForReview" &&
     note.structureStatus !== "pending" &&
@@ -34,63 +40,133 @@ function NotePage() {
     !!note.rawTranscript &&
     !note.sections.some((s) => s.editedAt);
 
+  return (
+    <div className="flex flex-col gap-6 p-4 md:p-8">
+      <Link
+        to="/patients/$patientId"
+        params={{ patientId: note.patientId }}
+        className="inline-flex items-center gap-1 self-start text-label-lg text-primary hover:underline"
+      >
+        <ArrowLeft size={16} />
+        {t("noteView.backToPatient")}
+      </Link>
+
+      <header className="flex items-center gap-4 min-w-0">
+        <Avatar name={note.patientName} size={64} />
+        <div className="min-w-0">
+          <h1 className="truncate text-headline-lg text-onSurface">{note.patientName}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-body-md text-onSurfaceVariant">
+            <span>{new Date(note.createdAt).toLocaleString("pt-BR")}</span>
+            <Badge label={t(`liveSession.formats.${note.format}`, { defaultValue: note.format })} tone="primary" />
+            {aiDraft && <Badge label={t("noteView.aiDraft")} tone="lavender" />}
+          </div>
+        </div>
+      </header>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="flex flex-col gap-6 lg:col-span-2">
+          <DetailCard title={t("noteView.note")} icon={<FileText size={20} />}>
+            <NoteBody note={note} onRetried={() => void query.refetch()} />
+            {hasSections && <NoteSections sections={note.sections} />}
+            {note.rawTranscript && <p className="mt-4 text-body-sm text-onSurfaceVariant">{t("noteView.editorSoon")}</p>}
+          </DetailCard>
+          {note.rawTranscript && <TranscriptCard text={note.rawTranscript} defaultOpen={!hasSections} />}
+        </div>
+
+        <div className="flex flex-col gap-6">
+          {canRestructure && (
+            <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The raw transcript can be long (up to ~35 min of speech), so it starts collapsed once the note
+// has sections; with no sections it is the note, so it starts open.
+function TranscriptCard({ text, defaultOpen }: { text: string; defaultOpen: boolean }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <DetailCard
+      title={t("noteView.transcript")}
+      icon={<ScrollText size={20} />}
+      className={open ? undefined : "[&>div]:mb-0"}
+      action={
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="note-transcript"
+          className="inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:bg-surfaceContainerLow"
+        >
+          {open ? t("noteView.hideTranscript") : t("noteView.showTranscript")}
+          <ChevronDown size={16} aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      }
+    >
+      {open && (
+        <p id="note-transcript" className="max-h-96 overflow-y-auto whitespace-pre-wrap text-body-md text-onSurface">
+          {text}
+        </p>
+      )}
+    </DetailCard>
+  );
+}
+
+// Processing, structuring and failure states shown at the top of the note card.
+function NoteBody({ note, onRetried }: { note: NoteDetail; onRetried: () => void }) {
+  const { t } = useTranslation();
+  const [retrying, setRetrying] = useState(false);
+
   const retry = async () => {
     setRetrying(true);
     try {
-      await notesApi.restructure(noteId, note.format as LiveNoteFormat);
-      await query.refetch();
+      await notesApi.restructure(note.id, note.format as LiveNoteFormat);
+      onRetried();
     } catch {
-      // The failure line stays; the provider can try again.
+      // The failure message stays; the provider can try again.
     } finally {
       setRetrying(false);
     }
   };
 
-  return (
-    <div className="mx-auto max-w-3xl p-4 md:p-8">
-      <h1 className="text-headline-sm">{note.patientName}</h1>
-      <p className="mb-6 text-label-md text-onSurfaceVariant">
-        {new Date(note.createdAt).toLocaleString("pt-BR")} · {note.format}
+  if (note.status === "Processing" || note.structureStatus === "pending") {
+    return (
+      <p className="mb-4 flex items-center gap-2 rounded-radii-lg bg-surfaceContainerLow p-4 text-body-md text-onSurfaceVariant">
+        <Loader2 size={18} className="animate-spin text-primary" aria-hidden />
+        {note.status === "Processing" ? t("noteView.processing") : t("noteView.structuring")}
       </p>
-      {note.status === "Processing" && <p className="text-body-lg text-onSurfaceVariant">{t("noteView.processing")}</p>}
-      {note.status === "Failed" && (
-        <p className="text-body-lg text-error">
-          {note.failureReason ? t(`liveSession.failed.${note.failureReason}`) : t("noteView.failed")}
+    );
+  }
+  if (note.status === "Failed") {
+    return (
+      <p className="flex items-center gap-2 rounded-radii-lg bg-errorContainer p-4 text-body-md text-onErrorContainer">
+        <AlertCircle size={18} aria-hidden />
+        {note.failureReason ? t(`liveSession.failed.${note.failureReason}`) : t("noteView.failed")}
+      </p>
+    );
+  }
+  if (note.structureStatus === "failed") {
+    return (
+      <div className="mb-4 flex flex-col items-start gap-3 rounded-radii-lg bg-errorContainer p-4 text-onErrorContainer">
+        <p className="flex items-center gap-2 text-body-md">
+          <AlertCircle size={18} aria-hidden />
+          {t(`noteView.structureFailed.${note.structureFailure ?? "model_error"}`)}
         </p>
-      )}
-      {note.structureStatus === "pending" && <p className="mb-4 text-body-lg text-onSurfaceVariant">{t("noteView.structuring")}</p>}
-      {note.structureStatus === "failed" && (
-        <div className="mb-4 flex flex-col items-start gap-2">
-          <p className="text-body-lg text-error">
-            {note.structureFailure ? t(`noteView.structureFailed.${note.structureFailure}`) : t("noteView.structureFailed.model_error")}
-          </p>
-          {note.structureFailure !== "too_long" && (
-            <button
-              type="button"
-              disabled={retrying}
-              onClick={retry}
-              className="px-4 py-2 rounded-radii-lg bg-primary text-label-lg text-onPrimary disabled:opacity-60"
-            >
-              {t("noteView.retry")}
-            </button>
-          )}
-        </div>
-      )}
-      {hasSections && <NoteSections sections={note.sections} />}
-      {note.rawTranscript &&
-        (hasSections ? (
-          <details className="mt-6">
-            <summary className="cursor-pointer text-title-md">{t("noteView.transcript")}</summary>
-            <p className="mt-2 whitespace-pre-wrap rounded-radii-md bg-surfaceVariant p-4 text-body-md">{note.rawTranscript}</p>
-          </details>
-        ) : (
-          <section>
-            <h2 className="mb-2 text-title-md">{t("noteView.transcript")}</h2>
-            <p className="whitespace-pre-wrap rounded-radii-md bg-surfaceVariant p-4 text-body-md">{note.rawTranscript}</p>
-          </section>
-        ))}
-      {canRestructure && <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />}
-      {note.rawTranscript && <p className="mt-4 text-body-sm text-onSurfaceVariant">{t("noteView.editorSoon")}</p>}
-    </div>
-  );
+        {note.structureFailure !== "too_long" && (
+          <button
+            type="button"
+            disabled={retrying}
+            onClick={retry}
+            className="rounded-radii-lg bg-primary px-4 py-2 text-label-lg text-onPrimary disabled:opacity-60"
+          >
+            {t("noteView.retry")}
+          </button>
+        )}
+      </div>
+    );
+  }
+  return null;
 }

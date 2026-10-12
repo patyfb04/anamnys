@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { RefreshCw } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import type { LiveNoteFormat } from "@anamnys/shared/lib/types";
-import { inputClass } from "@/components/patients/FormField";
+import FormatCards from "@/components/live-session/FormatCards";
 
 const FORMATS: LiveNoteFormat[] = ["DAP", "SOAP", "Biopsychosocial"];
 
@@ -12,6 +13,7 @@ interface Props {
   onRequested: () => void;
 }
 
+// Regenerates the AI sections in a chosen format; only rendered while nothing has been edited.
 export default function RestructureControl({ noteId, format, onRequested }: Props) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<LiveNoteFormat>(
@@ -35,29 +37,17 @@ export default function RestructureControl({ noteId, format, onRequested }: Prop
   };
 
   return (
-    <div className="mt-6 flex flex-col gap-2">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-label-md text-onSurfaceVariant">
-          {t("noteView.format")}
-          <select
-            className={inputClass}
-            value={selected}
-            disabled={busy}
-            onChange={(e) => setSelected(e.target.value as LiveNoteFormat)}
-          >
-            {FORMATS.map((f) => <option key={f} value={f}>{t(`liveSession.formats.${f}`)}</option>)}
-          </select>
-        </label>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={run}
-          className="px-4 py-2 rounded-radii-lg bg-primary text-label-lg text-onPrimary disabled:opacity-60"
-        >
-          {t("noteView.reorganize")}
-        </button>
-      </div>
-      {error && <p className="text-body-sm text-error">{t("noteView.reorganizeFailed")}</p>}
-    </div>
+    <FormatCards value={selected} onChange={setSelected} disabled={busy}>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={run}
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-radii-lg bg-primary px-4 py-3 text-label-lg text-onPrimary disabled:opacity-60"
+      >
+        <RefreshCw size={16} aria-hidden />
+        {t("noteView.reorganize")}
+      </button>
+      {error && <p className="mt-2 text-body-sm text-error">{t("noteView.reorganizeFailed")}</p>}
+    </FormatCards>
   );
 }

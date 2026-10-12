@@ -66,14 +66,14 @@ export default function ProcessingStep({ noteId, onRecordAgain }: { noteId: stri
 
   if (failed) {
     return (
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-start gap-4">
         <p className="text-body-lg text-error">{t(`liveSession.failed.${failed}`)}</p>
         <button type="button" onClick={onRecordAgain} className="px-4 py-2 rounded-radii-lg bg-primary text-label-lg text-onPrimary">{t("liveSession.recordAgain")}</button>
       </div>
     );
   }
   return (
-    <p className="text-center text-body-lg text-onSurfaceVariant">
+    <p className="text-body-lg text-onSurfaceVariant">
       {!noteId ? t("liveSession.sending") : position > 0 ? t("liveSession.queued", { position }) : t("liveSession.transcribing")}
     </p>
   );

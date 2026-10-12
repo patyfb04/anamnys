@@ -1,8 +1,21 @@
-import { useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Archive, ArchiveRestore, ArrowLeft, CalendarClock, FileText, Pencil, Trash2, UserRound } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowLeft,
+  CalendarClock,
+  CalendarDays,
+  CalendarPlus,
+  FileText,
+  Mic,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { patientsApi } from "@anamnys/shared/api/patients";
 import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
@@ -106,32 +119,44 @@ function PatientDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={actionButton} onClick={() => setEditing(true)}>
-            <Pencil size={18} />
-            {t("common.edit")}
-          </button>
-          {archived ? (
-            <button type="button" className={actionButton} onClick={() => archive.mutate(false)} disabled={archive.isPending}>
-              <ArchiveRestore size={18} />
-              {t("patients.detail.unarchive")}
-            </button>
-          ) : (
-            <button type="button" className={actionButton} onClick={() => setConfirm("archive")}>
-              <Archive size={18} />
-              {t("patients.detail.archive")}
-            </button>
-          )}
-          {patient.canDelete && (
-            <button
-              type="button"
-              className={`${actionButton} text-error border-error/40 hover:bg-errorContainer`}
-              onClick={() => setConfirm("delete")}
+        <div className="flex flex-wrap items-center gap-2">
+          {!archived && (
+            <Link
+              to="/live-session"
+              search={{ patientId }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-radii-md text-label-lg text-onPrimary bg-primary hover:opacity-90 transition-opacity"
             >
-              <Trash2 size={18} />
-              {t("patients.detail.delete")}
-            </button>
+              <Mic size={18} />
+              {t("patients.detail.startSession")}
+            </Link>
           )}
+          {!archived && (
+            <Link to="/calendar" className={actionButton}>
+              <CalendarPlus size={18} />
+              {t("patients.detail.schedule")}
+            </Link>
+          )}
+          <MoreActions label={t("patients.detail.moreActions")}>
+            <MenuItem icon={<Pencil size={18} />} label={t("common.edit")} onSelect={() => setEditing(true)} />
+            {archived ? (
+              <MenuItem
+                icon={<ArchiveRestore size={18} />}
+                label={t("patients.detail.unarchive")}
+                onSelect={() => archive.mutate(false)}
+                disabled={archive.isPending}
+              />
+            ) : (
+              <MenuItem icon={<Archive size={18} />} label={t("patients.detail.archive")} onSelect={() => setConfirm("archive")} />
+            )}
+            {patient.canDelete && (
+              <MenuItem
+                icon={<Trash2 size={18} />}
+                label={t("patients.detail.delete")}
+                onSelect={() => setConfirm("delete")}
+                destructive
+              />
+            )}
+          </MoreActions>
         </div>
       </header>
 
@@ -231,20 +256,100 @@ function RecentNotes({ notes }: { notes: NoteSummary[] }) {
   if (notes.length === 0) return <p className="text-body-md text-onSurfaceVariant">{t("patients.detail.noNotes")}</p>;
   return (
     <ul className="flex flex-col gap-2">
-      {notes.map((note) => (
-        <li key={note.id}>
-          <Link
-            to="/notes/$noteId"
-            params={{ noteId: note.id }}
-            className="flex items-center justify-between gap-2 p-2 -mx-2 rounded-radii-md hover:bg-surfaceContainerLow"
+      {notes.map((note) => {
+        const signed = note.status === "Signed" || note.status === "Exported";
+        return (
+          <li
+            key={note.id}
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-radii-lg border p-3 ${
+              signed ? "border-outlineVariant" : "border-transparent bg-surfaceContainerLow"
+            }`}
           >
-            <span className="text-body-md text-onSurface">
-              {note.format} · {formatDate(note.createdAt, i18n.language)}
-            </span>
-            <NoteStatusBadge status={note.status === "Signed" || note.status === "Exported" ? "signed" : "pending"} />
-          </Link>
-        </li>
-      ))}
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-radii-md bg-surfaceContainerHighest text-primary">
+                <CalendarDays size={18} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-label-lg text-onSurface">{note.format}</p>
+                <p className="text-body-sm text-onSurfaceVariant">{formatDate(note.createdAt, i18n.language)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <NoteStatusBadge status={signed ? "signed" : "pending"} />
+              <Link
+                to="/notes/$noteId"
+                params={{ noteId: note.id }}
+                className={`rounded-radii-md px-3 py-1.5 text-label-md ${
+                  signed ? "text-onSurfaceVariant hover:text-primary" : "border border-primary text-primary hover:bg-primaryFixed"
+                }`}
+              >
+                {signed ? t("patients.detail.viewNote") : t("patients.detail.continueNote")}
+              </Link>
+            </div>
+          </li>
+        );
+      })}
     </ul>
+  );
+}
+
+// Secondary record actions (edit, archive, delete) behind a "⋯" button; Escape or a click outside closes it.
+function MoreActions({ label, children }: { label: string; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center justify-center p-2 border border-outlineVariant rounded-radii-md text-onSurface bg-surfaceContainerLowest hover:bg-surfaceContainerLow"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          onClick={() => setOpen(false)}
+          className="absolute right-0 top-full z-50 mt-1 min-w-48 rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest py-1 shadow-lg"
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MenuItem(props: { icon: ReactNode; label: string; onSelect: () => void; disabled?: boolean; destructive?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={props.disabled}
+      onClick={props.onSelect}
+      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-label-lg hover:bg-surfaceContainerLow disabled:opacity-60 ${
+        props.destructive ? "text-error" : "text-onSurface"
+      }`}
+    >
+      {props.icon}
+      {props.label}
+    </button>
   );
 }

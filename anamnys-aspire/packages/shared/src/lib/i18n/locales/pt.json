@@ -23,8 +23,31 @@
   },
   "liveSession": {
     "title": "Sessão ao Vivo",
+    "subtitle": "Dite a evolução da sessão; a transcrição e a nota em seções são geradas no nosso servidor.",
+    "chips": {
+      "memory": "Áudio só em memória",
+      "local": "IA no nosso servidor"
+    },
     "consent": "A transcrição registra o que você dita. Se o paciente estiver audível na gravação, é necessário o consentimento dele.",
     "patient": "Paciente",
+    "changePatient": "Trocar",
+    "age": "{{age}} anos",
+    "recording": "Gravação",
+    "status": {
+      "ready": "Pronto",
+      "recording": "Gravando",
+      "paused": "Pausado",
+      "reconnecting": "Reconectando",
+      "processing": "Processando"
+    },
+    "ofMax": "/ {{max}} máx.",
+    "choosePatientFirst": "Escolha um paciente para começar.",
+    "safeguardsTitle": "Garantias",
+    "safeguards": {
+      "memory": "O áudio fica só em memória e é destruído logo após a transcrição. Nunca vai para o disco.",
+      "local": "Transcrição e organização da nota rodam no nosso servidor, sem enviar dados a terceiros.",
+      "organise": "A IA só organiza o que você ditou: não acrescenta fatos, hipóteses nem conclusões."
+    },
     "appointment": "Consulta de hoje (opcional)",
     "noAppointment": "Sem consulta vinculada",
     "format": "Formato da nota",
@@ -33,7 +56,11 @@
       "SOAP": "SOAP",
       "Biopsychosocial": "Biopsicossocial"
     },
-    "formatHelp": "DAP: Dados, Avaliação e Plano. SOAP: Subjetivo, Objetivo, Avaliação e Plano. Biopsicossocial: aspectos biológicos, psicológicos e sociais, e Plano.",
+    "formatHelp": {
+      "DAP": "Dados, Avaliação e Plano.",
+      "SOAP": "Subjetivo, Objetivo, Avaliação e Plano.",
+      "Biopsychosocial": "Aspectos biológicos, psicológicos e sociais, e Plano."
+    },
     "start": "Iniciar gravação",
     "pause": "Pausar",
     "resume": "Retomar",
@@ -64,6 +91,10 @@
     }
   },
   "noteView": {
+    "note": "Evolução",
+    "backToPatient": "Voltar para o paciente",
+    "showTranscript": "Mostrar",
+    "hideTranscript": "Ocultar",
     "processing": "Esta nota ainda está sendo processada.",
     "failed": "Falha ao processar esta nota.",
     "transcript": "Transcrição",
@@ -546,6 +577,11 @@
       "visits": "Atendimentos",
       "recentNotes": "Notas recentes",
       "noNotes": "Nenhuma nota ainda.",
+      "startSession": "Iniciar sessão",
+      "schedule": "Agendar consulta",
+      "moreActions": "Mais ações",
+      "viewNote": "Ver nota",
+      "continueNote": "Continuar nota",
       "diagnoses": "Diagnósticos",
       "noDiagnoses": "Nenhum diagnóstico registrado.",
       "resolve": "Resolver",
