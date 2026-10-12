@@ -1,4 +1,5 @@
 using Anamnys.Server.Data;
+using Anamnys.Server.NoteStructuring;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,15 @@ public sealed class TranscriptionWorker(
         await foreach (var job in queue.Reader.ReadAllAsync(stoppingToken))
         {
             queue.MarkStarted(job.NoteId);
-            await RunJobAsync(job, scopes, progress, clock, logger, stoppingToken);
+            switch (job)
+            {
+                case TranscriptionJob transcription:
+                    await RunJobAsync(transcription, scopes, progress, clock, logger, stoppingToken);
+                    break;
+                case StructureJob structure:
+                    await RunStructureAsync(structure.NoteId, structure.ProviderId, scopes, progress, clock, logger, stoppingToken);
+                    break;
+            }
         }
     }
 
@@ -23,6 +32,7 @@ public sealed class TranscriptionWorker(
         TimeProvider clock, ILogger logger, CancellationToken stoppingToken)
     {
         var group = progress.Clients.Group(ProgressHub.Group(job.NoteId));
+        var ready = false;
         try
         {
             await group.SendAsync("NoteProgress", job.NoteId, "transcribing", 0, stoppingToken);
@@ -31,6 +41,7 @@ public sealed class TranscriptionWorker(
                 scope.ServiceProvider.GetRequiredService<AnamnysDbContext>(),
                 scope.ServiceProvider.GetRequiredService<ITranscriber>(),
                 job, clock, logger, stoppingToken);
+            ready = outcome == TranscriptionOutcome.Ready;
             await (outcome switch
             {
                 TranscriptionOutcome.Ready => group.SendAsync("NoteReady", job.NoteId, stoppingToken),
@@ -46,6 +57,73 @@ public sealed class TranscriptionWorker(
         finally
         {
             job.Audio.Destroy();
+        }
+
+        // The audio is already destroyed: structuring reads only the stored transcript.
+        if (ready)
+        {
+            await RunStructureAsync(job.NoteId, job.ProviderId, scopes, progress, clock, logger, stoppingToken);
+        }
+    }
+
+    // Never throws: a structuring failure leaves the transcript as the note (spec §5).
+    internal static async Task RunStructureAsync(
+        Guid noteId, Guid providerId, IServiceScopeFactory scopes, IHubContext<ProgressHub> progress,
+        TimeProvider clock, ILogger logger, CancellationToken ct)
+    {
+        var group = progress.Clients.Group(ProgressHub.Group(noteId));
+        try
+        {
+            await group.SendAsync("NoteProgress", noteId, "structuring", 0, ct);
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
+            var outcome = await NoteStructuringJob.ProcessAsync(
+                db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), noteId, providerId, clock, logger, ct);
+            switch (outcome)
+            {
+                case StructuringOutcome.Done or StructuringOutcome.Discarded:
+                    await group.SendAsync("NoteStructured", noteId, ct);
+                    break;
+                case StructuringOutcome.Failed:
+                    var reason = await db.Notes.AsNoTracking()
+                        .Where(n => n.Id == noteId && n.ProviderId == providerId)
+                        .Select(n => n.StructureFailure)
+                        .SingleOrDefaultAsync(ct);
+                    await group.SendAsync("NoteStructureFailed", noteId, reason ?? "model_error", ct);
+                    break;
+            }
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError("Structuring job for note {NoteId} failed: {ExceptionType}", noteId, e.GetType().Name);
+            await StructureFailBestEffortAsync(noteId, providerId, scopes, group, clock, logger, ct);
+        }
+    }
+
+    // Only a note still pending is marked failed.
+    private static async Task StructureFailBestEffortAsync(
+        Guid noteId, Guid providerId, IServiceScopeFactory scopes, IClientProxy group,
+        TimeProvider clock, ILogger logger, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
+            var now = clock.GetUtcNow();
+            var updated = await db.Notes
+                .Where(n => n.Id == noteId && n.ProviderId == providerId && n.StructureStatus == "pending")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.StructureStatus, "failed")
+                    .SetProperty(n => n.StructureFailure, "model_error")
+                    .SetProperty(n => n.UpdatedAt, now), ct);
+            if (updated > 0)
+            {
+                await group.SendAsync("NoteStructureFailed", noteId, "model_error", ct);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Could not mark structuring of note {NoteId} as failed: {ExceptionType}", noteId, e.GetType().Name);
         }
     }
 
@@ -64,6 +142,7 @@ public sealed class TranscriptionWorker(
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(n => n.Status, "Failed")
                     .SetProperty(n => n.FailureReason, "transcription_error")
+                    .SetProperty(n => n.StructureStatus, (string?)null)
                     .SetProperty(n => n.UpdatedAt, now), ct);
             if (updated > 0)
             {

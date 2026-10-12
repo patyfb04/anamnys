@@ -46,6 +46,7 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
         note.Status.Should().Be("Failed");
         note.FailureReason.Should().Be("no_speech");
+        note.StructureStatus.Should().BeNull();
         note.RawTranscript.Should().BeNull();
         bytes.Should().OnlyContain(b => b == 0);
     }
@@ -64,6 +65,7 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
         note.Status.Should().Be("Failed");
         note.FailureReason.Should().Be("transcription_error");
+        note.StructureStatus.Should().BeNull();
         bytes.Should().OnlyContain(b => b == 0);
     }
 
@@ -94,9 +96,10 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10)));
         buffers.Append(id, seed.ProviderId, 0, [1, 0, 2, 0]);
         await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct);
-        queue.Reader.TryRead(out var queued).Should().BeTrue();
+        queue.Reader.TryRead(out var read).Should().BeTrue();
+        var queued = read.Should().BeOfType<TranscriptionJob>().Subject;
         var bytes = new byte[] { 1, 0, 2, 0 };
-        queued!.Audio.Destroy();
+        queued.Audio.Destroy();
         return (db, queued with { Audio = new PcmAudio(bytes, bytes.Length) }, bytes);
     }
 }

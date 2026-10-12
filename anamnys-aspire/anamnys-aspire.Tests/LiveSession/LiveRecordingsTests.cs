@@ -73,6 +73,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         note.Status.Should().Be("Processing");
         note.InputMode.Should().Be("VoiceLive");
         note.Format.Should().Be("SOAP");
+        note.StructureStatus.Should().Be("pending");
         note.RecordingId.Should().Be(recordingId);
         var session = await db.Sessions.AsNoTracking().SingleAsync(s => s.Id == note.SessionId, Ct);
         session.Attendance.Should().Be("attended");
@@ -162,6 +163,27 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == noteId, Ct);
         note.Status.Should().Be("Failed");
         note.FailureReason.Should().Be("server_restart");
+    }
+
+    [Fact]
+    public async Task FailOrphans_PendingStructure_BecomesFailedServerRestart()
+    {
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
+        var noteId = (await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct)).NoteId;
+        await db.Notes.Where(n => n.Id == noteId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.Status, "ReadyForReview")
+                .SetProperty(n => n.RawTranscript, "x"), Ct);
+
+        await LiveRecordings.FailOrphansAsync(db, Now.AddMinutes(1), Ct);
+
+        var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == noteId, Ct);
+        note.Status.Should().Be("ReadyForReview");
+        note.StructureStatus.Should().Be("failed");
+        note.StructureFailure.Should().Be("server_restart");
     }
 
     [Fact]

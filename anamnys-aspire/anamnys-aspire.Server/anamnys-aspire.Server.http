@@ -74,3 +74,11 @@ Content-Type: application/json
 GET {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000
 
 ###
+### Restructure note (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Re-runs the AI structuring of a ReadyForReview note; format is DAP, SOAP or Biopsychosocial. 202 accepted, 409 if signed/pending/edited.
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/restructure
+Content-Type: application/json
+
+{ "format": "SOAP" }
+
+###

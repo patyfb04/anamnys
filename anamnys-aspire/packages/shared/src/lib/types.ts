@@ -349,6 +349,17 @@ export type LiveLanguage = "pt";
 export type NoteDetailStatus = "Draft" | "Processing" | "ReadyForReview" | "Signed" | "Exported" | "Failed";
 export type NoteFailureReason = "no_speech" | "transcription_error" | "server_restart";
 
+export type StructureStatus = "pending" | "done" | "failed";
+export type StructureFailure = "model_error" | "too_long" | "server_restart";
+
+export interface NoteSectionView {
+  key: string;
+  content: string;
+  position: number;
+  generatedAt: string;
+  editedAt: string | null;
+}
+
 export interface NoteDetail {
   id: string;
   patientId: string;
@@ -359,6 +370,9 @@ export interface NoteDetail {
   rawTranscript: string | null;
   failureReason: NoteFailureReason | null;
   createdAt: string;
+  structureStatus: StructureStatus | null;
+  structureFailure: StructureFailure | null;
+  sections: NoteSectionView[];
 }
 
 export interface NoteSnapshot {

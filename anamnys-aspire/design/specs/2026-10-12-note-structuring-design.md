@@ -1,7 +1,7 @@
 # Live Session — Note Structuring
 
 **Date:** 2026-10-12
-**Status:** Approved
+**Status:** Implemented
 **Scope:** Delivery 2 of "Sessão ao Vivo". After Whisper transcribes a dictation, an in-process
 LLM (Qwen2.5 7B Instruct, CPU) reorganises the transcript into the sections of the chosen note
 format (DAP, SOAP or Biopsychosocial) and stores them in `NoteSections`. The note page shows the
@@ -34,12 +34,12 @@ splitting transcripts longer than the model context.
 | Model | Qwen2.5 7B Instruct, GGUF Q4_K_M (~4.7 GB), Apache 2.0. Configurable; downloaded on first use and verified against a pinned SHA-256, like the Whisper model. |
 | Runtime | LLamaSharp with the CPU backend, one `LLamaWeights` per process. |
 | What the AI may do | Put each dictated passage in the right section, remove speech fillers and repetitions, fix punctuation, use record tone. Never add facts, hypotheses, conclusions or anything not dictated. A section with nothing dictated is `""`. |
-| Output | JSON constrained by a GBNF grammar generated from the format's section keys, so the output always has exactly those keys. Low temperature (0–0.2), capped output tokens. |
+| Output | JSON constrained by a GBNF grammar generated from the format's section keys, so the output always has exactly those keys. Low temperature (0–0.2); output limited to what the context leaves after the prompt. |
 | Where it runs | Same queue and same single worker as transcription (Whisper and the LLM compete for the same CPU). Two job kinds: `TranscribeAndStructure` and `Structure`. |
 | When the transcript shows | As soon as it exists: the note becomes `ReadyForReview` after transcription; structuring continues with `StructureStatus = pending`. |
 | Structuring failure | Never fails the note. `StructureStatus = failed`; the transcript stays; the page offers "Tentar de novo". |
 | Regenerate | Allowed only while the note is `ReadyForReview`, no section has `EditedAt`, the transcript is not empty and nothing is pending. Replaces all sections. |
-| Context limit | `NoteStructuring:ContextSize` (default 8192 tokens, ~50 min of speech). A transcript that does not fit fails with reason `too_long`. |
+| Context limit | `NoteStructuring:ContextSize` (16384 tokens by default, roughly 25–35 min of dictation, since the output is about as long as the transcript). A transcript whose prompt plus expected output does not fit, or whose output is cut at the limit, fails with reason `too_long`. |
 | Language | Portuguese only (prompt and UI). |
 
 ## 3. Data
@@ -71,24 +71,29 @@ Section titles are UI strings (`pt.json`), not stored.
 
 New folder `anamnys-aspire.Server/NoteStructuring/`.
 
-- **`NoteStructuringOptions`** (`NoteStructuring:` section): `Model`, `ModelUrl`, `ModelSha256`,
-  `ModelDirectory` (default under local application data, like Whisper), `ContextSize`,
-  `Threads` (default processor count − 1), `MaxOutputTokens`.
+- **`NoteStructuringOptions`** (`NoteStructuring:` section): `ModelDirectory` (default under local
+  application data, like Whisper), `ModelBaseUrl`, `Files` (`[{ Name, Sha256 }]`, the GGUF parts in
+  split order), `ContextSize` (16384), `Threads` (0 = processor count − 1), `MaxOutputTokens`
+  (0 = no cap beyond what the context leaves after the prompt), `Temperature` (0.1).
 - **`LlmModelProvider`**: download to a temp file, verify SHA-256, atomic rename, load one
   `LLamaWeights`; fail closed without a 64-character hash. The model source (single-file GGUF vs the
   official split files) is chosen in the plan, with its hash cross-checked.
-- **`INoteStructurer`**: `Task<StructuredSections> StructureAsync(string transcript, string format,
+- **`INoteStructurer`**: `Task<IReadOnlyList<StructuredSection>> StructureAsync(string transcript, string format,
   CancellationToken ct)`. `LlamaNoteStructurer` builds the Portuguese system prompt with the rules
   of §2, the GBNF grammar for the format, runs stateless inference, parses the JSON and returns the
-  sections in format order. Throws `TranscriptTooLongException` when the prompt does not fit.
+  sections in format order. Throws `TranscriptTooLongException` when the prompt plus the expected
+  output (1.2 × transcript tokens + 64 per section) exceeds `ContextSize`, or when generation is cut
+  at its token budget (`ContextSize` − prompt tokens) before the JSON is complete.
 - **`NoteGrammar`**: builds the GBNF for a format's keys (pure function, unit-tested).
-- **Queue:** `TranscriptionJob` becomes `NoteJob(NoteId, ProviderId, Kind, Language, Audio?)`;
-  `Kind` is `TranscribeAndStructure` or `Structure`. Audio is null for `Structure`.
+- **Queue:** `TranscriptionJob` stays and joins an abstract `NoteJob(NoteId, ProviderId)` base with a
+  second subtype `StructureJob(NoteId, ProviderId)` (structuring only, no audio). The queue,
+  `Enqueue` and `Reader` carry `NoteJob`. Subtypes (instead of one record with `Kind` and nullable
+  `Audio`) keep `TranscriptionJob.Audio` non-nullable.
 - **Worker:** `TranscribeAndStructure` runs the existing transcription; on success it sets
   `ReadyForReview` and sends `NoteReady`, then (if not `no_speech`) runs structuring. `Structure`
   runs structuring only. Progress stages: `transcribing`, `structuring`. New events:
   `NoteStructured(noteId)` and `NoteStructureFailed(noteId, reason)`.
-- **`NoteStructuring.ProcessAsync`** (testable, like `NoteTranscription`): reads the transcript and
+- **`NoteStructuringJob.ProcessAsync`** (testable, like `NoteTranscription`): reads the transcript and
   format, calls the structurer, and in one transaction deletes the note's sections and inserts the
   new ones with `GeneratedAt = now`, sets `StructureStatus = done` — but only if no section of the
   note has `EditedAt` (re-checked in the transaction); otherwise discards the result and restores
@@ -132,7 +137,7 @@ New folder `anamnys-aspire.Server/NoteStructuring/`.
 ## 8. Testing
 
 - `NoteFormats` keys and order; `NoteGrammar` output per format.
-- `NoteStructuring.ProcessAsync` with a fake `INoteStructurer` (real Postgres): success writes
+- `NoteStructuringJob.ProcessAsync` with a fake `INoteStructurer` (real Postgres): success writes
   sections in order and `done`; failure → `failed` and transcript kept; edited section → result
   discarded; replacing previous sections on restructure.
 - Worker: `TranscribeAndStructure` sends `NoteReady` before structuring; `Structure` jobs.

@@ -1,6 +1,6 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-07
+**Started:** 2026-10-03 · **Last updated:** 2026-10-12
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
@@ -155,11 +155,29 @@ Not built yet; planned for after the calendar deliveries.
   recording creates the `Sessions` row (`attended`, `ActualStart`/`ActualEnd`) and links it
   to the appointment (`Appointments.SessionId`) and the note (`Notes.SessionId`). Notes
   from other inputs, and `Transcripts.SessionId`, are not wired.
-- **Structuring is not built** (live session delivery 2): the note keeps the raw transcript.
-- **Note editor and signing are not built** (delivery 3).
+- **Note structuring (live session delivery 2) is done**: the transcript is organised into the
+  sections of the chosen format (DAP, SOAP, Biopsychosocial) and can be regenerated. Still missing:
+  - Structuring of typed text (flow 03); only live-session transcripts are structured.
+  - Transcripts longer than the model context (`too_long`) are not chunked; they fail.
+  - Section editing, signing and audit (delivery 3). The edit endpoint must lock the note row, or
+    refuse edits while structuring is pending: the edited-section check in `NoteStructuringJob`
+    takes no lock.
+- **Hub progress sends are not best-effort**: a hub error while sending the "structuring"
+  progress marks structuring as failed.
+- **One structuring holds the single worker for minutes of CPU**: transcriptions of other
+  notes (any provider) wait in the queue behind it. Consider a separate worker, or a priority
+  for transcription.
+- **The first structuring after each server start re-hashes the 4.7 GB model** (tens of
+  seconds) before loading it, so that note waits longer.
+- **Restructure changes `Notes.Format` before the outcome is known.** Today a failed
+  restructure leaves no sections; after delivery 3 (section editing), a failed or discarded
+  restructure would show the old sections under the new format. Set the format when the new
+  sections are written instead.
+- **Production memory sizing**: Whisper medium + Qwen2.5 7B Q4_K_M (~6 GB) + recording buffers
+  must fit in the container; size it, or limit concurrency.
 - **No `AccessLogs`/`AuditEntries` writes for notes yet.**
 - **Production model directory must be a persistent volume**, or each deploy re-downloads
-  the Whisper model.
+  the Whisper model and the two Qwen GGUF files (~4.7 GB).
 - **Production `LiveSession:ModelSha256` must be set before deploy.** The `medium` SHA-256
   in `appsettings.json` came from the Hugging Face LFS pointer and was not computed
   locally; verify it before production.

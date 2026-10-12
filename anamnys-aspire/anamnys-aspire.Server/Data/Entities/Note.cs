@@ -15,6 +15,8 @@ public class Note
     public string? RawTranscript { get; set; }
     public Guid? RecordingId { get; set; }
     public string? FailureReason { get; set; }
+    public string? StructureStatus { get; set; }
+    public string? StructureFailure { get; set; }
     public DateTimeOffset? SignedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

@@ -72,6 +72,7 @@ public static class LiveRecordings
                     Status = "Processing",
                     InputMode = "VoiceLive",
                     Format = meta.Format,
+                    StructureStatus = "pending",
                     RecordingId = recordingId,
                     CreatedAt = now,
                     UpdatedAt = now,
@@ -89,13 +90,23 @@ public static class LiveRecordings
         }
     }
 
-    public static Task<int> FailOrphansAsync(AnamnysDbContext db, DateTimeOffset now, CancellationToken ct) =>
-        db.Notes
+    public static async Task<int> FailOrphansAsync(AnamnysDbContext db, DateTimeOffset now, CancellationToken ct)
+    {
+        var transcriptions = await db.Notes
             .Where(n => n.Status == "Processing" && n.RecordingId != null)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(n => n.Status, "Failed")
                 .SetProperty(n => n.FailureReason, "server_restart")
+                .SetProperty(n => n.StructureStatus, (string?)null)
                 .SetProperty(n => n.UpdatedAt, now), ct);
+        var structurings = await db.Notes
+            .Where(n => n.StructureStatus == "pending")
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.StructureStatus, "failed")
+                .SetProperty(n => n.StructureFailure, "server_restart")
+                .SetProperty(n => n.UpdatedAt, now), ct);
+        return transcriptions + structurings;
+    }
 
     private static async Task<Session> SessionForAsync(AnamnysDbContext db, RecordingMeta meta, DateTimeOffset now, CancellationToken ct)
     {

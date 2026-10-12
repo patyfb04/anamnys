@@ -5,6 +5,7 @@ using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Email;
 using Anamnys.Server.LiveSession;
+using Anamnys.Server.NoteStructuring;
 using Anamnys.Server.Notes;
 using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
@@ -22,6 +23,7 @@ builder.AddRedisClientBuilder("cache")
 builder.AddNpgsqlDbContext<AnamnysDbContext>("anamnysdb");
 builder.Services.AddHostedService<DatabaseInitializer>();
 builder.AddLiveSession();
+builder.AddNoteStructuring();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();

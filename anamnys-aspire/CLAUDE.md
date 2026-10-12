@@ -72,6 +72,7 @@ planned package without adding the reference first.
   committed realm JSON baked into a custom image at `keycloak/Dockerfile`. See
   `design/specs/2026-09-05-keycloak-implementation-design.md`.
 - Whisper.net (CPU runtime) for in-process transcription; models downloaded on first use to `LiveSession:ModelDirectory`, verified by `LiveSession:ModelSha256`
+- LLamaSharp (CPU backend) running Qwen2.5 7B Instruct in-process for note structuring; model files downloaded on first use to NoteStructuring:ModelDirectory, verified by the SHA-256 list in NoteStructuring:Files
 - ASP.NET Core SignalR hubs `/hubs/transcription` and `/hubs/progress`
 
 ### Backend — planned

@@ -1,5 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
+using Anamnys.Server.NoteStructuring;
+using Anamnys.Tests.NoteStructuring;
 using Anamnys.Tests.Patients;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
@@ -37,7 +39,7 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
             .BuildServiceProvider();
 
         // Act
-        await TranscriptionWorker.RunJobAsync(job!, services.GetRequiredService<IServiceScopeFactory>(),
+        await TranscriptionWorker.RunJobAsync((TranscriptionJob)job!, services.GetRequiredService<IServiceScopeFactory>(),
             new FakeHubContext(proxy), new FakeTimeProvider(Now.AddMinutes(1)), NullLogger.Instance, Ct);
 
         // Assert
@@ -47,7 +49,101 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
         proxy.Methods.Should().Contain("NoteFailed");
     }
 
-    private sealed class RecordingProxy(string failOn) : IClientProxy
+    [Fact]
+    public async Task RunJob_Success_SendsReadyThenStructures()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var structurer = new FakeNoteStructurer((_, _) =>
+        [
+            new("data", "Paciente relata insônia."), new("assessment", ""), new("plan", ""),
+        ]);
+        var (job, proxy, services) = await FinalizeAsync(seed, patient, _ => "Paciente relata insônia.", structurer);
+
+        // Act
+        await TranscriptionWorker.RunJobAsync(job, services.GetRequiredService<IServiceScopeFactory>(),
+            new FakeHubContext(proxy), new FakeTimeProvider(Now.AddMinutes(1)), NullLogger.Instance, Ct);
+
+        // Assert
+        await using var db = seed.CreateDbContext();
+        var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
+        note.Status.Should().Be("ReadyForReview");
+        note.StructureStatus.Should().Be("done");
+        (await db.NoteSections.CountAsync(s => s.NoteId == job.NoteId, Ct)).Should().Be(3);
+        proxy.Methods.Should().ContainInOrder("NoteReady", "NoteProgress", "NoteStructured");
+    }
+
+    [Fact]
+    public async Task RunJob_NoSpeech_DoesNotStructure()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var structurer = new FakeNoteStructurer((_, _) => []);
+        var (job, proxy, services) = await FinalizeAsync(seed, patient, _ => "", structurer);
+
+        // Act
+        await TranscriptionWorker.RunJobAsync(job, services.GetRequiredService<IServiceScopeFactory>(),
+            new FakeHubContext(proxy), new FakeTimeProvider(Now.AddMinutes(1)), NullLogger.Instance, Ct);
+
+        // Assert
+        await using var db = seed.CreateDbContext();
+        var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
+        note.StructureStatus.Should().BeNull();
+        structurer.Calls.Should().Be(0);
+        proxy.Methods.Should().Contain("NoteFailed").And.NotContain("NoteStructured");
+    }
+
+    [Fact]
+    public async Task RunStructure_StructurerFails_SendsStructureFailed()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var structurer = new FakeNoteStructurer((_, _) => throw new InvalidOperationException("boom"));
+        var (job, proxy, services) = await FinalizeAsync(seed, patient, _ => "texto", structurer);
+        await using (var db = seed.CreateDbContext())
+        {
+            await db.Notes.Where(n => n.Id == job.NoteId).ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.Status, "ReadyForReview")
+                .SetProperty(n => n.RawTranscript, "texto")
+                .SetProperty(n => n.StructureStatus, "pending"), Ct);
+        }
+
+        // Act
+        await TranscriptionWorker.RunStructureAsync(job.NoteId, seed.ProviderId, services.GetRequiredService<IServiceScopeFactory>(),
+            new FakeHubContext(proxy), new FakeTimeProvider(Now.AddMinutes(1)), NullLogger.Instance, Ct);
+
+        // Assert
+        await using var verify = seed.CreateDbContext();
+        var note = await verify.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
+        note.StructureStatus.Should().Be("failed");
+        note.StructureFailure.Should().Be("model_error");
+        note.Status.Should().Be("ReadyForReview");
+        proxy.Methods.Should().Contain("NoteStructureFailed");
+    }
+
+    private static async Task<(TranscriptionJob Job, RecordingProxy Proxy, ServiceProvider Services)> FinalizeAsync(
+        PatientSearchSeed seed, Guid patient, Func<float[], string> transcribe, INoteStructurer structurer)
+    {
+        await using var db = seed.CreateDbContext();
+        var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
+        var queue = new TranscriptionQueue();
+        var id = Guid.NewGuid();
+        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10)));
+        buffers.Append(id, seed.ProviderId, 0, [1, 0, 2, 0]);
+        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct);
+        queue.Reader.TryRead(out var job).Should().BeTrue();
+        var services = new ServiceCollection()
+            .AddScoped(_ => seed.CreateDbContext())
+            .AddSingleton<ITranscriber>(new FakeTranscriber(transcribe))
+            .AddSingleton(structurer)
+            .BuildServiceProvider();
+        return ((TranscriptionJob)job!, new RecordingProxy(), services);
+    }
+
+    private sealed class RecordingProxy(string? failOn = null) : IClientProxy
     {
         public List<string> Methods { get; } = [];
 

@@ -1,0 +1,94 @@
+using Anamnys.Server.Data;
+using Anamnys.Server.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace Anamnys.Server.NoteStructuring;
+
+public enum StructuringOutcome { Done, Failed, Discarded, Skipped }
+
+// Turns a note's transcript into sections (design/specs/2026-10-12-note-structuring-design.md §5).
+// Never changes Notes.Status: a structuring failure leaves the transcript as the note.
+public static class NoteStructuringJob
+{
+    public static async Task<StructuringOutcome> ProcessAsync(
+        AnamnysDbContext db, INoteStructurer structurer, Guid noteId, Guid providerId,
+        TimeProvider clock, ILogger logger, CancellationToken ct)
+    {
+        var note = await db.Notes.AsNoTracking()
+            .Where(n => n.Id == noteId && n.ProviderId == providerId)
+            .Select(n => new { n.RawTranscript, n.Format, n.StructureStatus })
+            .SingleOrDefaultAsync(ct);
+        if (note is null || note.StructureStatus != "pending")
+        {
+            return StructuringOutcome.Skipped;
+        }
+        if (string.IsNullOrWhiteSpace(note.RawTranscript) || !NoteFormats.IsStructurable(note.Format))
+        {
+            await SetStatusAsync(db, noteId, providerId, null, null, clock.GetUtcNow(), ct);
+            return StructuringOutcome.Skipped;
+        }
+
+        IReadOnlyList<StructuredSection> sections;
+        try
+        {
+            sections = await structurer.StructureAsync(note.RawTranscript, note.Format, ct);
+        }
+        catch (TranscriptTooLongException)
+        {
+            await SetStatusAsync(db, noteId, providerId, "failed", "too_long", clock.GetUtcNow(), ct);
+            return StructuringOutcome.Failed;
+        }
+        catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            logger.LogError("Structuring failed for note {NoteId}: {ExceptionType}", noteId, e.GetType().Name);
+            await SetStatusAsync(db, noteId, providerId, "failed", "model_error", clock.GetUtcNow(), ct);
+            return StructuringOutcome.Failed;
+        }
+
+        if (!sections.Select(s => s.Key).SequenceEqual(NoteFormats.KeysFor(note.Format)))
+        {
+            logger.LogError("Structuring for note {NoteId} returned unexpected sections.", noteId);
+            await SetStatusAsync(db, noteId, providerId, "failed", "model_error", clock.GetUtcNow(), ct);
+            return StructuringOutcome.Failed;
+        }
+
+        var now = clock.GetUtcNow();
+        var outcome = StructuringOutcome.Done;
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            outcome = StructuringOutcome.Done;
+            db.ChangeTracker.Clear();
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            if (await db.NoteSections.AnyAsync(s => s.NoteId == noteId && s.EditedAt != null, ct))
+            {
+                outcome = StructuringOutcome.Discarded;
+            }
+            else
+            {
+                await db.NoteSections.Where(s => s.NoteId == noteId).ExecuteDeleteAsync(ct);
+                db.NoteSections.AddRange(sections.Select((s, i) => new NoteSection
+                {
+                    Id = Guid.NewGuid(),
+                    NoteId = noteId,
+                    Key = s.Key,
+                    Content = s.Content.Trim(),
+                    Position = i,
+                    GeneratedAt = now,
+                }));
+                await db.SaveChangesAsync(ct);
+            }
+            await SetStatusAsync(db, noteId, providerId, "done", null, now, ct);
+            await tx.CommitAsync(ct);
+        });
+        return outcome;
+    }
+
+    private static Task<int> SetStatusAsync(AnamnysDbContext db, Guid noteId, Guid providerId, string? status, string? failure, DateTimeOffset now, CancellationToken ct) =>
+        db.Notes
+            .Where(n => n.Id == noteId && n.ProviderId == providerId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.StructureStatus, status)
+                .SetProperty(n => n.StructureFailure, failure)
+                .SetProperty(n => n.UpdatedAt, now), ct);
+}

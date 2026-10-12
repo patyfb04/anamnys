@@ -451,11 +451,15 @@ CREATE TABLE "Notes" (
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"FailureReason" text,
 	"RecordingId" uuid,
+	"StructureStatus" text,
+	"StructureFailure" text,
 	CONSTRAINT "Notes_Format_ck" CHECK (("Format" = ANY (ARRAY['DAP'::text, 'SOAP'::text, 'Biopsychosocial'::text, 'PtFunctional'::text]))),
 	CONSTRAINT "Notes_InputMode_ck" CHECK (("InputMode" = ANY (ARRAY['VoiceBatch'::text, 'VoiceLive'::text, 'VoiceAppointment'::text, 'Text'::text]))),
 	CONSTRAINT "Notes_Signed_ck" CHECK ((("Status" = ANY (ARRAY['Signed'::text, 'Exported'::text])) = ("SignedAt" IS NOT NULL))),
 	CONSTRAINT "Notes_Status_ck" CHECK (("Status" = ANY (ARRAY['Draft'::text, 'Processing'::text, 'ReadyForReview'::text, 'Signed'::text, 'Exported'::text, 'Failed'::text]))),
-	CONSTRAINT "Notes_FailureReason_ck" CHECK ((("Status" = 'Failed'::text) = ("FailureReason" IS NOT NULL)) AND (("FailureReason" IS NULL) OR ("FailureReason" = ANY (ARRAY['no_speech'::text, 'transcription_error'::text, 'server_restart'::text]))))
+	CONSTRAINT "Notes_FailureReason_ck" CHECK ((("Status" = 'Failed'::text) = ("FailureReason" IS NOT NULL)) AND (("FailureReason" IS NULL) OR ("FailureReason" = ANY (ARRAY['no_speech'::text, 'transcription_error'::text, 'server_restart'::text])))),
+	CONSTRAINT "Notes_StructureStatus_ck" CHECK ((("StructureStatus" IS NULL) OR ("StructureStatus" = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text])))),
+	CONSTRAINT "Notes_StructureFailure_ck" CHECK (((("StructureStatus" IS NOT DISTINCT FROM 'failed'::text) = ("StructureFailure" IS NOT NULL)) AND (("StructureFailure" IS NULL) OR ("StructureFailure" = ANY (ARRAY['model_error'::text, 'too_long'::text, 'server_restart'::text])))))
 );
 CREATE TABLE "NoteSections" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

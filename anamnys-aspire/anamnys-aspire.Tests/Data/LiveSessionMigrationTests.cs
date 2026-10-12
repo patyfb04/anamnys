@@ -21,6 +21,7 @@ public class LiveSessionMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-10-07-appointment-notifications.sql");
             await RunMigrationAsync(db, "2026-10-10-live-session.sql");
             await RunMigrationAsync(db, "2026-10-10-live-session.sql");
+            await RunMigrationAsync(db, "2026-10-12-note-structuring.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

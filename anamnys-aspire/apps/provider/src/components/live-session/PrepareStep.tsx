@@ -44,6 +44,7 @@ export default function PrepareStep({ onStart }: { onStart: (o: StartOptions) =>
           {FORMATS.map((f) => <option key={f} value={f}>{t(`liveSession.formats.${f}`)}</option>)}
         </select>
       </label>
+      <p className="text-body-sm text-onSurfaceVariant">{t("liveSession.formatHelp")}</p>
       <button
         type="button"
         disabled={!patient}

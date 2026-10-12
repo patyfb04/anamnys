@@ -1,5 +1,5 @@
 import api from "@anamnys/shared/api/client";
-import type { Note, NoteDetail } from "@anamnys/shared/lib/types";
+import type { LiveNoteFormat, Note, NoteDetail } from "@anamnys/shared/lib/types";
 
 export const notesApi = {
   list: async (patientId: string): Promise<Note[]> => {
@@ -9,6 +9,9 @@ export const notesApi = {
   getDetail: async (noteId: string): Promise<NoteDetail> => {
     const { data } = await api.get<NoteDetail>(`/phi/providers/me/notes/${noteId}`);
     return data;
+  },
+  restructure: async (noteId: string, format: LiveNoteFormat): Promise<void> => {
+    await api.post(`/phi/providers/me/notes/${noteId}/restructure`, { format });
   },
   get: async (noteId: string): Promise<Note> => {
     const { data } = await api.get<Note>(`/notes/${noteId}`);

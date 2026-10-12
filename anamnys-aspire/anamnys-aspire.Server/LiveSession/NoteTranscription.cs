@@ -52,5 +52,6 @@ public static class NoteTranscription
             .ExecuteUpdateAsync(s => s
                 .SetProperty(n => n.Status, "Failed")
                 .SetProperty(n => n.FailureReason, reason)
+                .SetProperty(n => n.StructureStatus, (string?)null)
                 .SetProperty(n => n.UpdatedAt, now), ct);
 }
