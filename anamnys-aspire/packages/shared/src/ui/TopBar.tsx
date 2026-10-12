@@ -1,6 +1,6 @@
 import { Settings, HelpCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import logo from "../assets/logo1.png";
+import logo from "../assets/anamnys.png";
 import { useTranslation } from "react-i18next";
 import AccountMenu from "./AccountMenu";
 import NotificationBell from "./NotificationBell";

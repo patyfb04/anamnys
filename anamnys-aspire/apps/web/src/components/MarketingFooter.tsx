@@ -19,7 +19,7 @@ export default function MarketingFooter() {
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="w-30 h-6.5 shrink-0">
           <img
-            src="/logo1.png"
+            src="/anamnys.png"
             alt="Anamnys"
             width={120}
             height={26}

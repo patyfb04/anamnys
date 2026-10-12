@@ -46,43 +46,43 @@ Every task's requirements implicitly include this section.
 
 **New C# — `anamnys-aspire.Server/`**
 
-| File | Responsibility |
-|---|---|
-| `Auth/AuthSchemes.cs` | Scheme name constants and the comma-joined scheme lists endpoint groups use |
-| `Auth/Realms.cs` | Realm name constants |
-| `Auth/AuthenticationSetup.cs` | Registers 3 cookie + 3 OIDC + 3 bearer schemes |
-| `Auth/RedisTicketStore.cs` | `ITicketStore` over Redis, data-protected at rest |
-| `Auth/TokenRefresher.cs` | `OnValidatePrincipal` refresh-token exchange |
-| `Auth/FirstLoginProvisioner.cs` | Resolves or creates the local row from the token subject |
-| `Auth/CurrentUser.cs` | Reads the resolved local id off the principal; the only sanctioned source of a provider id |
-| `Auth/AuthEndpoints.cs` | `/auth/{realm}/login`, `/logout`, `/api/auth/me` |
-| `Data/AnamnysDbContext.cs` | EF Core context |
-| `Data/Entities/*.cs` | `Provider`, `PatientAccount`, `Staff`, `BreakGlassGrant`, `AccessLog` |
-| `Data/DatabaseInitializer.cs` | Applies the schema script on first run |
+| File                            | Responsibility                                                                             |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| `Auth/AuthSchemes.cs`           | Scheme name constants and the comma-joined scheme lists endpoint groups use                |
+| `Auth/Realms.cs`                | Realm name constants                                                                       |
+| `Auth/AuthenticationSetup.cs`   | Registers 3 cookie + 3 OIDC + 3 bearer schemes                                             |
+| `Auth/RedisTicketStore.cs`      | `ITicketStore` over Redis, data-protected at rest                                          |
+| `Auth/TokenRefresher.cs`        | `OnValidatePrincipal` refresh-token exchange                                               |
+| `Auth/FirstLoginProvisioner.cs` | Resolves or creates the local row from the token subject                                   |
+| `Auth/CurrentUser.cs`           | Reads the resolved local id off the principal; the only sanctioned source of a provider id |
+| `Auth/AuthEndpoints.cs`         | `/auth/{realm}/login`, `/logout`, `/api/auth/me`                                           |
+| `Data/AnamnysDbContext.cs`      | EF Core context                                                                            |
+| `Data/Entities/*.cs`            | `Provider`, `PatientAccount`, `Staff`, `BreakGlassGrant`, `AccessLog`                      |
+| `Data/DatabaseInitializer.cs`   | Applies the schema script on first run                                                     |
 
 **New infrastructure — `anamnys-aspire/keycloak/`**
 
-| File | Responsibility |
-|---|---|
-| `Dockerfile` | Keycloak 26.6 + realm JSON + theme jar |
+| File                            | Responsibility                                                |
+| ------------------------------- | ------------------------------------------------------------- |
+| `Dockerfile`                    | Keycloak 26.6 + realm JSON + theme jar                        |
 | `realms/anamnys-providers.json` | Providers realm, clients, roles, scopes, password policy, MFA |
-| `realms/anamnys-patients.json` | Patients realm |
-| `realms/anamnys-owners.json` | Owners realm |
-| `theme/.gitignore` | Ignores the built jar |
+| `realms/anamnys-patients.json`  | Patients realm                                                |
+| `realms/anamnys-owners.json`    | Owners realm                                                  |
+| `theme/.gitignore`              | Ignores the built jar                                         |
 
 **New frontend**
 
-| Path | Responsibility |
-|---|---|
+| Path                   | Responsibility                |
+| ---------------------- | ----------------------------- |
 | `apps/keycloak-theme/` | Keycloakify React login theme |
-| `apps/admin/` | Owners SPA, `base: '/admin/'` |
+| `apps/admin/`          | Owners SPA, `base: '/admin/'` |
 
 **New tests — `anamnys-aspire.Tests/`**
 
-| File | Responsibility |
-|---|---|
-| `Auth/SchemeIsolationTests.cs` | The 401-not-403 tests |
-| `Auth/FirstLoginProvisionerTests.cs` | Provisioning idempotency |
+| File                                     | Responsibility                        |
+| ---------------------------------------- | ------------------------------------- |
+| `Auth/SchemeIsolationTests.cs`           | The 401-not-403 tests                 |
+| `Auth/FirstLoginProvisionerTests.cs`     | Provisioning idempotency              |
 | `Data/BreakGlassGrantConstraintTests.cs` | Two-person rule at the database level |
 
 **Modified**
@@ -105,6 +105,7 @@ Every task's requirements implicitly include this section.
 The spec (§6, "Known risk") makes this a spike because Keycloakify 11.16.0 declares no `peerDependencies` and dev-builds against Vite 5 / React 18 / TypeScript 4.9, while this repo is on Vite 8 / React 19 / TypeScript 6.0.3. Nothing else in the plan is safe to build on until this is answered. **This task's deliverable is an answer plus a scaffold, not a finished theme.**
 
 **Files:**
+
 - Create: `apps/keycloak-theme/package.json`
 - Create: `apps/keycloak-theme/vite.config.ts`
 - Create: `apps/keycloak-theme/tsconfig.json`
@@ -115,6 +116,7 @@ The spec (§6, "Known risk") makes this a spike because Keycloakify 11.16.0 decl
 - Modify: `anamnys-aspire/package.json` (workspaces already glob `apps/*`; no edit expected — verify)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `apps/keycloak-theme` builds a jar at `keycloak/theme/keycloak-theme-anamnys.jar` via `npm run build-keycloak-theme -w @anamnys/keycloak-theme`. Task 9 fills in the pages; Task 2's Dockerfile copies the jar.
 
@@ -169,10 +171,10 @@ Create `apps/keycloak-theme/package.json`:
 Create `apps/keycloak-theme/vite.config.ts`:
 
 ```ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-import { keycloakify } from 'keycloakify/vite-plugin';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { keycloakify } from "keycloakify/vite-plugin";
 
 export default defineConfig({
   plugins: [
@@ -181,7 +183,7 @@ export default defineConfig({
     keycloakify({
       // Emitted next to the Keycloak Dockerfile so the image build can COPY it
       // without reaching across the workspace.
-      keycloakifyBuildDirPath: '../../keycloak/theme',
+      keycloakifyBuildDirPath: "../../keycloak/theme",
     }),
   ],
 });
@@ -228,12 +230,12 @@ Create `apps/keycloak-theme/index.html`:
 Create `apps/keycloak-theme/src/main.tsx` — a deliberately minimal page whose only job is to prove the build pipeline works:
 
 ```tsx
-import { createRoot } from 'react-dom/client';
-import { StrictMode } from 'react';
-import { KcPage } from './KcPage';
+import { createRoot } from "react-dom/client";
+import { StrictMode } from "react";
+import { KcPage } from "./KcPage";
 
-const rootEl = document.getElementById('root');
-if (!rootEl) throw new Error('Missing #root');
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Missing #root");
 
 createRoot(rootEl).render(
   <StrictMode>
@@ -316,12 +318,14 @@ In the commit body, record which branch of Step 3 was taken and the exact versio
 ## Task 2: Postgres and Keycloak resources with the providers realm
 
 **Files:**
+
 - Modify: `anamnys-aspire.AppHost/anamnys-aspire.AppHost.csproj`
 - Modify: `anamnys-aspire.AppHost/AppHost.cs`
 - Create: `keycloak/Dockerfile`
 - Create: `keycloak/realms/anamnys-providers.json`
 
 **Interfaces:**
+
 - Consumes: the theme jar path from Task 1.
 - Produces: an Aspire resource named `keycloak` reachable at a fixed `http://localhost:8080`, serving realm `anamnys-providers` with clients `anamnys-web` and `anamnys-api`. Databases `keycloakdb` and `anamnysdb` on a resource named `postgres`. Tasks 6 and 7 consume the `keycloak` service name via `AddKeycloakOpenIdConnect`.
 
@@ -381,27 +385,42 @@ Create `keycloak/realms/anamnys-providers.json`:
     {
       "name": "notes:read",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     },
     {
       "name": "notes:write",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     },
     {
       "name": "notes:sign",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     },
     {
       "name": "billing:read",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     },
     {
       "name": "patients:read",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     }
   ],
   "clients": [
@@ -424,14 +443,23 @@ Create `keycloak/realms/anamnys-providers.json`:
       "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:5000/signin-oidc-provider", "https://localhost:5001/signin-oidc-provider"],
+      "redirectUris": [
+        "http://localhost:5000/signin-oidc-provider",
+        "https://localhost:5001/signin-oidc-provider"
+      ],
       "webOrigins": ["+"],
       "attributes": {
         "pkce.code.challenge.method": "S256",
         "post.logout.redirect.uris": "http://localhost:5000/provider/##https://localhost:5001/provider/"
       },
       "defaultClientScopes": ["openid", "profile", "email", "roles"],
-      "optionalClientScopes": ["notes:read", "notes:write", "notes:sign", "billing:read", "patients:read"],
+      "optionalClientScopes": [
+        "notes:read",
+        "notes:write",
+        "notes:sign",
+        "billing:read",
+        "patients:read"
+      ],
       "protocolMappers": [
         {
           "name": "audience-anamnys-api",
@@ -557,12 +585,14 @@ git commit -m "feat: add postgres and keycloak resources with providers realm"
 ## Task 3: Patients and owners realms, and parameterised redirect URIs
 
 **Files:**
+
 - Create: `keycloak/realms/anamnys-patients.json`
 - Create: `keycloak/realms/anamnys-owners.json`
 - Modify: `keycloak/realms/anamnys-providers.json`
 - Modify: `anamnys-aspire.AppHost/AppHost.cs`
 
 **Interfaces:**
+
 - Consumes: the `keycloak` resource from Task 2.
 - Produces: realms `anamnys-patients` (client `anamnys-patient-web`) and `anamnys-owners` (client `anamnys-admin-web`). Task 6 registers schemes against all three.
 
@@ -606,7 +636,10 @@ Create `keycloak/realms/anamnys-patients.json`. Same shape as the providers real
     {
       "name": "notes:read",
       "protocol": "openid-connect",
-      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" }
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
     }
   ],
   "clients": [
@@ -695,14 +728,70 @@ Create `keycloak/realms/anamnys-owners.json`. The scope vocabulary is disjoint f
     ]
   },
   "clientScopes": [
-    { "name": "tenancy:read", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "tenancy:write", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "billing:read", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "billing:write", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "plans:write", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "audit:read", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "ops:read", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
-    { "name": "breakglass:request", "protocol": "openid-connect", "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } }
+    {
+      "name": "tenancy:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "tenancy:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "billing:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "billing:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "plans:write",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "audit:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "ops:read",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    },
+    {
+      "name": "breakglass:request",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      }
+    }
   ],
   "clients": [
     {
@@ -731,7 +820,16 @@ Create `keycloak/realms/anamnys-owners.json`. The scope vocabulary is disjoint f
         "post.logout.redirect.uris": "${ANAMNYS_APP_ORIGIN}/admin/"
       },
       "defaultClientScopes": ["openid", "profile", "email", "roles"],
-      "optionalClientScopes": ["tenancy:read", "tenancy:write", "billing:read", "billing:write", "plans:write", "audit:read", "ops:read", "breakglass:request"],
+      "optionalClientScopes": [
+        "tenancy:read",
+        "tenancy:write",
+        "billing:read",
+        "billing:write",
+        "plans:write",
+        "audit:read",
+        "ops:read",
+        "breakglass:request"
+      ],
       "protocolMappers": [
         {
           "name": "audience-anamnys-api",
@@ -866,10 +964,12 @@ git commit -m "feat: add patients and owners realms"
 ## Task 4: Schema amendments
 
 **Files:**
+
 - Modify: `../.gitignore`
 - Modify: `anamnys-db-script.sql`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `Providers.ExternalSubject uuid NOT NULL UNIQUE`, `PatientAccounts.ExternalSubject uuid UNIQUE NULL`, tables `Staff` and `BreakGlassGrants`. Task 5's entities map exactly these columns.
 
@@ -917,7 +1017,7 @@ and add, immediately after the `"Email"` line:
 	"ExternalSubject" uuid NOT NULL CONSTRAINT "Providers_ExternalSubject_unique" UNIQUE,
 ```
 
-Non-nullable because a `Providers` row is created *by* a successful first login — there is no window in which one exists without a Keycloak subject.
+Non-nullable because a `Providers` row is created _by_ a successful first login — there is no window in which one exists without a Keycloak subject.
 
 - [ ] **Step 4: Drop the `RecoveryCodes` table**
 
@@ -1061,6 +1161,7 @@ the Staff and BreakGlassGrants tables for the owners realm."
 ## Task 5: EF Core context, entities, and the test project
 
 **Files:**
+
 - Modify: `anamnys-aspire.Server/anamnys-aspire.Server.csproj`
 - Create: `anamnys-aspire.Server/Data/Entities/Provider.cs`
 - Create: `anamnys-aspire.Server/Data/Entities/PatientAccount.cs`
@@ -1075,6 +1176,7 @@ the Staff and BreakGlassGrants tables for the owners realm."
 - Modify: `anamnys-aspire.sln`
 
 **Interfaces:**
+
 - Consumes: the schema from Task 4, `anamnysdb` from Task 2.
 - Produces:
   - `Anamnys.Server.Data.AnamnysDbContext` with `DbSet<Provider> Providers`, `DbSet<PatientAccount> PatientAccounts`, `DbSet<Staff> Staff`, `DbSet<BreakGlassGrant> BreakGlassGrants`, `DbSet<AccessLog> AccessLogs`.
@@ -1432,6 +1534,7 @@ git commit -m "feat: add EF Core context, auth entities and schema bootstrap"
 ## Task 6: Register the nine authentication schemes
 
 **Files:**
+
 - Modify: `anamnys-aspire.Server/anamnys-aspire.Server.csproj`
 - Create: `anamnys-aspire.Server/Auth/AuthSchemes.cs`
 - Create: `anamnys-aspire.Server/Auth/Realms.cs`
@@ -1441,6 +1544,7 @@ git commit -m "feat: add EF Core context, auth entities and schema bootstrap"
 - Modify: `anamnys-aspire.Server/Program.cs`
 
 **Interfaces:**
+
 - Consumes: `keycloak` resource (Task 2/3), Redis `cache` (existing).
 - Produces:
   - `Anamnys.Server.Auth.AuthSchemes` with `ProviderCookie`, `PatientCookie`, `OwnerCookie`, `ProviderOidc`, `PatientOidc`, `OwnerOidc`, `ProviderBearer`, `PatientBearer`, `OwnerBearer`, and the joined lists `ProviderSchemes`, `PatientSchemes`, `PhiSchemes`, `AdminSchemes`.
@@ -1871,6 +1975,7 @@ git commit -m "feat: register cookie, OIDC and bearer schemes per realm"
 ## Task 7: Login, logout, provisioning, and `/api/auth/me`
 
 **Files:**
+
 - Create: `anamnys-aspire.Server/Auth/FirstLoginProvisioner.cs`
 - Create: `anamnys-aspire.Server/Auth/CurrentUser.cs`
 - Create: `anamnys-aspire.Server/Auth/AuthEndpoints.cs`
@@ -1880,6 +1985,7 @@ git commit -m "feat: register cookie, OIDC and bearer schemes per realm"
 - Modify: `anamnys-aspire.Server/anamnys-aspire.Server.http`
 
 **Interfaces:**
+
 - Consumes: `AnamnysDbContext` (Task 5), `AuthSchemes`/`Realms` (Task 6).
 - Produces:
   - `FirstLoginProvisioner.ProvisionAsync(ClaimsPrincipal principal, string realm, CancellationToken ct) → Task<Guid>` returning the local row id.
@@ -2286,6 +2392,7 @@ Create a test provider in Keycloak: open `http://localhost:8080`, sign in with t
 Then visit `http://localhost:5000/auth/provider/login` in a browser.
 
 Expected:
+
 1. Redirect to Keycloak's login page (still the stock theme at this point — Task 9 replaces it).
 2. After signing in, redirect back to `/provider/`.
 3. `document.cookie` in the browser console shows **nothing** — the cookie is `HttpOnly`.
@@ -2340,10 +2447,12 @@ git commit -m "feat: add login, logout, first-login provisioning and /api/auth/m
 This is the task that proves the design's central claim. Everything before it is plumbing.
 
 **Files:**
+
 - Modify: `anamnys-aspire.Server/Program.cs`
 - Create: `anamnys-aspire.Tests/Auth/SchemeIsolationTests.cs`
 
 **Interfaces:**
+
 - Consumes: `AuthSchemes` (Task 6), the endpoints from Task 7.
 - Produces: route groups `/api/phi` (PHI schemes only) and `/api/admin` (owner schemes only), each with a probe endpoint the tests use.
 
@@ -2475,28 +2584,28 @@ internal static class KeycloakTestTokens
 Add the two service-account clients to the realm JSON. In `keycloak/realms/anamnys-providers.json`, append to `clients`:
 
 ```json
+{
+  "clientId": "anamnys-test-provider",
+  "name": "Integration test service account (development only)",
+  "enabled": true,
+  "publicClient": false,
+  "secret": "test-only-not-a-secret",
+  "standardFlowEnabled": false,
+  "directAccessGrantsEnabled": false,
+  "serviceAccountsEnabled": true,
+  "protocolMappers": [
     {
-      "clientId": "anamnys-test-provider",
-      "name": "Integration test service account (development only)",
-      "enabled": true,
-      "publicClient": false,
-      "secret": "test-only-not-a-secret",
-      "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": true,
-      "protocolMappers": [
-        {
-          "name": "audience-anamnys-api",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-audience-mapper",
-          "config": {
-            "included.client.audience": "anamnys-api",
-            "access.token.claim": "true",
-            "id.token.claim": "false"
-          }
-        }
-      ]
+      "name": "audience-anamnys-api",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.client.audience": "anamnys-api",
+        "access.token.claim": "true",
+        "id.token.claim": "false"
+      }
     }
+  ]
+}
 ```
 
 and the equivalent in `keycloak/realms/anamnys-owners.json` with `"clientId": "anamnys-test-owner"`.
@@ -2585,6 +2694,7 @@ git commit -m "feat: scope endpoint groups by realm scheme, with isolation tests
 ## Task 9: The React login theme
 
 **Files:**
+
 - Modify: `apps/keycloak-theme/src/KcPage.tsx`
 - Create: `apps/keycloak-theme/src/login/Template.tsx`
 - Create: `apps/keycloak-theme/src/login/pages/Login.tsx`
@@ -2595,6 +2705,7 @@ git commit -m "feat: scope endpoint groups by realm scheme, with isolation tests
 - Modify: `apps/keycloak-theme/src/main.tsx`
 
 **Interfaces:**
+
 - Consumes: `@anamnys/shared/ui/Button`, `@anamnys/shared/ui/TextField` (existing).
 - Produces: a jar at `keycloak/theme/keycloak-theme-anamnys.jar` rendering the Anamnys design for `login.ftl`, `login-otp.ftl`, and `login-reset-password.ftl`.
 
@@ -2626,24 +2737,24 @@ type Branding = {
 };
 
 const BRANDING: Record<string, Branding> = {
-  'anamnys-providers': {
-    logo: '/logo1.png',
-    accent: 'var(--color-primary)',
-    productName: 'Anamnys',
+  "anamnys-providers": {
+    logo: "/anamnys.png",
+    accent: "var(--color-primary)",
+    productName: "Anamnys",
   },
-  'anamnys-patients': {
-    logo: '/logo1.png',
-    accent: 'var(--color-primary)',
-    productName: 'Anamnys',
+  "anamnys-patients": {
+    logo: "/anamnys.png",
+    accent: "var(--color-primary)",
+    productName: "Anamnys",
   },
-  'anamnys-owners': {
-    logo: '/logo1.png',
-    accent: 'var(--color-onSurfaceVariant)',
-    productName: 'Anamnys Internal',
+  "anamnys-owners": {
+    logo: "/anamnys.png",
+    accent: "var(--color-onSurfaceVariant)",
+    productName: "Anamnys Internal",
   },
 };
 
-const FALLBACK: Branding = BRANDING['anamnys-providers'];
+const FALLBACK: Branding = BRANDING["anamnys-providers"];
 
 export function brandingFor(realmName: string): Branding {
   return BRANDING[realmName] ?? FALLBACK;
@@ -2655,10 +2766,10 @@ export function brandingFor(realmName: string): Branding {
 Create `apps/keycloak-theme/src/login/Template.tsx`, porting the layout from `apps/provider/src/routes/_auth.tsx`:
 
 ```tsx
-import type { ReactNode } from 'react';
-import { ShieldCheck } from 'lucide-react';
-import { brandingFor } from './branding';
-import type { KcContext } from '../kc.gen';
+import type { ReactNode } from "react";
+import { ShieldCheck } from "lucide-react";
+import { brandingFor } from "./branding";
+import type { KcContext } from "../kc.gen";
 
 type Props = {
   kcContext: KcContext;
@@ -2687,15 +2798,23 @@ export function Template({ kcContext, headline, subhead, children }: Props) {
       <div className="flex-1 flex items-start justify-center p-4 pt-10 md:pt-14 pb-8">
         <div className="w-full max-w-5xl flex flex-col md:flex-row md:items-start gap-8">
           <div className="hidden md:flex md:flex-[5] flex-col">
-            <h1 className="text-headline-lg text-[30px] text-onSurface mb-2.5">{headline}</h1>
-            <p className="text-body-lg text-onSurfaceVariant mb-6 max-w-[360px]">{subhead}</p>
+            <h1 className="text-headline-lg text-[30px] text-onSurface mb-2.5">
+              {headline}
+            </h1>
+            <p className="text-body-lg text-onSurfaceVariant mb-6 max-w-[360px]">
+              {subhead}
+            </p>
             <div className="rounded-radii-lg overflow-hidden bg-surfaceContainerHigh shadow-xl relative flex-1 min-h-[240px]">
-              <img src="/sign-up.jpg" alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <img
+                src="/sign-up.jpg"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
               <div className="absolute inset-x-0 bottom-0 h-[55%] bg-primary/30" />
               <div className="absolute left-4 right-4 bottom-4 flex items-center gap-2 bg-white/85 border border-white/50 rounded-radii-md px-3 py-2.5">
                 <ShieldCheck size={16} className="text-primary" />
                 <span className="text-label-md text-onSurface normal-case">
-                  {kcContext.msg('loginTitleHtml', branding.productName)}
+                  {kcContext.msg("loginTitleHtml", branding.productName)}
                 </span>
               </div>
             </div>
@@ -2718,31 +2837,31 @@ export function Template({ kcContext, headline, subhead, children }: Props) {
 Create `apps/keycloak-theme/src/login/pages/Login.tsx`. This is a **native form post to Keycloak's `url.loginAction`**, not a controlled React form calling an API. Keycloak owns the credential exchange; the page only collects input.
 
 ```tsx
-import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
-import Button from '@anamnys/shared/ui/Button';
-import TextField from '@anamnys/shared/ui/TextField';
-import { Template } from '../Template';
-import type { KcContext } from '../../kc.gen';
+import { useState } from "react";
+import { Mail, Lock } from "lucide-react";
+import Button from "@anamnys/shared/ui/Button";
+import TextField from "@anamnys/shared/ui/TextField";
+import { Template } from "../Template";
+import type { KcContext } from "../../kc.gen";
 
-type Props = { kcContext: Extract<KcContext, { pageId: 'login.ftl' }> };
+type Props = { kcContext: Extract<KcContext, { pageId: "login.ftl" }> };
 
 export default function Login({ kcContext }: Props) {
   const { url, realm, login, messagesPerField } = kcContext;
   const [submitting, setSubmitting] = useState(false);
 
-  const usernameError = messagesPerField.existsError('username', 'password')
-    ? messagesPerField.getFirstError('username', 'password')
+  const usernameError = messagesPerField.existsError("username", "password")
+    ? messagesPerField.getFirstError("username", "password")
     : null;
 
   return (
     <Template
       kcContext={kcContext}
-      headline={kcContext.msg('loginAccountTitle')}
-      subhead={kcContext.msg('doLogIn')}
+      headline={kcContext.msg("loginAccountTitle")}
+      subhead={kcContext.msg("doLogIn")}
     >
       <h2 className="text-headline-md text-[24px] text-onSurface mb-1">
-        {kcContext.msg('loginAccountTitle')}
+        {kcContext.msg("loginAccountTitle")}
       </h2>
 
       {usernameError && (
@@ -2751,20 +2870,24 @@ export default function Login({ kcContext }: Props) {
         </div>
       )}
 
-      <form action={url.loginAction} method="post" onSubmit={() => setSubmitting(true)}>
+      <form
+        action={url.loginAction}
+        method="post"
+        onSubmit={() => setSubmitting(true)}
+      >
         <TextField
           name="username"
-          label={kcContext.msg('email')}
+          label={kcContext.msg("email")}
           icon={Mail}
           type="email"
           autoCapitalize="none"
           autoComplete="username"
-          defaultValue={login.username ?? ''}
+          defaultValue={login.username ?? ""}
           containerClassName="mb-3.5"
         />
         <TextField
           name="password"
-          label={kcContext.msg('password')}
+          label={kcContext.msg("password")}
           icon={Lock}
           secureToggle
           autoComplete="current-password"
@@ -2773,7 +2896,7 @@ export default function Login({ kcContext }: Props) {
 
         <Button
           type="submit"
-          title={kcContext.msg('doLogIn')}
+          title={kcContext.msg("doLogIn")}
           loading={submitting}
           rounded="md"
           className="mt-1"
@@ -2781,8 +2904,11 @@ export default function Login({ kcContext }: Props) {
       </form>
 
       {realm.resetPasswordAllowed && (
-        <a href={url.loginResetCredentialsUrl} className="block text-center mt-4.5 text-label-lg text-primary">
-          {kcContext.msg('doForgotPassword')}
+        <a
+          href={url.loginResetCredentialsUrl}
+          className="block text-center mt-4.5 text-label-lg text-primary"
+        >
+          {kcContext.msg("doForgotPassword")}
         </a>
       )}
     </Template>
@@ -2797,28 +2923,30 @@ export default function Login({ kcContext }: Props) {
 Create `apps/keycloak-theme/src/login/pages/LoginOtp.tsx`:
 
 ```tsx
-import { useState } from 'react';
-import { KeyRound } from 'lucide-react';
-import Button from '@anamnys/shared/ui/Button';
-import TextField from '@anamnys/shared/ui/TextField';
-import { Template } from '../Template';
-import type { KcContext } from '../../kc.gen';
+import { useState } from "react";
+import { KeyRound } from "lucide-react";
+import Button from "@anamnys/shared/ui/Button";
+import TextField from "@anamnys/shared/ui/TextField";
+import { Template } from "../Template";
+import type { KcContext } from "../../kc.gen";
 
-type Props = { kcContext: Extract<KcContext, { pageId: 'login-otp.ftl' }> };
+type Props = { kcContext: Extract<KcContext, { pageId: "login-otp.ftl" }> };
 
 export default function LoginOtp({ kcContext }: Props) {
   const { url, messagesPerField } = kcContext;
   const [submitting, setSubmitting] = useState(false);
-  const error = messagesPerField.existsError('totp') ? messagesPerField.get('totp') : null;
+  const error = messagesPerField.existsError("totp")
+    ? messagesPerField.get("totp")
+    : null;
 
   return (
     <Template
       kcContext={kcContext}
-      headline={kcContext.msg('doLogIn')}
-      subhead={kcContext.msg('loginOtpOneTime')}
+      headline={kcContext.msg("doLogIn")}
+      subhead={kcContext.msg("loginOtpOneTime")}
     >
       <h2 className="text-headline-md text-[24px] text-onSurface mb-1">
-        {kcContext.msg('loginOtpOneTime')}
+        {kcContext.msg("loginOtpOneTime")}
       </h2>
 
       {error && (
@@ -2827,17 +2955,27 @@ export default function LoginOtp({ kcContext }: Props) {
         </div>
       )}
 
-      <form action={url.loginAction} method="post" onSubmit={() => setSubmitting(true)}>
+      <form
+        action={url.loginAction}
+        method="post"
+        onSubmit={() => setSubmitting(true)}
+      >
         <TextField
           name="otp"
-          label={kcContext.msg('loginOtpOneTime')}
+          label={kcContext.msg("loginOtpOneTime")}
           icon={KeyRound}
           autoCapitalize="none"
           autoComplete="one-time-code"
           inputMode="numeric"
           containerClassName="mb-3.5"
         />
-        <Button type="submit" title={kcContext.msg('doLogIn')} loading={submitting} rounded="md" className="mt-1" />
+        <Button
+          type="submit"
+          title={kcContext.msg("doLogIn")}
+          loading={submitting}
+          rounded="md"
+          className="mt-1"
+        />
       </form>
     </Template>
   );
@@ -2847,30 +2985,36 @@ export default function LoginOtp({ kcContext }: Props) {
 Create `apps/keycloak-theme/src/login/pages/LoginResetPassword.tsx`:
 
 ```tsx
-import { useState } from 'react';
-import { Mail } from 'lucide-react';
-import Button from '@anamnys/shared/ui/Button';
-import TextField from '@anamnys/shared/ui/TextField';
-import { Template } from '../Template';
-import type { KcContext } from '../../kc.gen';
+import { useState } from "react";
+import { Mail } from "lucide-react";
+import Button from "@anamnys/shared/ui/Button";
+import TextField from "@anamnys/shared/ui/TextField";
+import { Template } from "../Template";
+import type { KcContext } from "../../kc.gen";
 
-type Props = { kcContext: Extract<KcContext, { pageId: 'login-reset-password.ftl' }> };
+type Props = {
+  kcContext: Extract<KcContext, { pageId: "login-reset-password.ftl" }>;
+};
 
 export default function LoginResetPassword({ kcContext }: Props) {
   const { url, messagesPerField } = kcContext;
   const [submitting, setSubmitting] = useState(false);
-  const error = messagesPerField.existsError('username') ? messagesPerField.get('username') : null;
+  const error = messagesPerField.existsError("username")
+    ? messagesPerField.get("username")
+    : null;
 
   return (
     <Template
       kcContext={kcContext}
-      headline={kcContext.msg('emailForgotTitle')}
-      subhead={kcContext.msg('emailInstruction')}
+      headline={kcContext.msg("emailForgotTitle")}
+      subhead={kcContext.msg("emailInstruction")}
     >
       <h2 className="text-headline-md text-[24px] text-onSurface mb-1">
-        {kcContext.msg('emailForgotTitle')}
+        {kcContext.msg("emailForgotTitle")}
       </h2>
-      <p className="text-body-md text-onSurfaceVariant mb-5">{kcContext.msg('emailInstruction')}</p>
+      <p className="text-body-md text-onSurfaceVariant mb-5">
+        {kcContext.msg("emailInstruction")}
+      </p>
 
       {error && (
         <div className="bg-errorContainer rounded-[10px] p-2.5 mb-4">
@@ -2878,21 +3022,34 @@ export default function LoginResetPassword({ kcContext }: Props) {
         </div>
       )}
 
-      <form action={url.loginAction} method="post" onSubmit={() => setSubmitting(true)}>
+      <form
+        action={url.loginAction}
+        method="post"
+        onSubmit={() => setSubmitting(true)}
+      >
         <TextField
           name="username"
-          label={kcContext.msg('email')}
+          label={kcContext.msg("email")}
           icon={Mail}
           type="email"
           autoCapitalize="none"
           autoComplete="username"
           containerClassName="mb-3.5"
         />
-        <Button type="submit" title={kcContext.msg('doSubmit')} loading={submitting} rounded="md" className="mt-1" />
+        <Button
+          type="submit"
+          title={kcContext.msg("doSubmit")}
+          loading={submitting}
+          rounded="md"
+          className="mt-1"
+        />
       </form>
 
-      <a href={url.loginUrl} className="block text-center mt-4.5 text-label-lg text-primary">
-        {kcContext.msg('backToLogin')}
+      <a
+        href={url.loginUrl}
+        className="block text-center mt-4.5 text-label-lg text-primary"
+      >
+        {kcContext.msg("backToLogin")}
       </a>
     </Template>
   );
@@ -2904,25 +3061,27 @@ export default function LoginResetPassword({ kcContext }: Props) {
 Replace `apps/keycloak-theme/src/KcPage.tsx`:
 
 ```tsx
-import { Suspense, lazy } from 'react';
-import type { KcContext } from './kc.gen';
-import './index.css';
+import { Suspense, lazy } from "react";
+import type { KcContext } from "./kc.gen";
+import "./index.css";
 
-const Login = lazy(() => import('./login/pages/Login'));
-const LoginOtp = lazy(() => import('./login/pages/LoginOtp'));
-const LoginResetPassword = lazy(() => import('./login/pages/LoginResetPassword'));
-const DefaultPage = lazy(() => import('keycloakify/login/DefaultPage'));
+const Login = lazy(() => import("./login/pages/Login"));
+const LoginOtp = lazy(() => import("./login/pages/LoginOtp"));
+const LoginResetPassword = lazy(
+  () => import("./login/pages/LoginResetPassword"),
+);
+const DefaultPage = lazy(() => import("keycloakify/login/DefaultPage"));
 
 export function KcPage({ kcContext }: { kcContext: KcContext }) {
   return (
     <Suspense>
       {(() => {
         switch (kcContext.pageId) {
-          case 'login.ftl':
+          case "login.ftl":
             return <Login kcContext={kcContext} />;
-          case 'login-otp.ftl':
+          case "login-otp.ftl":
             return <LoginOtp kcContext={kcContext} />;
-          case 'login-reset-password.ftl':
+          case "login-reset-password.ftl":
             return <LoginResetPassword kcContext={kcContext} />;
           default:
             return <DefaultPage kcContext={kcContext} />;
@@ -2936,15 +3095,15 @@ export function KcPage({ kcContext }: { kcContext: KcContext }) {
 Update `apps/keycloak-theme/src/main.tsx` to pass the context Keycloakify injects:
 
 ```tsx
-import { createRoot } from 'react-dom/client';
-import { StrictMode } from 'react';
-import { KcPage } from './KcPage';
-import { getKcContextMock } from './login/KcPageStory';
+import { createRoot } from "react-dom/client";
+import { StrictMode } from "react";
+import { KcPage } from "./KcPage";
+import { getKcContextMock } from "./login/KcPageStory";
 
-const kcContext = window.kcContext ?? getKcContextMock({ pageId: 'login.ftl' });
+const kcContext = window.kcContext ?? getKcContextMock({ pageId: "login.ftl" });
 
-const rootEl = document.getElementById('root');
-if (!rootEl) throw new Error('Missing #root');
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Missing #root");
 
 createRoot(rootEl).render(
   <StrictMode>
@@ -2990,6 +3149,7 @@ git commit -m "feat: build the Anamnys login theme with keycloakify"
 ## Task 10: Cut the provider SPA over to redirect-based auth
 
 **Files:**
+
 - Delete: `apps/provider/src/routes/_auth/login.tsx`
 - Delete: `apps/provider/src/routes/_auth/register.tsx`
 - Delete: `apps/provider/src/routes/_auth.tsx`
@@ -3000,6 +3160,7 @@ git commit -m "feat: build the Anamnys login theme with keycloakify"
 - Modify: `apps/provider/src/routeTree.gen.ts` (regenerated, must stay committed)
 
 **Interfaces:**
+
 - Consumes: `/auth/provider/login`, `/auth/provider/logout`, `/api/auth/me` (Task 7).
 - Produces: `useAuthStore` with `{ user, isLoading, error, loadUser, login, logout, clearError }`. `AuthUser` becomes `{ id, email, name, realm, roles }`.
 
@@ -3047,7 +3208,9 @@ export const authApi = {
 Note the `logout` path: the axios instance has `baseURL: "/api"`, but `/auth/provider/logout` is **not** under `/api`. Fix by using an absolute path that bypasses the base URL:
 
 ```ts
-    await api.post(`/auth/${realm}/logout`, undefined, { baseURL: "/" }).catch(() => undefined);
+await api
+  .post(`/auth/${realm}/logout`, undefined, { baseURL: "/" })
+  .catch(() => undefined);
 ```
 
 - [ ] **Step 3: Rewrite the auth store**
@@ -3084,7 +3247,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   // A full-page navigation, not a fetch. The BFF answers with a 302 to Keycloak
   // and the whole document has to follow it.
   login: (realm, returnUrl) => {
-    const query = returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : "";
+    const query = returnUrl
+      ? `?returnUrl=${encodeURIComponent(returnUrl)}`
+      : "";
     window.location.assign(`/auth/${realm}/login${query}`);
   },
 
@@ -3197,11 +3362,13 @@ git commit -m "refactor: move provider login to the keycloak-hosted theme"
 ## Task 11: Scaffold the admin SPA
 
 **Files:**
+
 - Create: `apps/admin/` (package.json, vite.config.ts, tsconfig*.json, eslint.config.js, index.html, admin.esproj, src/main.tsx, src/index.css, src/routes/__root.tsx, src/routes/index.tsx, src/routes/_app.tsx)
 - Modify: `anamnys-aspire.AppHost/AppHost.cs`
 - Modify: `anamnys-aspire.sln`
 
 **Interfaces:**
+
 - Consumes: `useAuthStore` (Task 10), `/auth/owner/login` (Task 7).
 - Produces: an Aspire resource named `admin` published to `wwwroot/admin`.
 
@@ -3319,7 +3486,9 @@ Expected: one row with `Role = 'support'`.
 Confirm the owner cannot reach PHI, in the browser console on `/admin/`:
 
 ```js
-fetch('/api/phi/probe', { credentials: 'include' }).then(r => console.log(r.status));
+fetch("/api/phi/probe", { credentials: "include" }).then((r) =>
+  console.log(r.status),
+);
 ```
 
 Expected: `401`. If it logs `403`, stop — the design is broken; see Task 8 Step 6.
@@ -3337,10 +3506,12 @@ git commit -m "feat: scaffold the admin SPA on the owners realm"
 ## Task 12: Documentation and final verification
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 - Modify: `../.gitignore`
 
 **Interfaces:**
+
 - Consumes: everything.
 - Produces: nothing consumed by later tasks.
 
@@ -3356,7 +3527,7 @@ Append to the `## Gotchas` section:
 - **Realm import only runs when the realm does not exist.** `keycloak` uses
   `WithDataVolume()`, so editing `keycloak/realms/*.json` changes nothing until the
   volume is deleted: `aspire stop`, `docker volume rm <keycloak volume>`, `aspire start`.
-  The failure is silent — Keycloak starts healthy with the *old* realm.
+  The failure is silent — Keycloak starts healthy with the _old_ realm.
 - **The Keycloak image needs the theme jar to exist before it builds.**
   `npm run build-keycloak-theme -w @anamnys/keycloak-theme` writes
   `keycloak/theme/keycloak-theme-anamnys.jar`, which the Dockerfile `COPY`s. The jar is
