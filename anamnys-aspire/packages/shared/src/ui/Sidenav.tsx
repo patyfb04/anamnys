@@ -14,10 +14,13 @@ import {
   CreditCard,
   type LucideIcon,
 } from "lucide-react";
-// Imported, not "/logo1.png": that file lives in apps/web/public, so it only resolves
-// at site root in production and 404s on the other apps' own dev servers.
-import logo from "../assets/logo1.png";
-import { featureFlagsMockApi, type DashboardNavFeature } from "@anamnys/shared/api-mock/featureFlags";
+// Imported, not "/anamnys.png": a public-folder path only resolves at site root in
+// production and 404s on the other apps' own dev servers.
+import logo from "@anamnys/shared/assets/anamnys.png";
+import {
+  featureFlagsMockApi,
+  type DashboardNavFeature,
+} from "@anamnys/shared/api-mock/featureFlags";
 
 interface NavItem {
   href: string;
@@ -28,11 +31,38 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", Icon: LayoutDashboard, labelKey: "nav.dashboard", matchPrefix: "/dashboard" },
-  { href: "/patients", Icon: Users, labelKey: "nav.patients", matchPrefix: "/patients" },
-  { href: "/calendar", Icon: Calendar, labelKey: "nav.calendar", matchPrefix: "/calendar" },
-  { href: "/live-session", Icon: Mic, labelKey: "nav.liveSession", matchPrefix: "/live-session", feature: "liveSession" },
-  { href: "/note-editor", Icon: FileEdit, labelKey: "nav.noteEditor", matchPrefix: "/note-editor", feature: "noteEditor" },
+  {
+    href: "/dashboard",
+    Icon: LayoutDashboard,
+    labelKey: "nav.dashboard",
+    matchPrefix: "/dashboard",
+  },
+  {
+    href: "/patients",
+    Icon: Users,
+    labelKey: "nav.patients",
+    matchPrefix: "/patients",
+  },
+  {
+    href: "/calendar",
+    Icon: Calendar,
+    labelKey: "nav.calendar",
+    matchPrefix: "/calendar",
+  },
+  {
+    href: "/live-session",
+    Icon: Mic,
+    labelKey: "nav.liveSession",
+    matchPrefix: "/live-session",
+    feature: "liveSession",
+  },
+  {
+    href: "/note-editor",
+    Icon: FileEdit,
+    labelKey: "nav.noteEditor",
+    matchPrefix: "/note-editor",
+    feature: "noteEditor",
+  },
   {
     href: "/document-intake",
     Icon: FileInput,
@@ -40,7 +70,13 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/document-intake",
     feature: "documentIntake",
   },
-  { href: "/analytics", Icon: BarChart3, labelKey: "nav.analytics", matchPrefix: "/analytics", feature: "analytics" },
+  {
+    href: "/analytics",
+    Icon: BarChart3,
+    labelKey: "nav.analytics",
+    matchPrefix: "/analytics",
+    feature: "analytics",
+  },
   {
     href: "/secure-sharing",
     Icon: Share2,
@@ -55,7 +91,13 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/compliance-vault",
     feature: "complianceVault",
   },
-  { href: "/billing", Icon: CreditCard, labelKey: "nav.billing", matchPrefix: "/billing", feature: "billing" },
+  {
+    href: "/billing",
+    Icon: CreditCard,
+    labelKey: "nav.billing",
+    matchPrefix: "/billing",
+    feature: "billing",
+  },
 ];
 
 // Fixed left rail shown at md+ (desktop), replacing the mobile TopBar/AppTabBar shell. Mirrors
@@ -72,15 +114,26 @@ export default function Sidenav() {
     staleTime: Infinity,
   });
 
-  const items = NAV_ITEMS.filter((item) => !item.feature || flags?.[item.feature]);
+  const items = NAV_ITEMS.filter(
+    (item) => !item.feature || flags?.[item.feature],
+  );
 
   return (
     <nav className="hidden md:flex h-screen flex-col py-6 border-r border-outlineVariant bg-surfaceContainerLow fixed left-0 top-0 z-40 w-72">
-      <div className="px-6 mb-8">
+      {/* w-fit + items-center: logo and slogan share one centre line, whichever is wider. */}
+      <div className="px-6 mb-8 flex w-fit flex-col items-center">
         <div className="w-[170px] h-[34px]">
-          <img src={logo} alt="Anamnys" width={170} height={34} className="w-full h-full object-contain" />
+          <img
+            src={logo}
+            alt="Anamnys"
+            width={170}
+            height={34}
+            className="w-full h-full object-contain"
+          />
         </div>
-        <p className="text-label-md text-onSurfaceVariant mt-1 text-center">{t("auth.login.subtitle")}</p>
+        <p className="text-label-md text-onSurfaceVariant mt-1 text-center whitespace-nowrap">
+          {t("auth.login.subtitle")}
+        </p>
       </div>
       <div className="flex-1 overflow-y-auto space-y-1">
         {items.map((item) => {

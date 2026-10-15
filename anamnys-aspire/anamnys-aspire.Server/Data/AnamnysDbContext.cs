@@ -14,6 +14,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<NoteSection> NoteSections => Set<NoteSection>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<Session> Sessions => Set<Session>();
     public DbSet<PatientDiagnosis> PatientDiagnoses => Set<PatientDiagnosis>();
     public DbSet<MedicationEntry> MedicationEntries => Set<MedicationEntry>();
     public DbSet<TreatmentPlan> TreatmentPlans => Set<TreatmentPlan>();
@@ -90,6 +93,24 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         modelBuilder.Entity<Note>(e =>
         {
             e.ToTable("Notes");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<NoteSection>(e =>
+        {
+            e.ToTable("NoteSections");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<AuditEntry>(e =>
+        {
+            e.ToTable("AuditEntries");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<Session>(e =>
+        {
+            e.ToTable("Sessions");
             e.HasKey(x => x.Id);
         });
 

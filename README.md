@@ -47,6 +47,20 @@ containers, both locally and in production. Four React 19 + Vite + TanStack Rout
 SPAs, same-origin with the API via a Backend-for-Frontend: the server holds tokens,
 the browser holds only an `HttpOnly` session cookie.
 
+## AI models
+
+Both models run inside the server process, on CPU. No audio, transcript or note ever leaves the
+server, and no external AI API is called. Each model is downloaded once from Hugging Face on first
+use and checked against a SHA-256 pinned in `appsettings*.json`.
+
+| Model | Used for | Licence |
+|---|---|---|
+| Whisper (`ggml-base` in development, `ggml-medium` in production), via Whisper.net | Transcribing what the provider dictates in "Sessão ao Vivo" | MIT |
+| Qwen2.5 7B Instruct, GGUF Q4_K_M, via LLamaSharp | Organising the transcript into the sections of the chosen note format (DAP, SOAP, Biopsychosocial) — it reorganises and cleans what was dictated; it does not interpret or add content | Apache 2.0 |
+
+Development uses the same 4.7 GB Qwen model as production (there is no smaller development
+model), so structuring a note locally needs about 6 GB of free RAM.
+
 ## A constraint worth knowing up front
 
 Anamnys handles PHI. Every AI inference step runs in-process on the server (no cloud

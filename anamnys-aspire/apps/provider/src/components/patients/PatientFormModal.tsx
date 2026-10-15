@@ -6,6 +6,7 @@ import { patientsApi } from "@anamnys/shared/api/patients";
 import { ApiError } from "@anamnys/shared/api/client";
 import type { PatientDetail } from "@anamnys/shared/lib/types";
 import Modal from "./Modal";
+import ConfirmDialog from "./ConfirmDialog";
 import FormField from "./FormField";
 import Checkbox from "@anamnys/shared/ui/Checkbox";
 import { todayIso } from "./format";
@@ -54,8 +55,10 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
       dateOfBirth !== (editing.dateOfBirth ?? "")
     : Boolean(firstName || lastName || contactEmail || dateOfBirth || diagnoses.length || medications.length || objectives.length);
 
+  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const requestClose = () => {
-    if (!dirty || window.confirm(t("patients.form.discardConfirm"))) onClose();
+    if (dirty) setConfirmingDiscard(true);
+    else onClose();
   };
 
   const mutation = useMutation({
@@ -312,6 +315,15 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmingDiscard}
+        onOpenChange={setConfirmingDiscard}
+        title={t("patients.form.discardConfirm")}
+        description={t("patients.form.discardBody")}
+        confirmLabel={t("patients.form.discard")}
+        destructive
+        onConfirm={onClose}
+      />
     </Modal>
   );
 }

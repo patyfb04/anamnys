@@ -4,6 +4,9 @@ using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Email;
+using Anamnys.Server.LiveSession;
+using Anamnys.Server.NoteStructuring;
+using Anamnys.Server.Notes;
 using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
@@ -19,6 +22,8 @@ builder.AddRedisClientBuilder("cache")
 
 builder.AddNpgsqlDbContext<AnamnysDbContext>("anamnysdb");
 builder.Services.AddHostedService<DatabaseInitializer>();
+builder.AddLiveSession();
+builder.AddNoteStructuring();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -126,6 +131,7 @@ phi.MapPatientRecordEndpoints();
 phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
 phi.MapAppointmentEndpoints();
+phi.MapNoteEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 
@@ -141,6 +147,7 @@ var admin = app.MapGroup("/api/admin")
 admin.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
 
 app.MapAuthEndpoints();
+app.MapLiveSessionHubs();
 
 app.MapDefaultEndpoints();
 

@@ -1,6 +1,6 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-07
+**Started:** 2026-10-03 · **Last updated:** 2026-10-12
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
@@ -19,6 +19,10 @@ feature work are appended to the matching section.
   appointments in their slots, and the portal still shows them as the next session.
 - **Mobile check** of the provider-side "Portal do paciente" block and the invitation page at
   390px (the portal session pages were checked).
+- **Record actions from the reference mockups not built** (2026-10-12 redesign kept only working
+  features): document upload, patient dossier, clinical theme progression chart. "Agendar
+  consulta" only opens the calendar; it does not preselect the patient in the new-appointment
+  form.
 
 ## Calendário
 
@@ -149,11 +153,68 @@ Not built yet; planned for after the calendar deliveries.
 
 ## Notas clínicas
 
+- **Live session ideas from the reference mockups not built:** timestamped bookmarks during
+  recording ("Mark Clinical Moment"), session consent instrument and audio-destruction record
+  (flow 04, blocked by D-03), billing procedure target (D-04), named-entity redaction (F-27),
+  extra note formats (intake, custom evaluation).
+
 - **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
   `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.
-- **Appointment → session → note chain is unbuilt.** The schema links them through
-  `Appointments.SessionId` and `Notes.SessionId` (and `Transcripts.SessionId`); nothing
-  creates a `Sessions` row yet.
+- **Appointment → session → note chain is only built for live sessions.** Finalizing a live
+  recording creates the `Sessions` row (`attended`, `ActualStart`/`ActualEnd`) and links it
+  to the appointment (`Appointments.SessionId`) and the note (`Notes.SessionId`). Notes
+  from other inputs, and `Transcripts.SessionId`, are not wired.
+- **Note structuring (live session delivery 2) is done**: the transcript is organised into the
+  sections of the chosen format (DAP, SOAP, Biopsychosocial) and can be regenerated. Still missing:
+  - Structuring of typed text (flow 03); only live-session transcripts are structured.
+  - Transcripts longer than the model context (`too_long`) are not chunked; they fail.
+  - Note review and signing (delivery 3) is done: section edit, sign, audit (`AuditEntries`),
+    row lock and edit refusal while structuring is pending. Still missing: audit history view;
+    correction of a signed note through a new linked version; PDF export (needs private object
+    storage and 1 h presigned URLs); `SignedByCrp` is format-only (no CRP registry check).
+  - A replay after a lost commit acknowledgement can report Stale, AlreadyHasSections or
+    Conflict even though the change was saved (rare; the startup sweep covers pending).
+- **Hub progress sends are not best-effort**: a hub error while sending the "structuring"
+  progress marks structuring as failed.
+- **One structuring holds the single worker for minutes of CPU**: transcriptions of other
+  notes (any provider) wait in the queue behind it. Consider a separate worker, or a priority
+  for transcription.
+- **The first structuring after each server start re-hashes the 4.7 GB model** (tens of
+  seconds) before loading it, so that note waits longer.
+- **Restructure format is written only on success** (fixed): the job carries the requested
+  format and sets `Notes.Format` in the transaction that replaces the sections; a failed or
+  discarded restructure keeps the old format. Signing also refuses (Locked) if section keys
+  do not match the format.
+- **Audit coverage boundary.** Audited: `ai_generated`, `section_edited`, `sections_created`,
+  `signed`. Not audited: note creation at finalize, `RawTranscript` write, restructure
+  request status change, pipeline status/failure changes.
+- **Signed-note immutability and append-only `AuditEntries` are enforced by the application
+  only** (no DB triggers).
+- **Header badge shows "Rascunho gerado por IA" for hand-created sections not yet edited**:
+  the server has no signal for hand-written sections.
+- **Production memory sizing**: Whisper medium + Qwen2.5 7B Q4_K_M (~6 GB) + recording buffers
+  must fit in the container; size it, or limit concurrency.
+- **No `AccessLogs` writes for notes yet** (`AuditEntries` are written for note mutations).
+- **Production model directory must be a persistent volume**, or each deploy re-downloads
+  the Whisper model and the two Qwen GGUF files (~4.7 GB).
+- **Production `LiveSession:ModelSha256` must be set before deploy.** The `medium` SHA-256
+  in `appsettings.json` came from the Hugging Face LFS pointer and was not computed
+  locally; verify it before production.
+- **Live session has no automated frontend tests** (no runner); verified manually only.
+- **No cap on concurrent live recordings per provider.** Each 90-minute job holds ~270 MB of
+  buffer plus ~345 MB of samples in memory; size the container, or add a limit.
+- **Hub connections are not closed when the session expires**
+  (`CloseOnAuthenticationExpiration` is not set on the hubs).
+- **The appointment `Status` is not moved to attended** when its session becomes attended.
+- **`Sessions.ActualStart` resets to the reconnect time** if a recording begins again after
+  its buffer expired or the server restarted.
+- **`BeginRecording` does not check the appointment's status or date**; only the UI filters.
+- **Two concurrent recordings on one appointment orphan the first session** (concurrent
+  finalizes each create a session; the appointment keeps the last link).
+- **The `2026-10-10-live-session.sql` migration must run before the server starts**:
+  `OrphanNoteSweep` fails startup otherwise.
+- **Each test-suite AppHost run's `OrphanNoteSweep` fails in-progress live notes** in the
+  shared dev database.
 
 ## Portal do paciente e convites
 
@@ -200,6 +261,11 @@ Not built yet; planned for after the calendar deliveries.
 
 - **No frontend automated tests**; UI is verified manually in the browser only.
 - **`anamnys-aspire.Server.http`** has no requests for the appointment or patient endpoints.
+- **Tests load `appsettings.Development.json`**, so the server under test downloads
+  `ggml-base.bin` on the first transcription job if it is not in the model directory; this
+  may slow CI.
+- **`.gitignore` ignores `**/src/routeTree.gen.ts`**, contradicting the CLAUDE.md gotcha that
+  it must stay committed (see also "Documentação"); one of them is wrong.
 
 ## Documentação
 

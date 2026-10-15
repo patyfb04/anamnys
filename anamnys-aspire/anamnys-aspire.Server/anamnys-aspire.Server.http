@@ -69,3 +69,34 @@ Content-Type: application/json
 { "firstName": "Ana", "lastName": "Souza", "phone": "+55 11 91234-5678", "dateOfBirth": "1990-01-02" }
 
 ###
+### Note detail (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Status, raw transcript and failure reason of one note. Replace the id with a real note id.
+GET {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000
+
+###
+### Restructure note (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Re-runs the AI structuring of a ReadyForReview note; format is DAP, SOAP or Biopsychosocial. 202 accepted, 409 if signed/pending/edited.
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/restructure
+Content-Type: application/json
+
+{ "format": "SOAP" }
+
+###
+### Edit note section (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Saves the section text. 200 { revision }; 409 reason "locked" (pending/signed) or "stale" (revision mismatch); 400 if content is null or over 20000 characters.
+PUT {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/sections/data
+Content-Type: application/json
+
+{ "content": "Texto da seção.", "expectedRevision": 0 }
+
+###
+### Create blank sections (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Creates the empty sections of the note's format when it has none. 201 created, 409 if locked or it already has sections.
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/sections/blank
+
+###
+### Sign note (requires the __Host-anamnys-provider cookie — send from a browser session, not this file)
+### Signs a ReadyForReview note with the provider's CRP. 200 signed; 409 reason "locked" or "no_sections"; 422 reason "missing_crp".
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/sign
+
+###

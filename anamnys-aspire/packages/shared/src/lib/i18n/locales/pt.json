@@ -21,6 +21,137 @@
       "symbol": "Um símbolo"
     }
   },
+  "liveSession": {
+    "title": "Sessão ao Vivo",
+    "subtitle": "Dite a evolução da sessão; a transcrição e a nota em seções são geradas no nosso servidor.",
+    "chips": {
+      "memory": "Áudio só em memória",
+      "local": "IA no nosso servidor"
+    },
+    "consent": "A transcrição registra o que você dita. Se o paciente estiver audível na gravação, é necessário o consentimento dele.",
+    "patient": "Paciente",
+    "changePatient": "Trocar",
+    "age": "{{age}} anos",
+    "recording": "Gravação",
+    "status": {
+      "ready": "Pronto",
+      "recording": "Gravando",
+      "paused": "Pausado",
+      "reconnecting": "Reconectando",
+      "processing": "Processando"
+    },
+    "ofMax": "/ {{max}} máx.",
+    "choosePatientFirst": "Escolha um paciente para começar.",
+    "safeguardsTitle": "Garantias",
+    "safeguards": {
+      "memory": "O áudio fica só em memória e é destruído logo após a transcrição. Nunca vai para o disco.",
+      "local": "Transcrição e organização da nota rodam no nosso servidor, sem enviar dados a terceiros.",
+      "organise": "A IA só organiza o que você ditou: não acrescenta fatos, hipóteses nem conclusões."
+    },
+    "appointment": "Consulta de hoje (opcional)",
+    "noAppointment": "Sem consulta vinculada",
+    "format": "Formato da nota",
+    "formats": {
+      "DAP": "DAP",
+      "SOAP": "SOAP",
+      "Biopsychosocial": "Biopsicossocial"
+    },
+    "formatHelp": {
+      "DAP": "Dados, Avaliação e Plano.",
+      "SOAP": "Subjetivo, Objetivo, Avaliação e Plano.",
+      "Biopsychosocial": "Aspectos biológicos, psicológicos e sociais, e Plano."
+    },
+    "start": "Iniciar gravação",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "stop": "Parar e gerar nota",
+    "paused": "Pausado",
+    "connected": "Conectado",
+    "connecting": "Reconectando… a gravação continua no seu navegador.",
+    "warnLimit": "A gravação termina automaticamente em 5 minutos (limite de 90 minutos).",
+    "leaveTitle": "Sair da sessão?",
+    "leave": "Sair e descartar",
+    "leaveWarning": "A gravação ainda não foi enviada. Se sair agora, o áudio será perdido.",
+    "sending": "Enviando o áudio…",
+    "queued": "Na fila para transcrição (posição {{position}}).",
+    "transcribing": "Transcrevendo…",
+    "failed": {
+      "no_speech": "Nenhuma fala foi detectada. Grave novamente.",
+      "transcription_error": "Não foi possível transcrever esta gravação.",
+      "server_restart": "O servidor reiniciou durante o processamento e o áudio foi descartado. Grave novamente."
+    },
+    "recordAgain": "Gravar novamente",
+    "errors": {
+      "permission": "É necessário acesso ao microfone.",
+      "device": "Nenhum microfone encontrado.",
+      "connect": "Não foi possível conectar ao serviço de transcrição.",
+      "invalid": "Formato ou idioma inválido.",
+      "not_found": "Paciente ou consulta não encontrados.",
+      "forbidden": "Acesso negado a esta gravação.",
+      "too_long": "Limite de 90 minutos atingido.",
+      "finalize": "Não foi possível concluir a gravação."
+    }
+  },
+  "noteView": {
+    "note": "Evolução",
+    "backToPatient": "Voltar para o paciente",
+    "showTranscript": "Mostrar",
+    "hideTranscript": "Ocultar",
+    "processing": "Esta nota ainda está sendo processada.",
+    "failed": "Falha ao processar esta nota.",
+    "transcript": "Transcrição",
+    "aiDraft": "Rascunho gerado por IA",
+    "emptySection": "Nada ditado para esta seção.",
+    "structuring": "Organizando em seções…",
+    "structureFailed": {
+      "model_error": "Não foi possível organizar a transcrição em seções.",
+      "too_long": "A transcrição é longa demais para ser organizada automaticamente; a nota ficou só com a transcrição.",
+      "server_restart": "O servidor reiniciou enquanto a transcrição era organizada."
+    },
+    "retry": "Tentar de novo",
+    "reorganize": "Reorganizar",
+    "reorganizeConfirmTitle": "Reorganizar a nota?",
+    "reorganizeConfirm": "As seções atuais serão substituídas pelas geradas no novo formato.",
+    "reorganizeFailed": "Não foi possível reorganizar esta nota agora.",
+    "format": "Formato",
+    "sections": {
+      "data": "Dados",
+      "assessment": "Avaliação",
+      "plan": "Plano",
+      "subjective": "Subjetivo",
+      "objective": "Objetivo",
+      "biological": "Biológico",
+      "psychological": "Psicológico",
+      "social": "Social"
+    },
+    "notFound": "Nota não encontrada.",
+    "edit": "Editar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "editedByYou": "Editado por você",
+    "inReview": "Em revisão",
+    "signed": "Assinada",
+    "writeManually": "Escrever manualmente",
+    "writeManuallyHint": "A IA não organizou esta nota. Você pode escrever as seções à mão.",
+    "editErrors": {
+      "locked": "A nota está sendo organizada ou já foi assinada.",
+      "stale": "Esta seção foi alterada em outra janela. Recarregue a página.",
+      "generic": "Não foi possível salvar."
+    },
+    "signTitle": "Assinatura",
+    "signButton": "Assinar e travar nota",
+    "signConfirmTitle": "Assinar esta nota?",
+    "signConfirm": "Depois de assinada, a nota fica travada e não pode mais ser alterada. A assinatura registra seu CRP e a data.",
+    "signNeedsCrp": "Cadastre seu CRP no perfil para assinar.",
+    "goToProfile": "Ir para o perfil",
+    "signedAt": "Assinada em {{date}} · CRP {{crp}}",
+    "signErrors": {
+      "locked": "A nota está sendo organizada ou já foi assinada.",
+      "no_sections": "A nota não tem seções para assinar.",
+      "missing_crp": "Cadastre seu CRP no perfil para assinar.",
+      "generic": "Não foi possível assinar a nota."
+    }
+  },
   "nav": {
     "dashboard": "Painel",
     "patients": "Pacientes",
@@ -204,7 +335,7 @@
       "heroHeadline": "Bem-vindo(a) <accent>de volta</accent>.",
       "heroSubhead": "Entre para continuar sua documentação de onde parou.",
       "formTitle": "Entrar",
-      "subtitle": "Você cuida do caso. O Anamnys cuida da forma.",
+      "subtitle": "Você cuida do caso. Nós, da forma.",
       "emailLabel": "E-mail",
       "emailPlaceholder": "dr.smith@clinic.pro",
       "passwordLabel": "Senha",
@@ -451,7 +582,9 @@
       "objective": "Objetivo",
       "saving": "Salvando…",
       "saveFailed": "Não foi possível salvar. Tente novamente.",
-      "discardConfirm": "Descartar as alterações?"
+      "discardConfirm": "Descartar as alterações?",
+      "discardBody": "O que você preencheu neste formulário será perdido.",
+      "discard": "Descartar"
     },
     "detail": {
       "loading": "Carregando…",
@@ -474,6 +607,11 @@
       "visits": "Atendimentos",
       "recentNotes": "Notas recentes",
       "noNotes": "Nenhuma nota ainda.",
+      "startSession": "Iniciar sessão",
+      "schedule": "Agendar consulta",
+      "moreActions": "Mais ações",
+      "viewNote": "Ver nota",
+      "continueNote": "Continuar nota",
       "diagnoses": "Diagnósticos",
       "noDiagnoses": "Nenhum diagnóstico registrado.",
       "resolve": "Resolver",
@@ -491,16 +629,16 @@
     },
     "portal": {
       "title": "Portal do paciente",
-      "none": "Sem acesso ao portal.",
+      "none": "Paciente ainda não vinculado a você no portal.",
       "invited": "Convite enviado em {{sent}}, válido até {{until}}.",
       "expired": "O convite expirou em {{until}}.",
-      "active": "Acesso ativo ({{email}}).",
+      "active": "Paciente vinculado a você no portal ({{email}}).",
       "invite": "Convidar para o portal",
       "resend": "Reenviar convite",
       "cancel": "Cancelar convite",
-      "remove": "Remover acesso",
-      "removeTitle": "Remover acesso ao portal?",
-      "removeBody": "{{name}} deixará de ver você no portal. A conta e o prontuário continuam existindo, e você pode convidar de novo depois.",
+      "remove": "Desvincular paciente",
+      "removeTitle": "Desvincular este paciente?",
+      "removeBody": "O vínculo entre você e {{name}} será desfeito. A conta de {{name}} no portal continua ativa, mas deixa de mostrar você e os seus atendimentos. O prontuário não muda, e você pode convidar de novo depois.",
       "inviteFailed": "Não foi possível enviar o convite."
     },
     "notes": {
@@ -645,40 +783,126 @@
       {
         "title": "Documentação clínica",
         "features": [
-          { "name": "Ditado por voz e transcrição ao vivo", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Digitação direta", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "DAP, SOAP e Biopsicossocial", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Revisão e assinatura", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Exportação em PDF", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Cadastro de pacientes", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Trilha de auditoria", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Códigos TUSS e CID sugeridos", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Aviso de documentação incompleta", "plans": ["essencial", "profissional", "completo"] },
-          { "name": "Conferência conforme a Res. CFP nº 006/2019", "plans": ["essencial", "profissional", "completo"], "comingSoon": true }
+          {
+            "name": "Ditado por voz e transcrição ao vivo",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Digitação direta",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "DAP, SOAP e Biopsicossocial",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Revisão e assinatura",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Exportação em PDF",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Cadastro de pacientes",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Trilha de auditoria",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Códigos TUSS e CID sugeridos",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Aviso de documentação incompleta",
+            "plans": ["essencial", "profissional", "completo"]
+          },
+          {
+            "name": "Conferência conforme a Res. CFP nº 006/2019",
+            "plans": ["essencial", "profissional", "completo"],
+            "comingSoon": true
+          }
         ]
       },
       {
         "title": "Visão longitudinal e documentos",
         "features": [
-          { "name": "Upload e resumo de documentos externos", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Cronologia do caso", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Escalas (PHQ-9, GAD-7, BDI-II, EVA)", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Linha do tempo de temas", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Detecção de ausência", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Trajetória de escalas com eventos", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Busca em linguagem natural", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Compartilhamento protegido com log", "plans": ["profissional", "completo"], "comingSoon": true },
-          { "name": "Painel de guarda documental", "plans": ["profissional", "completo"], "comingSoon": true }
+          {
+            "name": "Upload e resumo de documentos externos",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Cronologia do caso",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Escalas (PHQ-9, GAD-7, BDI-II, EVA)",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Linha do tempo de temas",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Detecção de ausência",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Trajetória de escalas com eventos",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Busca em linguagem natural",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Compartilhamento protegido com log",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Painel de guarda documental",
+            "plans": ["profissional", "completo"],
+            "comingSoon": true
+          }
         ]
       },
       {
         "title": "Convênio e captura de sessão",
         "features": [
-          { "name": "Captura de sessão com consentimento", "plans": ["completo"] },
-          { "name": "Aderência ao plano terapêutico", "plans": ["completo"], "comingSoon": true },
-          { "name": "Guia no padrão TISS", "plans": ["completo"], "comingSoon": true },
-          { "name": "Previsão de risco de glosa", "plans": ["completo"], "comingSoon": true },
-          { "name": "Controle de autorizações e histórico de glosas", "plans": ["completo"], "comingSoon": true }
+          {
+            "name": "Captura de sessão com consentimento",
+            "plans": ["completo"]
+          },
+          {
+            "name": "Aderência ao plano terapêutico",
+            "plans": ["completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Guia no padrão TISS",
+            "plans": ["completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Previsão de risco de glosa",
+            "plans": ["completo"],
+            "comingSoon": true
+          },
+          {
+            "name": "Controle de autorizações e histórico de glosas",
+            "plans": ["completo"],
+            "comingSoon": true
+          }
         ]
       }
     ]
@@ -711,16 +935,46 @@
       "title": "O que já funciona hoje",
       "badge": "Disponível agora",
       "items": [
-        { "title": "Ditado por voz", "body": "narrar a sessão e receber a evolução estruturada em menos de dois minutos." },
-        { "title": "Transcrição ao vivo", "body": "transcrever durante o atendimento, para quem prefere não narrar depois." },
-        { "title": "Digitação direta", "body": "escrever sem usar voz, quando for mais conveniente." },
-        { "title": "Três formatos de registro", "body": "DAP, SOAP e Biopsicossocial, conforme a abordagem e a exigência do caso." },
-        { "title": "Revisão e assinatura", "body": "ler o rascunho, ajustar e assinar. Nada é registrado sem leitura humana." },
-        { "title": "Códigos de convênio sugeridos", "body": "TUSS e CID indicados a partir da conduta registrada, para sua conferência." },
-        { "title": "Aviso de documentação incompleta", "body": "alerta do que falta registrar para reduzir risco de glosa." },
-        { "title": "Exportação em PDF", "body": "documento formatado, pronto para anexar ao prontuário ou arquivar." },
-        { "title": "Cadastro de pacientes", "body": "lista com a situação de cada nota: pendente ou concluída." },
-        { "title": "Trilha de auditoria", "body": "histórico de cada documento: o que foi sugerido, o que você alterou, quando assinou." }
+        {
+          "title": "Ditado por voz",
+          "body": "narrar a sessão e receber a evolução estruturada em menos de dois minutos."
+        },
+        {
+          "title": "Transcrição ao vivo",
+          "body": "transcrever durante o atendimento, para quem prefere não narrar depois."
+        },
+        {
+          "title": "Digitação direta",
+          "body": "escrever sem usar voz, quando for mais conveniente."
+        },
+        {
+          "title": "Três formatos de registro",
+          "body": "DAP, SOAP e Biopsicossocial, conforme a abordagem e a exigência do caso."
+        },
+        {
+          "title": "Revisão e assinatura",
+          "body": "ler o rascunho, ajustar e assinar. Nada é registrado sem leitura humana."
+        },
+        {
+          "title": "Códigos de convênio sugeridos",
+          "body": "TUSS e CID indicados a partir da conduta registrada, para sua conferência."
+        },
+        {
+          "title": "Aviso de documentação incompleta",
+          "body": "alerta do que falta registrar para reduzir risco de glosa."
+        },
+        {
+          "title": "Exportação em PDF",
+          "body": "documento formatado, pronto para anexar ao prontuário ou arquivar."
+        },
+        {
+          "title": "Cadastro de pacientes",
+          "body": "lista com a situação de cada nota: pendente ou concluída."
+        },
+        {
+          "title": "Trilha de auditoria",
+          "body": "histórico de cada documento: o que foi sugerido, o que você alterou, quando assinou."
+        }
       ]
     },
     "upcoming": {
@@ -731,41 +985,86 @@
         {
           "title": "Conformidade documental",
           "items": [
-            { "title": "Conferência conforme a Res. CFP nº 006/2019", "body": "verificação dos elementos obrigatórios antes da assinatura, apontando exatamente o que falta. Tentar assinar um laudo sem metodologia e sem finalidade declarada devolve a lista do que está ausente." },
-            { "title": "Painel de guarda documental", "body": "prazos de guarda por prontuário, rascunhos parados e documentos com descarte vencido, numa tela só." }
+            {
+              "title": "Conferência conforme a Res. CFP nº 006/2019",
+              "body": "verificação dos elementos obrigatórios antes da assinatura, apontando exatamente o que falta. Tentar assinar um laudo sem metodologia e sem finalidade declarada devolve a lista do que está ausente."
+            },
+            {
+              "title": "Painel de guarda documental",
+              "body": "prazos de guarda por prontuário, rascunhos parados e documentos com descarte vencido, numa tela só."
+            }
           ]
         },
         {
           "title": "Leitura de documentos externos",
           "items": [
-            { "title": "Upload de documentos", "body": "laudos, exames, receitas, relatórios escolares, avaliações anteriores, documentos judiciais." },
-            { "title": "Resumo do que o documento declara", "body": "emitente e registro, data, CID citado, medicação e posologia. O sistema extrai o que o documento <b>afirma</b>; nunca reinterpreta o conteúdo clínico de outro profissional." },
-            { "title": "Cronologia do caso", "body": "o conteúdo anexado organizado na linha do tempo do paciente." }
+            {
+              "title": "Upload de documentos",
+              "body": "laudos, exames, receitas, relatórios escolares, avaliações anteriores, documentos judiciais."
+            },
+            {
+              "title": "Resumo do que o documento declara",
+              "body": "emitente e registro, data, CID citado, medicação e posologia. O sistema extrai o que o documento <b>afirma</b>; nunca reinterpreta o conteúdo clínico de outro profissional."
+            },
+            {
+              "title": "Cronologia do caso",
+              "body": "o conteúdo anexado organizado na linha do tempo do paciente."
+            }
           ]
         },
         {
           "title": "Visão longitudinal",
           "items": [
-            { "title": "Registro de escalas", "body": "PHQ-9, GAD-7, BDI-II, EVA de dor e outras, guardadas com data e escore, recuperáveis como série." },
-            { "title": "Linha do tempo de temas", "body": "o que apareceu em quais sessões, com clique até a passagem de origem." },
-            { "title": "Detecção de ausência", "body": "temas que se repetiam e pararam de aparecer. \"Registrado em 9 das 9 primeiras sessões; sem registro nas 11 seguintes.\" A observação é do sistema; a leitura clínica é sua." },
-            { "title": "Trajetória de escalas com eventos", "body": "escores ao longo do tempo, com mudanças de medicação e anotações no mesmo eixo. É também a evidência de evolução objetiva que a operadora pede na prorrogação." },
-            { "title": "Busca em linguagem natural", "body": "\"quando falamos de sono pela primeira vez?\" devolve as sessões e os trechos, com data e origem." }
+            {
+              "title": "Registro de escalas",
+              "body": "PHQ-9, GAD-7, BDI-II, EVA de dor e outras, guardadas com data e escore, recuperáveis como série."
+            },
+            {
+              "title": "Linha do tempo de temas",
+              "body": "o que apareceu em quais sessões, com clique até a passagem de origem."
+            },
+            {
+              "title": "Detecção de ausência",
+              "body": "temas que se repetiam e pararam de aparecer. \"Registrado em 9 das 9 primeiras sessões; sem registro nas 11 seguintes.\" A observação é do sistema; a leitura clínica é sua."
+            },
+            {
+              "title": "Trajetória de escalas com eventos",
+              "body": "escores ao longo do tempo, com mudanças de medicação e anotações no mesmo eixo. É também a evidência de evolução objetiva que a operadora pede na prorrogação."
+            },
+            {
+              "title": "Busca em linguagem natural",
+              "body": "\"quando falamos de sono pela primeira vez?\" devolve as sessões e os trechos, com data e origem."
+            }
           ]
         },
         {
           "title": "Convênios",
           "items": [
-            { "title": "Guia no padrão TISS", "body": "montada a partir da nota assinada, pronta para o portal da operadora." },
-            { "title": "Aviso de risco de glosa", "body": "conferência antes do envio: código contra duração registrada, consistência entre diagnóstico e procedimento, documentação exigida." },
-            { "title": "Controle de autorizações", "body": "sessões autorizadas contra realizadas, com aviso de saldo e de vencimento, para que a prorrogação seja pedida a tempo." }
+            {
+              "title": "Guia no padrão TISS",
+              "body": "montada a partir da nota assinada, pronta para o portal da operadora."
+            },
+            {
+              "title": "Aviso de risco de glosa",
+              "body": "conferência antes do envio: código contra duração registrada, consistência entre diagnóstico e procedimento, documentação exigida."
+            },
+            {
+              "title": "Controle de autorizações",
+              "body": "sessões autorizadas contra realizadas, com aviso de saldo e de vencimento, para que a prorrogação seja pedida a tempo."
+            }
           ]
         },
         {
           "title": "Compartilhamento protegido",
           "items": [
-            { "title": "Registro de autorização do paciente", "body": "antes de qualquer envio, fica registrado que o paciente autorizou <b>aquela</b> divulgação, para <b>aquele</b> destinatário, com <b>aquela</b> finalidade. Sem isso, o compartilhamento não acontece." },
-            { "title": "Link com senha e prazo", "body": "senha entregue por outro canal, marca d'água com o nome de quem acessou, log de acesso visível a você, revogação imediata em um clique." }
+            {
+              "title": "Registro de autorização do paciente",
+              "body": "antes de qualquer envio, fica registrado que o paciente autorizou <b>aquela</b> divulgação, para <b>aquele</b> destinatário, com <b>aquela</b> finalidade. Sem isso, o compartilhamento não acontece."
+            },
+            {
+              "title": "Link com senha e prazo",
+              "body": "senha entregue por outro canal, marca d'água com o nome de quem acessou, log de acesso visível a você, revogação imediata em um clique."
+            }
           ]
         }
       ]
@@ -813,9 +1112,18 @@
     "audience": {
       "title": "Para quem é",
       "items": [
-        { "title": "Psicólogos", "body": "em consultório particular ou clínica, atendendo por convênio ou particular, presencial ou on-line." },
-        { "title": "Fisioterapeutas", "body": "que precisam registrar evolução objetiva e sustentar pedidos de prorrogação junto a operadoras." },
-        { "title": "Profissionais que atendem em clínica", "body": "e querem manter a própria documentação sob controle. A conta é individual e pessoal — os registros que você produz são seus, e vão com você." }
+        {
+          "title": "Psicólogos",
+          "body": "em consultório particular ou clínica, atendendo por convênio ou particular, presencial ou on-line."
+        },
+        {
+          "title": "Fisioterapeutas",
+          "body": "que precisam registrar evolução objetiva e sustentar pedidos de prorrogação junto a operadoras."
+        },
+        {
+          "title": "Profissionais que atendem em clínica",
+          "body": "e querem manter a própria documentação sob controle. A conta é individual e pessoal — os registros que você produz são seus, e vão com você."
+        }
       ],
       "notNote": "<b>Não somos</b> prontuário eletrônico substitutivo, nem sistema de gestão de clínica. Somos a camada de documentação — e não substituímos nenhuma obrigação legal ou ética sua."
     },
