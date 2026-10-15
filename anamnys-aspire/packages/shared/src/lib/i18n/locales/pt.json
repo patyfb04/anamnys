@@ -629,16 +629,16 @@
     },
     "portal": {
       "title": "Portal do paciente",
-      "none": "Sem acesso ao portal.",
+      "none": "Paciente ainda não vinculado a você no portal.",
       "invited": "Convite enviado em {{sent}}, válido até {{until}}.",
       "expired": "O convite expirou em {{until}}.",
-      "active": "Acesso ativo ({{email}}).",
+      "active": "Paciente vinculado a você no portal ({{email}}).",
       "invite": "Convidar para o portal",
       "resend": "Reenviar convite",
       "cancel": "Cancelar convite",
-      "remove": "Remover acesso",
-      "removeTitle": "Remover acesso ao portal?",
-      "removeBody": "{{name}} deixará de ver você no portal. A conta e o prontuário continuam existindo, e você pode convidar de novo depois.",
+      "remove": "Desvincular paciente",
+      "removeTitle": "Desvincular este paciente?",
+      "removeBody": "O vínculo entre você e {{name}} será desfeito. A conta de {{name}} no portal continua ativa, mas deixa de mostrar você e os seus atendimentos. O prontuário não muda, e você pode convidar de novo depois.",
       "inviteFailed": "Não foi possível enviar o convite."
     },
     "notes": {
