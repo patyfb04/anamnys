@@ -11,6 +11,7 @@ import FormatCards from "@/components/live-session/FormatCards";
 import SafeguardsCard from "@/components/live-session/SafeguardsCard";
 import ProcessingStep from "@/components/live-session/ProcessingStep";
 import { useLiveRecorder } from "@/hooks/useLiveRecorder";
+import ConfirmDialog from "@/components/patients/ConfirmDialog";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,9 +53,11 @@ function LiveSessionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preselected.data]);
 
-  useBlocker({
-    shouldBlockFn: () => holdsAudio && !window.confirm(t("liveSession.leaveWarning")),
+  // In-app navigation asks through a modal; closing or reloading the tab gets the browser's own prompt.
+  const blocker = useBlocker({
+    shouldBlockFn: () => holdsAudio,
     enableBeforeUnload: () => holdsAudio,
+    withResolver: true,
   });
 
   return (
@@ -112,6 +115,17 @@ function LiveSessionPage() {
           <SafeguardsCard />
         </div>
       </div>
+      <ConfirmDialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open && blocker.status === "blocked") blocker.reset();
+        }}
+        title={t("liveSession.leaveTitle")}
+        description={t("liveSession.leaveWarning")}
+        confirmLabel={t("liveSession.leave")}
+        destructive
+        onConfirm={() => blocker.status === "blocked" && blocker.proceed()}
+      />
     </div>
   );
 }

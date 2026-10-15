@@ -6,6 +6,7 @@ import { PenLine } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import type { NoteDetail } from "@anamnys/shared/lib/types";
 import DetailCard from "@/components/patients/detail/DetailCard";
+import ConfirmDialog from "@/components/patients/ConfirmDialog";
 
 interface Props {
   note: NoteDetail;
@@ -18,8 +19,10 @@ export default function SignCard({ note, onSigned }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [confirming, setConfirming] = useState(false);
+
   const sign = async () => {
-    if (!window.confirm(t("noteView.signConfirm"))) return;
+    setConfirming(false);
     setBusy(true);
     setError(null);
     try {
@@ -56,7 +59,7 @@ export default function SignCard({ note, onSigned }: Props) {
       <button
         type="button"
         disabled={busy || !note.providerHasCrp || note.structureStatus === "pending" || note.sections.length === 0}
-        onClick={sign}
+        onClick={() => setConfirming(true)}
         className="inline-flex w-full items-center justify-center gap-2 rounded-radii-lg bg-primary px-4 py-3 text-label-lg text-onPrimary disabled:opacity-60"
       >
         <PenLine size={16} aria-hidden />
@@ -67,6 +70,15 @@ export default function SignCard({ note, onSigned }: Props) {
           {t(`noteView.signErrors.${error}`)}
         </p>
       )}
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={t("noteView.signConfirmTitle")}
+        description={t("noteView.signConfirm")}
+        confirmLabel={t("noteView.signButton")}
+        pending={busy}
+        onConfirm={() => void sign()}
+      />
     </DetailCard>
   );
 }

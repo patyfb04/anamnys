@@ -69,6 +69,8 @@
     "connected": "Conectado",
     "connecting": "Reconectando… a gravação continua no seu navegador.",
     "warnLimit": "A gravação termina automaticamente em 5 minutos (limite de 90 minutos).",
+    "leaveTitle": "Sair da sessão?",
+    "leave": "Sair e descartar",
     "leaveWarning": "A gravação ainda não foi enviada. Se sair agora, o áudio será perdido.",
     "sending": "Enviando o áudio…",
     "queued": "Na fila para transcrição (posição {{position}}).",
@@ -108,7 +110,8 @@
     },
     "retry": "Tentar de novo",
     "reorganize": "Reorganizar",
-    "reorganizeConfirm": "As seções atuais serão substituídas. Continuar?",
+    "reorganizeConfirmTitle": "Reorganizar a nota?",
+    "reorganizeConfirm": "As seções atuais serão substituídas pelas geradas no novo formato.",
     "reorganizeFailed": "Não foi possível reorganizar esta nota agora.",
     "format": "Formato",
     "sections": {
@@ -137,7 +140,8 @@
     },
     "signTitle": "Assinatura",
     "signButton": "Assinar e travar nota",
-    "signConfirm": "Depois de assinada, a nota não pode ser alterada. Assinar agora?",
+    "signConfirmTitle": "Assinar esta nota?",
+    "signConfirm": "Depois de assinada, a nota fica travada e não pode mais ser alterada. A assinatura registra seu CRP e a data.",
     "signNeedsCrp": "Cadastre seu CRP no perfil para assinar.",
     "goToProfile": "Ir para o perfil",
     "signedAt": "Assinada em {{date}} · CRP {{crp}}",
@@ -578,7 +582,9 @@
       "objective": "Objetivo",
       "saving": "Salvando…",
       "saveFailed": "Não foi possível salvar. Tente novamente.",
-      "discardConfirm": "Descartar as alterações?"
+      "discardConfirm": "Descartar as alterações?",
+      "discardBody": "O que você preencheu neste formulário será perdido.",
+      "discard": "Descartar"
     },
     "detail": {
       "loading": "Carregando…",
