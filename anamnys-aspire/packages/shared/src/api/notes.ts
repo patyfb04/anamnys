@@ -21,9 +21,18 @@ export const notesApi = {
     const { data } = await api.patch<Note>(`/notes/${noteId}`, patch);
     return data;
   },
-  sign: async (noteId: string): Promise<Note> => {
-    const { data } = await api.post<Note>(`/notes/${noteId}/sign`);
+  editSection: async (noteId: string, key: string, content: string, expectedRevision: number): Promise<{ revision: number }> => {
+    const { data } = await api.put<{ revision: number }>(`/phi/providers/me/notes/${noteId}/sections/${key}`, {
+      content,
+      expectedRevision,
+    });
     return data;
+  },
+  createBlankSections: async (noteId: string): Promise<void> => {
+    await api.post(`/phi/providers/me/notes/${noteId}/sections/blank`);
+  },
+  sign: async (noteId: string): Promise<void> => {
+    await api.post(`/phi/providers/me/notes/${noteId}/sign`);
   },
   export: async (noteId: string): Promise<{ url: string }> => {
     const { data } = await api.post<{ url: string }>(`/notes/${noteId}/export`);

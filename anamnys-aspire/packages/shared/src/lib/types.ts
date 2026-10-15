@@ -358,6 +358,7 @@ export interface NoteSectionView {
   position: number;
   generatedAt: string;
   editedAt: string | null;
+  revision: number;
 }
 
 export interface NoteDetail {
@@ -373,6 +374,9 @@ export interface NoteDetail {
   structureStatus: StructureStatus | null;
   structureFailure: StructureFailure | null;
   sections: NoteSectionView[];
+  signedAt: string | null;
+  signedByCrp: string | null;
+  providerHasCrp: boolean;
 }
 
 export interface NoteSnapshot {

@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Notes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.NoteStructuring;
@@ -8,11 +9,13 @@ public enum StructuringOutcome { Done, Failed, Discarded, Skipped }
 
 // Turns a note's transcript into sections (design/specs/2026-10-12-note-structuring-design.md §5).
 // Never changes Notes.Status: a structuring failure leaves the transcript as the note.
+// `format` is the restructure's requested format (null = the note's current one, as for dictation);
+// it is written to Notes.Format only in the transaction that replaces the sections.
 public static class NoteStructuringJob
 {
     public static async Task<StructuringOutcome> ProcessAsync(
         AnamnysDbContext db, INoteStructurer structurer, Guid noteId, Guid providerId,
-        TimeProvider clock, ILogger logger, CancellationToken ct)
+        TimeProvider clock, ILogger logger, CancellationToken ct, string? format = null)
     {
         var note = await db.Notes.AsNoTracking()
             .Where(n => n.Id == noteId && n.ProviderId == providerId)
@@ -22,7 +25,9 @@ public static class NoteStructuringJob
         {
             return StructuringOutcome.Skipped;
         }
-        if (string.IsNullOrWhiteSpace(note.RawTranscript) || !NoteFormats.IsStructurable(note.Format))
+        // A restructure brings the requested format; Notes.Format changes only with the new sections.
+        var effectiveFormat = format ?? note.Format;
+        if (string.IsNullOrWhiteSpace(note.RawTranscript) || !NoteFormats.IsStructurable(effectiveFormat))
         {
             await SetStatusAsync(db, noteId, providerId, null, null, clock.GetUtcNow(), ct);
             return StructuringOutcome.Skipped;
@@ -31,7 +36,7 @@ public static class NoteStructuringJob
         IReadOnlyList<StructuredSection> sections;
         try
         {
-            sections = await structurer.StructureAsync(note.RawTranscript, note.Format, ct);
+            sections = await structurer.StructureAsync(note.RawTranscript, effectiveFormat, ct);
         }
         catch (TranscriptTooLongException)
         {
@@ -45,7 +50,7 @@ public static class NoteStructuringJob
             return StructuringOutcome.Failed;
         }
 
-        if (!sections.Select(s => s.Key).SequenceEqual(NoteFormats.KeysFor(note.Format)))
+        if (!sections.Select(s => s.Key).SequenceEqual(NoteFormats.KeysFor(effectiveFormat)))
         {
             logger.LogError("Structuring for note {NoteId} returned unexpected sections.", noteId);
             await SetStatusAsync(db, noteId, providerId, "failed", "model_error", clock.GetUtcNow(), ct);
@@ -60,6 +65,7 @@ public static class NoteStructuringJob
             outcome = StructuringOutcome.Done;
             db.ChangeTracker.Clear();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await NoteLocks.LockAsync(db, noteId, ct);
             if (await db.NoteSections.AnyAsync(s => s.NoteId == noteId && s.EditedAt != null, ct))
             {
                 outcome = StructuringOutcome.Discarded;
@@ -67,7 +73,7 @@ public static class NoteStructuringJob
             else
             {
                 await db.NoteSections.Where(s => s.NoteId == noteId).ExecuteDeleteAsync(ct);
-                db.NoteSections.AddRange(sections.Select((s, i) => new NoteSection
+                var rows = sections.Select((s, i) => new NoteSection
                 {
                     Id = Guid.NewGuid(),
                     NoteId = noteId,
@@ -75,8 +81,16 @@ public static class NoteStructuringJob
                     Content = s.Content.Trim(),
                     Position = i,
                     GeneratedAt = now,
-                }));
+                }).ToList();
+                db.NoteSections.AddRange(rows);
+                foreach (var row in rows)
+                {
+                    NoteAudit.Add(db, noteId, null, "ai_generated", row.Key, null, row.Content, now);
+                }
                 await db.SaveChangesAsync(ct);
+                await db.Notes
+                    .Where(n => n.Id == noteId && n.ProviderId == providerId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(n => n.Format, effectiveFormat), ct);
             }
             await SetStatusAsync(db, noteId, providerId, "done", null, now, ct);
             await tx.CommitAsync(ct);

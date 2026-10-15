@@ -11,4 +11,5 @@ public class NoteSection
     public int Position { get; set; }
     public DateTimeOffset GeneratedAt { get; set; }
     public DateTimeOffset? EditedAt { get; set; }
+    public int Revision { get; set; }
 }

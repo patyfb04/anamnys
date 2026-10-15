@@ -98,7 +98,6 @@
     "processing": "Esta nota ainda está sendo processada.",
     "failed": "Falha ao processar esta nota.",
     "transcript": "Transcrição",
-    "editorSoon": "A edição e a assinatura da nota chegam na próxima entrega.",
     "aiDraft": "Rascunho gerado por IA",
     "emptySection": "Nada ditado para esta seção.",
     "structuring": "Organizando em seções…",
@@ -122,7 +121,32 @@
       "psychological": "Psicológico",
       "social": "Social"
     },
-    "notFound": "Nota não encontrada."
+    "notFound": "Nota não encontrada.",
+    "edit": "Editar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "editedByYou": "Editado por você",
+    "inReview": "Em revisão",
+    "signed": "Assinada",
+    "writeManually": "Escrever manualmente",
+    "writeManuallyHint": "A IA não organizou esta nota. Você pode escrever as seções à mão.",
+    "editErrors": {
+      "locked": "A nota está sendo organizada ou já foi assinada.",
+      "stale": "Esta seção foi alterada em outra janela. Recarregue a página.",
+      "generic": "Não foi possível salvar."
+    },
+    "signTitle": "Assinatura",
+    "signButton": "Assinar e travar nota",
+    "signConfirm": "Depois de assinada, a nota não pode ser alterada. Assinar agora?",
+    "signNeedsCrp": "Cadastre seu CRP no perfil para assinar.",
+    "goToProfile": "Ir para o perfil",
+    "signedAt": "Assinada em {{date}} · CRP {{crp}}",
+    "signErrors": {
+      "locked": "A nota está sendo organizada ou já foi assinada.",
+      "no_sections": "A nota não tem seções para assinar.",
+      "missing_crp": "Cadastre seu CRP no perfil para assinar.",
+      "generic": "Não foi possível assinar a nota."
+    }
   },
   "nav": {
     "dashboard": "Painel",

@@ -49,7 +49,8 @@ every feature built from here.
   resolved server-side and appended to every database query, so a provider cannot read
   another provider's patients or notes even with a valid session. This is the system's
   primary access control — any new data-access code must preserve it.
-- Every note mutation appends an `AuditEntry` to the `AuditTrail` JSONB column (§164.312(b)).
+- Every note mutation appends a row to the `AuditEntries` table, written through `NoteAudit`
+  in the same transaction as the change (§164.312(b)).
 - Exported PDFs are ePHI: private bucket, access only via 1-hour presigned URLs.
 - **The application never stores credentials.** Keycloak owns passwords, hashing, reset
   flows, and lockout. There is no password column in the application database.

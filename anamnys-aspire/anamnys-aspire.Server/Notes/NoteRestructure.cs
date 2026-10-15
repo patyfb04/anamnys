@@ -13,6 +13,7 @@ public static class NoteRestructure
 {
     // The single conditional update is the guard: only a reviewable, unsigned note with a transcript,
     // no structuring in flight and no section edited by the provider is flipped to pending.
+    // Notes.Format is left alone: the job writes it together with the new sections, only on success.
     public static async Task<RestructureOutcome> RequestAsync(
         AnamnysDbContext db, TranscriptionQueue queue, Guid providerId, Guid noteId, string format,
         DateTimeOffset now, CancellationToken ct)
@@ -26,24 +27,31 @@ public static class NoteRestructure
             return RestructureOutcome.NotFound;
         }
 
-        var updated = await db.Notes
-            .Where(n => n.Id == noteId && n.ProviderId == providerId
-                && n.Status == "ReadyForReview"
-                && n.SignedAt == null
-                && n.RawTranscript != null && n.RawTranscript != ""
-                && (n.StructureStatus == null || n.StructureStatus != "pending")
-                && !db.NoteSections.Any(s => s.NoteId == n.Id && s.EditedAt != null))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(n => n.Format, format)
-                .SetProperty(n => n.StructureStatus, "pending")
-                .SetProperty(n => n.StructureFailure, (string?)null)
-                .SetProperty(n => n.UpdatedAt, now), ct);
+        var updated = 0;
+        var strategy = db.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await NoteLocks.LockAsync(db, noteId, ct);
+            updated = await db.Notes
+                .Where(n => n.Id == noteId && n.ProviderId == providerId
+                    && n.Status == "ReadyForReview"
+                    && n.SignedAt == null
+                    && n.RawTranscript != null && n.RawTranscript != ""
+                    && (n.StructureStatus == null || n.StructureStatus != "pending")
+                    && !db.NoteSections.Any(s => s.NoteId == n.Id && s.EditedAt != null))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.StructureStatus, "pending")
+                    .SetProperty(n => n.StructureFailure, (string?)null)
+                    .SetProperty(n => n.UpdatedAt, now), ct);
+            await tx.CommitAsync(ct);
+        });
         if (updated == 0)
         {
             return RestructureOutcome.Conflict;
         }
 
-        queue.Enqueue(new StructureJob(noteId, providerId));
+        queue.Enqueue(new StructureJob(noteId, providerId, format));
         return RestructureOutcome.Accepted;
     }
 }

@@ -1,7 +1,7 @@
 # Live Session — Note Review and Signing
 
 **Date:** 2026-10-13
-**Status:** Approved
+**Status:** Implemented
 **Scope:** Delivery 3 of "Sessão ao Vivo". The provider edits the sections of a live-session note
 one at a time, can write sections by hand when the AI produced none, and signs the note, which
 locks it for good. Every note mutation — AI generation, edit, blank sections, signing — appends an

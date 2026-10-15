@@ -21,7 +21,7 @@ public sealed class TranscriptionWorker(
                     await RunJobAsync(transcription, scopes, progress, clock, logger, stoppingToken);
                     break;
                 case StructureJob structure:
-                    await RunStructureAsync(structure.NoteId, structure.ProviderId, scopes, progress, clock, logger, stoppingToken);
+                    await RunStructureAsync(structure.NoteId, structure.ProviderId, scopes, progress, clock, logger, stoppingToken, structure.Format);
                     break;
             }
         }
@@ -69,7 +69,7 @@ public sealed class TranscriptionWorker(
     // Never throws: a structuring failure leaves the transcript as the note (spec §5).
     internal static async Task RunStructureAsync(
         Guid noteId, Guid providerId, IServiceScopeFactory scopes, IHubContext<ProgressHub> progress,
-        TimeProvider clock, ILogger logger, CancellationToken ct)
+        TimeProvider clock, ILogger logger, CancellationToken ct, string? format = null)
     {
         var group = progress.Clients.Group(ProgressHub.Group(noteId));
         try
@@ -78,7 +78,7 @@ public sealed class TranscriptionWorker(
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
             var outcome = await NoteStructuringJob.ProcessAsync(
-                db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), noteId, providerId, clock, logger, ct);
+                db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), noteId, providerId, clock, logger, ct, format);
             switch (outcome)
             {
                 case StructuringOutcome.Done or StructuringOutcome.Discarded:

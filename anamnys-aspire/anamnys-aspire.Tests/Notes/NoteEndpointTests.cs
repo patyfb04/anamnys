@@ -72,6 +72,65 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Theory]
+    [InlineData("PUT", "sections/data")]
+    [InlineData("POST", "sections/blank")]
+    [InlineData("POST", "sign")]
+    public async Task EditingRoutes_WithoutSession_Return401(string method, string route)
+    {
+        using var client = new HttpClient { BaseAddress = ProviderBaseAddress };
+        await BrowserSession.WaitForDevServerAsync(client, "/provider/", Ct);
+        using var request = new HttpRequestMessage(new HttpMethod(method), $"/api/phi/providers/me/notes/{Guid.NewGuid()}/{route}")
+        {
+            Content = JsonContent.Create(new { content = "x", expectedRevision = 0 }),
+        };
+
+        using var response = await client.SendAsync(request, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task EditSection_NullContent_Returns400()
+    {
+        using var session = await LoginAsProviderAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/phi/providers/me/notes/{Guid.NewGuid()}/sections/data")
+        {
+            Content = new StringContent("""{ "content": null, "expectedRevision": 0 }""", System.Text.Encoding.UTF8, "application/json"),
+        };
+
+        using var response = await session.SendAsync(request, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetAsync_ReturnsRevisionSignatureAndCrpFlag()
+    {
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var noteId = await AddReadyNoteAsync(seed);
+        await seed.ExecuteSqlAsync(
+            """INSERT INTO "NoteSections" ("NoteId", "Key", "Content", "Position", "Revision") VALUES (@id, 'data', 'x', 0, 3)""",
+            Ct, ("id", noteId));
+        await using var db = seed.CreateDbContext();
+
+        var before = await NoteQueries.GetAsync(db, seed.ProviderId, noteId, Ct);
+
+        before!.Sections.Single().Revision.Should().Be(3);
+        before.SignedAt.Should().BeNull();
+        before.SignedByCrp.Should().BeNull();
+        before.ProviderHasCrp.Should().BeFalse();
+
+        await seed.ExecuteSqlAsync("""UPDATE "Providers" SET "CrpNumber" = '123456', "CrpRegion" = '06' WHERE "Id" = @p""", Ct, ("p", seed.ProviderId));
+        await seed.ExecuteSqlAsync("""UPDATE "Notes" SET "Status" = 'Signed', "SignedAt" = now(), "SignedByCrp" = '123456/06' WHERE "Id" = @id""", Ct, ("id", noteId));
+
+        var after = await NoteQueries.GetAsync(db, seed.ProviderId, noteId, Ct);
+
+        after!.ProviderHasCrp.Should().BeTrue();
+        after.SignedAt.Should().NotBeNull();
+        after.SignedByCrp.Should().Be("123456/06");
+    }
+
     [Fact]
     public async Task GetAsync_WithSections_ReturnsThemOrdered()
     {
@@ -102,11 +161,11 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
 
         outcome.Should().Be(RestructureOutcome.Accepted);
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == noteId, Ct);
-        note.Format.Should().Be("SOAP");
+        note.Format.Should().Be("DAP");
         note.StructureStatus.Should().Be("pending");
         note.StructureFailure.Should().BeNull();
         queue.Reader.TryRead(out var job).Should().BeTrue();
-        job.Should().BeEquivalentTo(new StructureJob(noteId, seed.ProviderId));
+        job.Should().BeEquivalentTo(new StructureJob(noteId, seed.ProviderId, "SOAP"));
     }
 
     [Fact]
@@ -136,7 +195,7 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
     {
         await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
         var noteId = await AddReadyNoteAsync(seed);
-        await seed.ExecuteSqlAsync("""UPDATE "Notes" SET "Status" = 'Signed', "SignedAt" = now() WHERE "Id" = @id""", Ct, ("id", noteId));
+        await seed.ExecuteSqlAsync("""UPDATE "Notes" SET "Status" = 'Signed', "SignedAt" = now(), "SignedByCrp" = '000000/00' WHERE "Id" = @id""", Ct, ("id", noteId));
 
         await AssertConflictUnchangedAsync(seed, noteId);
     }

@@ -18,6 +18,7 @@ public class Note
     public string? StructureStatus { get; set; }
     public string? StructureFailure { get; set; }
     public DateTimeOffset? SignedAt { get; set; }
+    public string? SignedByCrp { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

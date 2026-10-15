@@ -168,9 +168,12 @@ Not built yet; planned for after the calendar deliveries.
   sections of the chosen format (DAP, SOAP, Biopsychosocial) and can be regenerated. Still missing:
   - Structuring of typed text (flow 03); only live-session transcripts are structured.
   - Transcripts longer than the model context (`too_long`) are not chunked; they fail.
-  - Section editing, signing and audit (delivery 3). The edit endpoint must lock the note row, or
-    refuse edits while structuring is pending: the edited-section check in `NoteStructuringJob`
-    takes no lock.
+  - Note review and signing (delivery 3) is done: section edit, sign, audit (`AuditEntries`),
+    row lock and edit refusal while structuring is pending. Still missing: audit history view;
+    correction of a signed note through a new linked version; PDF export (needs private object
+    storage and 1 h presigned URLs); `SignedByCrp` is format-only (no CRP registry check).
+  - A replay after a lost commit acknowledgement can report Stale, AlreadyHasSections or
+    Conflict even though the change was saved (rare; the startup sweep covers pending).
 - **Hub progress sends are not best-effort**: a hub error while sending the "structuring"
   progress marks structuring as failed.
 - **One structuring holds the single worker for minutes of CPU**: transcriptions of other
@@ -178,13 +181,20 @@ Not built yet; planned for after the calendar deliveries.
   for transcription.
 - **The first structuring after each server start re-hashes the 4.7 GB model** (tens of
   seconds) before loading it, so that note waits longer.
-- **Restructure changes `Notes.Format` before the outcome is known.** Today a failed
-  restructure leaves no sections; after delivery 3 (section editing), a failed or discarded
-  restructure would show the old sections under the new format. Set the format when the new
-  sections are written instead.
+- **Restructure format is written only on success** (fixed): the job carries the requested
+  format and sets `Notes.Format` in the transaction that replaces the sections; a failed or
+  discarded restructure keeps the old format. Signing also refuses (Locked) if section keys
+  do not match the format.
+- **Audit coverage boundary.** Audited: `ai_generated`, `section_edited`, `sections_created`,
+  `signed`. Not audited: note creation at finalize, `RawTranscript` write, restructure
+  request status change, pipeline status/failure changes.
+- **Signed-note immutability and append-only `AuditEntries` are enforced by the application
+  only** (no DB triggers).
+- **Header badge shows "Rascunho gerado por IA" for hand-created sections not yet edited**:
+  the server has no signal for hand-written sections.
 - **Production memory sizing**: Whisper medium + Qwen2.5 7B Q4_K_M (~6 GB) + recording buffers
   must fit in the container; size it, or limit concurrency.
-- **No `AccessLogs`/`AuditEntries` writes for notes yet.**
+- **No `AccessLogs` writes for notes yet** (`AuditEntries` are written for note mutations).
 - **Production model directory must be a persistent volume**, or each deploy re-downloads
   the Whisper model and the two Qwen GGUF files (~4.7 GB).
 - **Production `LiveSession:ModelSha256` must be set before deploy.** The `medium` SHA-256

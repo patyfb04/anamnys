@@ -6,7 +6,7 @@ public abstract record NoteJob(Guid NoteId, Guid ProviderId);
 
 public sealed record TranscriptionJob(Guid NoteId, Guid ProviderId, string Language, PcmAudio Audio) : NoteJob(NoteId, ProviderId);
 
-public sealed record StructureJob(Guid NoteId, Guid ProviderId) : NoteJob(NoteId, ProviderId);
+public sealed record StructureJob(Guid NoteId, Guid ProviderId, string Format) : NoteJob(NoteId, ProviderId);
 
 // In-memory only: a restart loses queued audio on purpose (spec §2). Positions are 1-based.
 public sealed class TranscriptionQueue

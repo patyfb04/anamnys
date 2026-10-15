@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, ScrollText } from "lucide-react";
+import { isAxiosError } from "axios";
+import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import type { LiveNoteFormat, NoteDetail } from "@anamnys/shared/lib/types";
 import Avatar from "@anamnys/shared/ui/Avatar";
@@ -10,13 +11,14 @@ import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import NoteSections from "@/components/notes/NoteSections";
 import RestructureControl from "@/components/notes/RestructureControl";
+import SignCard from "@/components/notes/SignCard";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
 });
 
-// The note produced by a live session: AI sections, raw transcript and regeneration. Editing and
-// signing are delivery 3 (design/specs/2026-10-12-note-structuring-design.md §6).
+// The note produced by a live session: AI sections, raw transcript, regeneration, per-section
+// editing and signing (design/specs/2026-10-13-note-review-and-signing-design.md §5).
 function NotePage() {
   const { t } = useTranslation();
   const { noteId } = Route.useParams();
@@ -32,10 +34,10 @@ function NotePage() {
   }
   const note = query.data;
   const hasSections = note.sections.length > 0;
-  const aiDraft = hasSections && note.sections.every((s) => !s.editedAt);
+  const editable = note.status === "ReadyForReview" && !note.signedAt && note.structureStatus !== "pending";
+  const inReview = !hasSections || note.sections.some((s) => s.editedAt);
   const canRestructure =
-    note.status === "ReadyForReview" &&
-    note.structureStatus !== "pending" &&
+    editable &&
     note.structureFailure !== "too_long" &&
     !!note.rawTranscript &&
     !note.sections.some((s) => s.editedAt);
@@ -58,7 +60,13 @@ function NotePage() {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-body-md text-onSurfaceVariant">
             <span>{new Date(note.createdAt).toLocaleString("pt-BR")}</span>
             <Badge label={t(`liveSession.formats.${note.format}`, { defaultValue: note.format })} tone="primary" />
-            {aiDraft && <Badge label={t("noteView.aiDraft")} tone="lavender" />}
+            {note.signedAt ? (
+              <Badge label={t("noteView.signed")} tone="mint" />
+            ) : inReview ? (
+              <Badge label={t("noteView.inReview")} tone="blue" />
+            ) : (
+              <Badge label={t("noteView.aiDraft")} tone="lavender" />
+            )}
           </div>
         </div>
       </header>
@@ -67,18 +75,63 @@ function NotePage() {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <DetailCard title={t("noteView.note")} icon={<FileText size={20} />}>
             <NoteBody note={note} onRetried={() => void query.refetch()} />
-            {hasSections && <NoteSections sections={note.sections} />}
-            {note.rawTranscript && <p className="mt-4 text-body-sm text-onSurfaceVariant">{t("noteView.editorSoon")}</p>}
+            {hasSections && (
+              <NoteSections sections={note.sections} editable={editable} noteId={noteId} onSaved={() => void query.refetch()} />
+            )}
+            {!hasSections && editable && <WriteManually noteId={noteId} onCreated={() => void query.refetch()} />}
           </DetailCard>
           {note.rawTranscript && <TranscriptCard text={note.rawTranscript} defaultOpen={!hasSections} />}
         </div>
 
         <div className="flex flex-col gap-6">
+          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => void query.refetch()} />}
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Shown when the AI produced no sections: the provider can start from blank sections instead.
+function WriteManually({ noteId, onCreated }: { noteId: string; onCreated: () => void }) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+
+  const create = async () => {
+    setBusy(true);
+    setError(false);
+    try {
+      await notesApi.createBlankSections(noteId);
+      onCreated();
+    } catch (e) {
+      // 409: the note changed meanwhile (sections already exist, structuring started, signed) — show it.
+      if (isAxiosError(e) && e.response?.status === 409) onCreated();
+      else setError(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-3 rounded-radii-lg bg-surfaceContainerLow p-4">
+      <p className="text-body-md text-onSurfaceVariant">{t("noteView.writeManuallyHint")}</p>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={create}
+        className="inline-flex items-center gap-2 rounded-radii-lg bg-primary px-4 py-2 text-label-lg text-onPrimary disabled:opacity-60"
+      >
+        <PenLine size={16} aria-hidden />
+        {t("noteView.writeManually")}
+      </button>
+      {error && (
+        <p role="alert" className="text-body-sm text-error">
+          {t("noteView.editErrors.generic")}
+        </p>
+      )}
     </div>
   );
 }

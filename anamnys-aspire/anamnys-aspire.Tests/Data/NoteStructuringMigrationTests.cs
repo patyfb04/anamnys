@@ -22,6 +22,7 @@ public class NoteStructuringMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-10-10-live-session.sql");
             await RunMigrationAsync(db, "2026-10-12-note-structuring.sql");
             await RunMigrationAsync(db, "2026-10-12-note-structuring.sql");
+            await RunMigrationAsync(db, "2026-10-13-note-review.sql");
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

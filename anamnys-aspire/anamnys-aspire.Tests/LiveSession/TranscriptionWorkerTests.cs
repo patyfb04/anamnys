@@ -124,6 +124,40 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
         proxy.Methods.Should().Contain("NoteStructureFailed");
     }
 
+    [Fact]
+    public async Task RunStructure_WithRequestedFormat_StructuresAndSetsFormat()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        string? requested = null;
+        var structurer = new FakeNoteStructurer((_, format) =>
+        {
+            requested = format;
+            return [new("subjective", "texto"), new("objective", ""), new("assessment", ""), new("plan", "")];
+        });
+        var (job, proxy, services) = await FinalizeAsync(seed, patient, _ => "texto", structurer);
+        await using (var db = seed.CreateDbContext())
+        {
+            await db.Notes.Where(n => n.Id == job.NoteId).ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.Status, "ReadyForReview")
+                .SetProperty(n => n.RawTranscript, "texto")
+                .SetProperty(n => n.StructureStatus, "pending"), Ct);
+        }
+
+        // Act
+        await TranscriptionWorker.RunStructureAsync(job.NoteId, seed.ProviderId, services.GetRequiredService<IServiceScopeFactory>(),
+            new FakeHubContext(proxy), new FakeTimeProvider(Now.AddMinutes(1)), NullLogger.Instance, Ct, "SOAP");
+
+        // Assert
+        requested.Should().Be("SOAP");
+        await using var verify = seed.CreateDbContext();
+        var note = await verify.Notes.AsNoTracking().SingleAsync(n => n.Id == job.NoteId, Ct);
+        note.Format.Should().Be("SOAP");
+        note.StructureStatus.Should().Be("done");
+        proxy.Methods.Should().Contain("NoteStructured");
+    }
+
     private static async Task<(TranscriptionJob Job, RecordingProxy Proxy, ServiceProvider Services)> FinalizeAsync(
         PatientSearchSeed seed, Guid patient, Func<float[], string> transcribe, INoteStructurer structurer)
     {
