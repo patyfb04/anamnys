@@ -10,7 +10,7 @@ import { PRACTICE_ZONE, zonedParts, zonedToInstant } from "./calendarTime";
 import PatientPicker from "./PatientPicker";
 
 export type FormMode =
-  | { kind: "create"; date: string; minutes: number }
+  | { kind: "create"; date: string; minutes: number; patient?: { id: string; name: string } }
   | { kind: "edit"; appointment: Appointment };
 
 interface Props {
@@ -26,7 +26,7 @@ const fromTime = (time: string) => {
 
 function initialState(mode: FormMode) {
   if (mode.kind === "create") {
-    return { patient: null, date: mode.date, time: toTime(mode.minutes), duration: 50, modality: "online" as AppointmentModality };
+    return { patient: mode.patient ?? null, date: mode.date, time: toTime(mode.minutes), duration: 50, modality: "online" as AppointmentModality };
   }
   const a = mode.appointment;
   const start = zonedParts(new Date(a.startsAt), PRACTICE_ZONE);

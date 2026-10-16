@@ -131,7 +131,7 @@ function PatientDetailPage() {
             </Link>
           )}
           {!archived && (
-            <Link to="/calendar" className={actionButton}>
+            <Link to="/calendar" search={{ patientId }} className={actionButton}>
               <CalendarPlus size={18} />
               {t("patients.detail.schedule")}
             </Link>
