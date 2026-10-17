@@ -14,6 +14,49 @@ public static class NoteEndpoints
     {
         var notes = phi.MapGroup("providers/me/notes");
 
+        notes.MapPost("search", async (NoteSearchRequest request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            var errors = request.Validate();
+            return errors.Count > 0
+                ? Results.ValidationProblem(errors)
+                : Results.Ok(await NoteList.SearchAsync(db, providerId, request, ct));
+        });
+
+        notes.MapPost("", async (CreateNoteRequest request, HttpContext http, AnamnysDbContext db, TranscriptionQueue queue, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            var errors = request.Validate();
+            if (errors.Count > 0)
+            {
+                return Results.ValidationProblem(errors);
+            }
+            var result = await NoteCreation.CreateAsync(db, queue, providerId, request, DateTimeOffset.UtcNow, ct);
+            return result.Outcome switch
+            {
+                CreateNoteOutcome.Created => Results.Json(new { noteId = result.NoteId }, statusCode: StatusCodes.Status201Created),
+                CreateNoteOutcome.NotFound => Results.NotFound(),
+                CreateNoteOutcome.Archived => Results.Conflict(new { message = "Desarquive o paciente para criar notas.", code = "archived" }),
+                _ => Results.Conflict(new { message = "Esta consulta foi cancelada ou já tem uma nota.", code = "appointment_unavailable" }),
+            };
+        });
+
+        phi.MapGet("providers/me/patients/{patientId:guid}/note-candidates", async (Guid patientId, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            var candidates = await NoteCreation.CandidatesAsync(db, providerId, patientId, DateTimeOffset.UtcNow, ct);
+            return candidates is null ? Results.NotFound() : Results.Ok(candidates);
+        });
+
         notes.MapGet("{noteId:guid}", async (Guid noteId, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
         {
             if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)

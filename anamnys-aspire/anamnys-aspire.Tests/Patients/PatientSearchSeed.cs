@@ -112,23 +112,28 @@ public sealed class PatientSearchSeed : IAsyncDisposable
     public Task ExecuteSqlAsync(string sql, CancellationToken cancellationToken, params (string Name, object Value)[] parameters) =>
         ExecuteAsync(sql, cancellationToken, parameters);
 
-    public Task AddAppointmentAsync(
+    public async Task<Guid> AddAppointmentAsync(
         Guid patientId,
         DateTimeOffset startsAt,
         string status = "scheduled",
         Guid? providerId = null,
-        CancellationToken cancellationToken = default) =>
-        ExecuteAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var id = Guid.NewGuid();
+        await ExecuteAsync(
             """
-            INSERT INTO "Appointments" ("ProviderId", "PatientId", "StartsAt", "EndsAt", "Status", "CancelledAt")
-            VALUES (@provider, @patient, @starts, @starts + interval '50 minutes', @status,
+            INSERT INTO "Appointments" ("Id", "ProviderId", "PatientId", "StartsAt", "EndsAt", "Status", "CancelledAt")
+            VALUES (@id, @provider, @patient, @starts, @starts + interval '50 minutes', @status,
                     CASE WHEN @status = 'cancelled' THEN now() END)
             """,
             cancellationToken,
+            ("id", id),
             ("provider", providerId ?? ProviderId),
             ("patient", patientId),
             ("starts", startsAt.ToUniversalTime()),
             ("status", status));
+        return id;
+    }
 
     public Task AddNoteAsync(
         Guid patientId,

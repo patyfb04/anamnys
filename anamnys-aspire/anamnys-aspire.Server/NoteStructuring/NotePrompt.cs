@@ -22,25 +22,39 @@ public static class NotePrompt
         return transcript;
     }
 
-    public static string Build(string transcript, string format)
+    public static string Build(string transcript, string format, NoteSource source = NoteSource.Dictation)
     {
+        var typed = source == NoteSource.Typed;
         var keys = NoteFormats.KeysFor(format);
         var system = new StringBuilder()
-            .AppendLine($"Você organiza o ditado de um(a) psicólogo(a) nas seções de uma evolução clínica no formato {format}.")
+            .AppendLine(typed
+                ? $"Você organiza as anotações escritas por um(a) psicólogo(a) nas seções de uma evolução clínica no formato {format}."
+                : $"Você organiza o ditado de um(a) psicólogo(a) nas seções de uma evolução clínica no formato {format}.")
             .AppendLine("Regras:")
-            .AppendLine("1. Use apenas o que foi ditado. Não acrescente fatos, hipóteses, diagnósticos, interpretações ou conclusões.")
+            .AppendLine(typed
+                ? "1. Use apenas o que foi escrito. Não acrescente fatos, hipóteses, diagnósticos, interpretações ou conclusões."
+                : "1. Use apenas o que foi ditado. Não acrescente fatos, hipóteses, diagnósticos, interpretações ou conclusões.")
             .AppendLine("2. Coloque cada trecho na seção a que pertence:");
         foreach (var key in keys)
         {
             system.AppendLine($"   - \"{key}\": {NoteFormats.Describe(key)}.");
         }
         system
-            .AppendLine("3. Remova vícios de fala (é, hum, né, tipo), repetições e hesitações; corrija a pontuação; escreva em português, em tom de prontuário, em terceira pessoa.")
-            .AppendLine("4. Preserve nomes, números, doses e datas exatamente como foram ditados. Nunca transforme um número solto em data, horário, dose ou quantidade.")
-            .AppendLine("5. O ditado vem de transcrição automática e pode ter erros. Se um trecho estiver confuso, truncado ou sem sentido, copie-o como foi ditado; nunca o reinterprete nem deduza fatos a partir dele.")
-            .AppendLine("6. Se nada foi ditado para uma seção, deixe-a vazia (\"\").")
+            .AppendLine(typed
+                ? "3. Corrija a pontuação; escreva em português, em tom de prontuário, em terceira pessoa."
+                : "3. Remova vícios de fala (é, hum, né, tipo), repetições e hesitações; corrija a pontuação; escreva em português, em tom de prontuário, em terceira pessoa.")
+            .AppendLine(typed
+                ? "4. Preserve nomes, números, doses e datas exatamente como foram escritos. Nunca transforme um número solto em data, horário, dose ou quantidade."
+                : "4. Preserve nomes, números, doses e datas exatamente como foram ditados. Nunca transforme um número solto em data, horário, dose ou quantidade.")
+            .AppendLine(typed
+                ? "5. Se um trecho estiver confuso ou incompleto, copie-o como foi escrito; nunca o reinterprete nem deduza fatos a partir dele."
+                : "5. O ditado vem de transcrição automática e pode ter erros. Se um trecho estiver confuso, truncado ou sem sentido, copie-o como foi ditado; nunca o reinterprete nem deduza fatos a partir dele.")
+            .AppendLine(typed
+                ? "6. Se nada foi escrito para uma seção, deixe-a vazia (\"\")."
+                : "6. Se nada foi ditado para uma seção, deixe-a vazia (\"\").")
             .Append("7. Responda somente com o objeto JSON com essas chaves, nessa ordem.");
+        var label = typed ? "Anotações" : "Ditado";
         // AppendLine writes \r\n on Windows; ChatML is \n throughout.
-        return $"<|im_start|>system\n{system.ToString().ReplaceLineEndings("\n")}<|im_end|>\n<|im_start|>user\nDitado:\n{StripControl(transcript)}<|im_end|>\n<|im_start|>assistant\n";
+        return $"<|im_start|>system\n{system.ToString().ReplaceLineEndings("\n")}<|im_end|>\n<|im_start|>user\n{label}:\n{StripControl(transcript)}<|im_end|>\n<|im_start|>assistant\n";
     }
 }

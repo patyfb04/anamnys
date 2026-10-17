@@ -27,11 +27,11 @@ public sealed class LlamaNoteStructurer(Func<CancellationToken, Task<(LLamaWeigh
         return (new LlamaNoteStructurer(_ => Task.FromResult((weights, parameters)), options), weights);
     }
 
-    public async Task<IReadOnlyList<StructuredSection>> StructureAsync(string transcript, string format, CancellationToken ct)
+    public async Task<IReadOnlyList<StructuredSection>> StructureAsync(string transcript, string format, NoteSource source, CancellationToken ct)
     {
         var keys = NoteFormats.KeysFor(format);
         var (weights, parameters) = await load(ct);
-        var prompt = NotePrompt.Build(transcript, format);
+        var prompt = NotePrompt.Build(transcript, format, source);
         var promptTokens = weights.Tokenize(prompt, add_bos: true, special: true, Encoding.UTF8).Length;
         var transcriptTokens = weights.Tokenize(transcript, add_bos: false, special: false, Encoding.UTF8).Length;
         if (!Fits(promptTokens, transcriptTokens, keys.Count, options.ContextSize))

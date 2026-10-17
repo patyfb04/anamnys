@@ -287,6 +287,168 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
         return noteId;
     }
 
+    [Fact]
+    public async Task Create_InvalidBody_Returns400()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/phi/providers/me/notes")
+        {
+            Content = new StringContent("""{ "patientId": null, "format": "DAP", "mode": "ai", "text": "x" }""", System.Text.Encoding.UTF8, "application/json"),
+        };
+
+        // Act
+        using var response = await session.SendAsync(request, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_WithoutSession_Returns401()
+    {
+        // Arrange
+        using var client = new HttpClient { BaseAddress = ProviderBaseAddress };
+        await BrowserSession.WaitForDevServerAsync(client, "/provider/", Ct);
+
+        // Act
+        using var response = await client.PostAsJsonAsync("/api/phi/providers/me/notes", new { }, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetAsync_SectionsByAi_FollowsLatestOfGeneratedOrCreated()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var manual = await NoteCreation.CreateAsync(db, new TranscriptionQueue(), seed.ProviderId,
+            new CreateNoteRequest(patient, null, "DAP", "manual", "x"), DateTimeOffset.UtcNow, Ct);
+
+        // Act
+        var beforeAi = await NoteQueries.GetAsync(db, seed.ProviderId, manual.NoteId!.Value, Ct);
+        db.AuditEntries.Add(new Anamnys.Server.Data.Entities.AuditEntry
+        {
+            Id = Guid.NewGuid(), NoteId = manual.NoteId, Action = "ai_generated", At = DateTimeOffset.UtcNow.AddMinutes(1),
+        });
+        await db.SaveChangesAsync(Ct);
+        var afterAi = await NoteQueries.GetAsync(db, seed.ProviderId, manual.NoteId!.Value, Ct);
+
+        // Assert
+        beforeAi!.SectionsByAi.Should().BeFalse();
+        afterAi!.SectionsByAi.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Search_WithoutSession_Returns401()
+    {
+        // Arrange
+        using var client = new HttpClient { BaseAddress = ProviderBaseAddress };
+        await BrowserSession.WaitForDevServerAsync(client, "/provider/", Ct);
+
+        // Act
+        using var response = await client.PostAsJsonAsync("/api/phi/providers/me/notes/search", new { }, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task Search_InvalidPage_Returns400()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/phi/providers/me/notes/search")
+        {
+            Content = new StringContent("""{ "page": 0 }""", System.Text.Encoding.UTF8, "application/json"),
+        };
+
+        // Act
+        using var response = await session.SendAsync(request, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Create_ManualForOwnPatient_Returns201WithNoteId()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await AddDevProviderPatientAsync(seed, archived: false);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/phi/providers/me/notes")
+            {
+                Content = JsonContent.Create(new { patientId = patient, format = "DAP", mode = "manual", text = (string?)null }),
+            };
+
+            // Act
+            using var response = await session.SendAsync(request, Ct);
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            using var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+            body.RootElement.GetProperty("noteId").GetGuid().Should().NotBeEmpty();
+        }
+        finally
+        {
+            await DeletePatientAsync(seed, patient);
+        }
+    }
+
+    [Fact]
+    public async Task Create_ArchivedPatient_Returns409WithArchivedCode()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await AddDevProviderPatientAsync(seed, archived: true);
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/phi/providers/me/notes")
+            {
+                Content = JsonContent.Create(new { patientId = patient, format = "DAP", mode = "manual", text = (string?)null }),
+            };
+
+            // Act
+            using var response = await session.SendAsync(request, Ct);
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            using var body = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+            body.RootElement.GetProperty("code").GetString().Should().Be("archived");
+            body.RootElement.GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
+        }
+        finally
+        {
+            await DeletePatientAsync(seed, patient);
+        }
+    }
+
+    // The logged-in dev provider's row already exists once LoginAsProviderAsync has run; the patient is
+    // seeded under it and removed again so the dev database stays clean.
+    private async Task<Guid> AddDevProviderPatientAsync(PatientSearchSeed seed, bool archived)
+    {
+        await using var db = seed.CreateDbContext();
+        var devProviderId = await db.Providers.AsNoTracking()
+            .Where(p => p.Email == "dev.provider@anamnys.local").Select(p => p.Id).SingleAsync(Ct);
+        return await seed.AddPatientAsync("Teste", "Nota", archivedAt: archived ? DateTimeOffset.UtcNow.AddDays(-1) : null, providerId: devProviderId, cancellationToken: Ct);
+    }
+
+    private static async Task DeletePatientAsync(PatientSearchSeed seed, Guid patient)
+    {
+        var ids = ("p", (object)patient);
+        await seed.ExecuteSqlAsync("""DELETE FROM "AuditEntries" WHERE "NoteId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = @p)""", CancellationToken.None, ids);
+        await seed.ExecuteSqlAsync("""DELETE FROM "NoteSections" WHERE "NoteId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = @p)""", CancellationToken.None, ids);
+        await seed.ExecuteSqlAsync("""DELETE FROM "Notes" WHERE "PatientId" = @p""", CancellationToken.None, ids);
+        await seed.ExecuteSqlAsync("""DELETE FROM "Patients" WHERE "Id" = @p""", CancellationToken.None, ids);
+    }
+
     private static Task<BrowserSession> LoginAsProviderAsync() =>
         BrowserSession.LoginAsync(
             ProviderBaseAddress, "/provider/", "provider", "dev.provider@anamnys.local", "DevProvider!2026", Ct);

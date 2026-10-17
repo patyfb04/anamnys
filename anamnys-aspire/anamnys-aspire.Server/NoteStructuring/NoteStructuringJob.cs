@@ -19,7 +19,7 @@ public static class NoteStructuringJob
     {
         var note = await db.Notes.AsNoTracking()
             .Where(n => n.Id == noteId && n.ProviderId == providerId)
-            .Select(n => new { n.RawTranscript, n.Format, n.StructureStatus })
+            .Select(n => new { n.RawTranscript, n.Format, n.StructureStatus, n.InputMode })
             .SingleOrDefaultAsync(ct);
         if (note is null || note.StructureStatus != "pending")
         {
@@ -36,7 +36,7 @@ public static class NoteStructuringJob
         IReadOnlyList<StructuredSection> sections;
         try
         {
-            sections = await structurer.StructureAsync(note.RawTranscript, effectiveFormat, ct);
+            sections = await structurer.StructureAsync(note.RawTranscript, effectiveFormat, NoteSources.Of(note.InputMode), ct);
         }
         catch (TranscriptTooLongException)
         {

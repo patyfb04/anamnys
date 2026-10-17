@@ -36,7 +36,7 @@ function Home() {
               <Link
                 to="/profissionais/$providerId"
                 params={{ providerId: provider.providerId }}
-                className="flex items-center gap-4 bg-surfaceContainerLowest border border-outlineVariant rounded-radii-xl p-4 hover:bg-surfaceContainerLow transition-colors"
+                className="flex items-center gap-4 bg-surfaceContainerLowest border border-outlineVariant rounded-radii-xl p-4 hover:bg-pastelLavender transition-colors"
               >
                 <Avatar name={provider.name} size={44} />
                 <div className="flex-1 min-w-0">

@@ -1,9 +1,25 @@
 import api from "@anamnys/shared/api/client";
-import type { LiveNoteFormat, Note, NoteDetail } from "@anamnys/shared/lib/types";
+import type {
+  CreateNoteRequest,
+  LiveNoteFormat,
+  Note,
+  NoteCandidate,
+  NoteDetail,
+  NoteSearchRequest,
+  NoteSearchResponse,
+} from "@anamnys/shared/lib/types";
 
 export const notesApi = {
-  list: async (patientId: string): Promise<Note[]> => {
-    const { data } = await api.get<Note[]>(`/notes`, { params: { patientId } });
+  search: async (request: NoteSearchRequest): Promise<NoteSearchResponse> => {
+    const { data } = await api.post<NoteSearchResponse>(`/phi/providers/me/notes/search`, request);
+    return data;
+  },
+  create: async (request: CreateNoteRequest): Promise<string> => {
+    const { data } = await api.post<{ noteId: string }>(`/phi/providers/me/notes`, request);
+    return data.noteId;
+  },
+  candidates: async (patientId: string): Promise<NoteCandidate[]> => {
+    const { data } = await api.get<NoteCandidate[]>(`/phi/providers/me/patients/${patientId}/note-candidates`);
     return data;
   },
   getDetail: async (noteId: string): Promise<NoteDetail> => {

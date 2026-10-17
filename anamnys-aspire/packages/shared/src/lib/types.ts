@@ -291,6 +291,7 @@ export interface Appointment {
   cancellationReason: string | null;
   confirmationDeadlineAt: string | null;
   patientHasEmail: boolean;
+  hasNote: boolean;
 }
 
 // Public confirmation link (design/specs/2026-10-07-appointment-notifications-design.md).
@@ -377,6 +378,50 @@ export interface NoteDetail {
   signedAt: string | null;
   signedByCrp: string | null;
   providerHasCrp: boolean;
+  sectionsByAi: boolean;
+}
+
+export type NoteListFilter = "pending" | "signed" | "failed";
+export type NoteMode = "ai" | "manual";
+
+export interface NoteListItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  status: NoteDetailStatus;
+  structureStatus: StructureStatus | null;
+  inputMode: string;
+  format: string;
+  createdAt: string;
+  signedAt: string | null;
+  appointmentStartsAt: string | null;
+}
+
+export interface NoteSearchRequest {
+  status?: NoteListFilter;
+  patientId?: string;
+  name?: string;
+  page?: number;
+}
+
+export interface NoteSearchResponse {
+  items: NoteListItem[];
+  hasMore: boolean;
+}
+
+export interface NoteCandidate {
+  appointmentId: string;
+  startsAt: string;
+  modality: AppointmentModality;
+  status: AppointmentStatus;
+}
+
+export interface CreateNoteRequest {
+  patientId: string;
+  appointmentId: string | null;
+  format: LiveNoteFormat;
+  mode: NoteMode;
+  text: string | null;
 }
 
 export interface NoteSnapshot {

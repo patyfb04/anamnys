@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Notes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.LiveSession;
@@ -62,7 +63,11 @@ public static class LiveRecordings
             {
                 db.ChangeTracker.Clear();
                 await using var tx = await db.Database.BeginTransactionAsync(write);
-                var session = await SessionForAsync(db, meta, now, write);
+                var appointment = meta.AppointmentId is { } appointmentId
+                    ? await NoteSessions.LockAppointmentAsync(db, meta.ProviderId, meta.PatientId, appointmentId, write)
+                        ?? throw new InvalidOperationException("The recording's appointment does not exist.")
+                    : null;
+                var session = await NoteSessions.AttendAsync(db, meta.ProviderId, meta.PatientId, appointment, meta.StartedAt, now, now, write);
                 db.Notes.Add(new Note
                 {
                     Id = noteId,
@@ -77,6 +82,8 @@ public static class LiveRecordings
                     CreatedAt = now,
                     UpdatedAt = now,
                 });
+                await db.SaveChangesAsync(write);
+                NoteAudit.Add(db, noteId, providerId, "note_created", null, null, $"VoiceLive,{meta.Format}", now);
                 await db.SaveChangesAsync(write);
                 await tx.CommitAsync(write);
             });
@@ -106,40 +113,5 @@ public static class LiveRecordings
                 .SetProperty(n => n.StructureFailure, "server_restart")
                 .SetProperty(n => n.UpdatedAt, now), ct);
         return transcriptions + structurings;
-    }
-
-    private static async Task<Session> SessionForAsync(AnamnysDbContext db, RecordingMeta meta, DateTimeOffset now, CancellationToken ct)
-    {
-        var appointment = meta.AppointmentId is { } id
-            ? await db.Appointments.SingleAsync(a => a.Id == id && a.ProviderId == meta.ProviderId, ct)
-            : null;
-        var session = appointment?.SessionId is { } sessionId
-            ? await db.Sessions.SingleAsync(s => s.Id == sessionId, ct)
-            : null;
-        if (session is null)
-        {
-            session = new Session
-            {
-                Id = Guid.NewGuid(),
-                PatientId = meta.PatientId,
-                ProviderId = meta.ProviderId,
-                ScheduledStart = appointment?.StartsAt,
-                ScheduledMinutes = appointment is null ? null : (int)(appointment.EndsAt - appointment.StartsAt).TotalMinutes,
-                Modality = appointment?.Modality is "presencial" or "online" ? appointment.Modality : null,
-                ActualStart = meta.StartedAt,
-                CreatedAt = now,
-            };
-            db.Sessions.Add(session);
-            // No navigations are mapped, so EF cannot order inserts by foreign key: persist the session first.
-            await db.SaveChangesAsync(ct);
-            if (appointment is not null)
-            {
-                appointment.SessionId = session.Id;
-            }
-        }
-        session.ActualStart ??= meta.StartedAt;
-        session.ActualEnd = now;
-        session.Attendance = "attended";
-        return session;
     }
 }

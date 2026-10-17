@@ -25,7 +25,7 @@ export default function PatientCards({ items, onOpen }: Props) {
             <button
               type="button"
               onClick={() => onOpen(patient.id)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surfaceContainerLow transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-pastelLavender transition-colors"
             >
               <Avatar name={fullName} size={40} />
               <div className="flex-1 min-w-0">

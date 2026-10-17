@@ -47,7 +47,8 @@ public static class Appointments
                 db.AppointmentConfirmations
                     .Where(c => c.AppointmentId == x.a.Id && c.ConfirmedAt == null && c.ClosedAt == null)
                     .Select(c => c.DeadlineAt).FirstOrDefault(),
-                x.p.ContactEmail != null))
+                x.p.ContactEmail != null,
+                x.a.SessionId != null && db.Notes.Any(n => n.SessionId == x.a.SessionId)))
             .ToListAsync(cancellationToken);
         return new AppointmentListResponse(items);
     }
@@ -160,38 +161,44 @@ public static class Appointments
                 var hasEmail = await PatientHasEmailAsync(db, providerId, appointment.PatientId, cancellationToken);
                 await AppointmentNotifications.OnCancelledAsync(db, appointment, hasEmail, nowUtc, cancellationToken);
                 break;
-            case AppointmentStatus.Attended or AppointmentStatus.NoShow:
+            case AppointmentStatus.Attended:
+                await ApplyAttendedAsync(db, appointment, nowUtc, cancellationToken);
+                break;
+            case AppointmentStatus.NoShow:
                 await AppointmentNotifications.OnLeftActiveAsync(db, appointment.Id, nowUtc, cancellationToken);
                 break;
         }
 
-        if (to == AppointmentStatus.Attended || from == AppointmentStatus.Attended)
+        if (from == AppointmentStatus.Attended)
         {
             var patient = await db.Patients
                 .SingleAsync(p => p.Id == appointment.PatientId && p.ProviderId == providerId, cancellationToken);
-            if (to == AppointmentStatus.Attended)
+            // Undoing "attended": the latest remaining attended visit, if any.
+            var latest = await db.Appointments
+                .Where(a => a.PatientId == appointment.PatientId && a.ProviderId == providerId
+                    && a.Id != appointment.Id && a.Status == AppointmentStatus.Attended)
+                .MaxAsync(a => (DateTimeOffset?)a.StartsAt, cancellationToken);
+            if (latest is not null)
             {
-                if (patient.LastVisit is null || patient.LastVisit < appointment.StartsAt)
-                {
-                    patient.LastVisit = appointment.StartsAt;
-                }
-            }
-            else
-            {
-                // Undoing "attended": the latest remaining attended visit, if any.
-                var latest = await db.Appointments
-                    .Where(a => a.PatientId == appointment.PatientId && a.ProviderId == providerId
-                        && a.Id != appointment.Id && a.Status == AppointmentStatus.Attended)
-                    .MaxAsync(a => (DateTimeOffset?)a.StartsAt, cancellationToken);
-                if (latest is not null)
-                {
-                    patient.LastVisit = latest;
-                }
+                patient.LastVisit = latest;
             }
         }
 
         // One SaveChanges: the status and LastVisit change in one transaction.
         return await SaveAsync(db, cancellationToken);
+    }
+
+    // Side effects of an appointment becoming attended; never saves, so callers keep one unit of work.
+    internal static async Task ApplyAttendedAsync(AnamnysDbContext db, Appointment appointment, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+    {
+        appointment.Status = AppointmentStatus.Attended;
+        await AppointmentNotifications.OnLeftActiveAsync(db, appointment.Id, nowUtc, cancellationToken);
+        var patient = await db.Patients
+            .SingleAsync(p => p.Id == appointment.PatientId && p.ProviderId == appointment.ProviderId, cancellationToken);
+        if (patient.LastVisit is null || patient.LastVisit < appointment.StartsAt)
+        {
+            patient.LastVisit = appointment.StartsAt;
+        }
     }
 
     private static Task<bool> PatientHasEmailAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken) =>

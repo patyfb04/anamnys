@@ -6,5 +6,5 @@ public sealed class TranscriptTooLongException : Exception;
 
 public interface INoteStructurer
 {
-    Task<IReadOnlyList<StructuredSection>> StructureAsync(string transcript, string format, CancellationToken ct);
+    Task<IReadOnlyList<StructuredSection>> StructureAsync(string transcript, string format, NoteSource source, CancellationToken ct);
 }

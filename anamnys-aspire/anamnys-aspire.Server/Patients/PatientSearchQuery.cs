@@ -124,7 +124,7 @@ public static class PatientSearchQuery
     }
 
     // Case-insensitive "contains" with the user's % _ \ taken literally.
-    private static string? ContainsPattern(string? value) =>
+    internal static string? ContainsPattern(string? value) =>
         ProfileText.Clean(value) is { } cleaned
             ? "%" + cleaned.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%"
             : null;
