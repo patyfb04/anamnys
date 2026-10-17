@@ -90,7 +90,7 @@ export default function NotificationBell({ className }: { className?: string }) 
                   <Link
                     to="/calendar"
                     search={{ view: "day", date: dayFormat.format(new Date(n.startsAt)) }}
-                    className={`block px-4 py-3 text-body-md text-onSurface hover:bg-surfaceContainerLow ${
+                    className={`block px-4 py-3 text-body-md text-onSurface hover:bg-pastelLavender ${
                       n.readAt ? "" : "font-bold"
                     }`}
                     onClick={() => {

@@ -63,7 +63,7 @@ export default function PatientsTable({ items, sortBy, sortDir, onSort, onOpen }
             <tr
               key={patient.id}
               onClick={() => onOpen(patient.id)}
-              className="group cursor-pointer hover:bg-surfaceContainerLow transition-colors"
+              className="group cursor-pointer hover:bg-pastelLavender transition-colors"
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">

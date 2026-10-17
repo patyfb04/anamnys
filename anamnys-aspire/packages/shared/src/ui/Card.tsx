@@ -14,7 +14,7 @@ export default function Card({ onClick, className, padded = true, children, ...r
   const classes = clsx(
     "bg-surfaceContainerLowest rounded-radii-lg border border-outlineVariant",
     padded && "p-4",
-    onClick && "cursor-pointer hover:border-primary/50 transition-colors",
+    onClick && "cursor-pointer hover:border-primary/50 hover:bg-pastelLavender transition-colors",
     className
   );
 
