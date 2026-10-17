@@ -10,10 +10,11 @@ export default function PatientNotesView({ patientId }: { patientId: string }) {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
-  const { data: notes, isLoading, error } = useQuery({
-    queryKey: ["notes", patientId],
-    queryFn: () => notesApi.list(patientId),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["notes", "patient", patientId],
+    queryFn: () => notesApi.search({ patientId }),
   });
+  const notes = data?.items;
 
   return (
     <div className="min-h-full flex flex-col">

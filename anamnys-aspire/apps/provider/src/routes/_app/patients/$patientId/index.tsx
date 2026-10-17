@@ -10,6 +10,7 @@ import {
   CalendarDays,
   CalendarPlus,
   FileText,
+  FilePlus,
   Mic,
   MoreHorizontal,
   Pencil,
@@ -134,6 +135,12 @@ function PatientDetailPage() {
             <Link to="/calendar" search={{ patientId }} className={actionButton}>
               <CalendarPlus size={18} />
               {t("patients.detail.schedule")}
+            </Link>
+          )}
+          {!archived && (
+            <Link to="/note-editor/new" search={{ patientId }} className={actionButton}>
+              <FilePlus size={18} />
+              {t("patients.detail.newNote")}
             </Link>
           )}
           <MoreActions label={t("patients.detail.moreActions")}>

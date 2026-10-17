@@ -104,27 +104,32 @@ public static class NoteEditing
                 return;
             }
 
-            var keys = NoteFormats.KeysFor(note.Format);
-            db.NoteSections.AddRange(keys.Select((k, i) => new NoteSection
-            {
-                Id = Guid.NewGuid(),
-                NoteId = noteId,
-                Key = k,
-                Content = "",
-                Position = i,
-                GeneratedAt = now,
-                Revision = 0,
-            }));
-            // A failed structuring is superseded by the provider writing the note by hand.
-            note.StructureStatus = "done";
-            note.StructureFailure = null;
-            note.UpdatedAt = now;
-            NoteAudit.Add(db, noteId, providerId, "sections_created", null, null, string.Join(",", keys), now);
+            AddBlankSections(db, note, providerId, now);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
             outcome = BlankOutcome.Created;
         });
         return outcome;
+    }
+
+    internal static void AddBlankSections(AnamnysDbContext db, Note note, Guid providerId, DateTimeOffset now)
+    {
+        var keys = NoteFormats.KeysFor(note.Format);
+        db.NoteSections.AddRange(keys.Select((k, i) => new NoteSection
+        {
+            Id = Guid.NewGuid(),
+            NoteId = note.Id,
+            Key = k,
+            Content = "",
+            Position = i,
+            GeneratedAt = now,
+            Revision = 0,
+        }));
+        // A failed structuring is superseded by the provider writing the note by hand.
+        note.StructureStatus = "done";
+        note.StructureFailure = null;
+        note.UpdatedAt = now;
+        NoteAudit.Add(db, note.Id, providerId, "sections_created", null, null, string.Join(",", keys), now);
     }
 
     public static async Task<SignOutcome> SignAsync(

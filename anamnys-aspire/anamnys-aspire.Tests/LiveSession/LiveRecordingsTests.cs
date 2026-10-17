@@ -105,6 +105,28 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task Finalize_StartedAppointment_MarksAppointmentAttendedAndAuditsCreation()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var appointmentId = await seed.AddAppointmentAsync(patient, Now.AddMinutes(-40), cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, appointmentId);
+
+        // Act
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+
+        // Assert
+        await using var check = seed.CreateDbContext();
+        (await check.Appointments.AsNoTracking().SingleAsync(a => a.Id == appointmentId, Ct)).Status.Should().Be("attended");
+        var audit = await check.AuditEntries.AsNoTracking().SingleAsync(a => a.NoteId == result.NoteId, Ct);
+        audit.Action.Should().Be("note_created");
+        audit.NewValue.Should().Be("VoiceLive,SOAP");
+        audit.ActorId.Should().Be(seed.ProviderId);
+    }
+
+    [Fact]
     public async Task Finalize_AppointmentWithSession_ReusesIt()
     {
         await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);

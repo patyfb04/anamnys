@@ -303,6 +303,39 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         (await db.Notes.AsNoTracking().SingleAsync(n => n.Id == noteId, Ct)).StructureStatus.Should().BeNull();
     }
 
+    [Fact]
+    public async Task Process_TextNote_PassesTypedSource()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var noteId = await AddNoteAsync(seed, "DAP", "pending");
+        await seed.ExecuteSqlAsync("""UPDATE "Notes" SET "InputMode" = 'Text' WHERE "Id" = @id""", Ct, ("id", noteId));
+        await using var db = seed.CreateDbContext();
+        var structurer = new FakeNoteStructurer((_, _) => DapSections);
+
+        // Act
+        await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+
+        // Assert
+        structurer.LastSource.Should().Be(NoteSource.Typed);
+    }
+
+    [Fact]
+    public async Task Process_LiveNote_PassesDictationSource()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var noteId = await AddNoteAsync(seed, "DAP", "pending");
+        await using var db = seed.CreateDbContext();
+        var structurer = new FakeNoteStructurer((_, _) => DapSections);
+
+        // Act
+        await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+
+        // Assert
+        structurer.LastSource.Should().Be(NoteSource.Dictation);
+    }
+
     private async Task<Guid> AddNoteAsync(PatientSearchSeed seed, string format, string structureStatus)
     {
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);

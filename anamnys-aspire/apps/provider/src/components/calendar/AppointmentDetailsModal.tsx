@@ -10,6 +10,8 @@ import { useAppointmentMutations } from "@/hooks/useAppointments";
 import { formatTime, formatTimeWithDate } from "./calendarTime";
 import { NEXT_STATUSES, STATUS_STYLE } from "./status";
 
+const NOTE_WINDOW_MS = 14 * 86_400_000;
+
 interface Props {
   appointment: Appointment;
   onClose: () => void;
@@ -94,6 +96,17 @@ export default function AppointmentDetailsModal({ appointment: a, onClose, onEdi
                 {t(ACTION_LABEL[s])}
               </button>
             ))}
+            {started && a.status !== "cancelled" && a.status !== "no_show" && !a.hasNote
+              && Date.now() - Date.parse(a.startsAt) <= NOTE_WINDOW_MS && (
+              <Link
+                to="/note-editor/new"
+                search={{ patientId: a.patientId, appointmentId: a.id }}
+                className={button}
+                onClick={onClose}
+              >
+                {t("calendar.details.writeNote")}
+              </Link>
+            )}
           </div>
         )}
       </div>

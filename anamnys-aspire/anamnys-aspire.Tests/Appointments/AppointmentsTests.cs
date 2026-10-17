@@ -1,4 +1,6 @@
 using Anamnys.Server.Appointments;
+using Anamnys.Server.LiveSession;
+using Anamnys.Server.Notes;
 using Anamnys.Tests.Patients;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
@@ -374,5 +376,25 @@ public class AppointmentsTests(SharedAppHostFixture fixture)
     {
         await using var db = seed.CreateDbContext();
         return await db.Patients.AsNoTracking().Where(p => p.Id == patientId).Select(p => p.LastVisit).SingleAsync(Ct);
+    }
+
+    [Fact]
+    public async Task ListAsync_AppointmentWithNote_HasNoteTrue()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        var noted = await seed.AddAppointmentAsync(patient, Now.AddHours(-3), cancellationToken: Ct);
+        var plain = await seed.AddAppointmentAsync(patient, Now.AddHours(-1), cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        await NoteCreation.CreateAsync(db, new TranscriptionQueue(), seed.ProviderId,
+            new CreateNoteRequest(patient, noted, "DAP", "manual", null), Now, Ct);
+
+        // Act
+        var list = await Appointments.ListAsync(db, seed.ProviderId, Now.AddDays(-1), Now.AddDays(1), [], Ct);
+
+        // Assert
+        list.Items.Single(i => i.Id == noted).HasNote.Should().BeTrue();
+        list.Items.Single(i => i.Id == plain).HasNote.Should().BeFalse();
     }
 }

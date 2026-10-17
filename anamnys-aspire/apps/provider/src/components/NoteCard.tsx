@@ -1,38 +1,46 @@
 import { useTranslation } from "react-i18next";
-import type { Note } from "@anamnys/shared/lib/types";
+import type { NoteListItem } from "@anamnys/shared/lib/types";
 import Card from "@anamnys/shared/ui/Card";
 import Badge, { type BadgeTone } from "@anamnys/shared/ui/Badge";
 
 const STATUS_TONE: Record<string, BadgeTone> = {
-  draft: "neutral",
-  processing: "pink",
-  ready_for_review: "teal",
-  signed: "primary",
-  exported: "blue",
+  Draft: "neutral",
+  Processing: "pink",
+  ReadyForReview: "teal",
+  Signed: "primary",
+  Exported: "blue",
+  Failed: "neutral",
 };
 
 interface Props {
-  note: Note;
+  note: NoteListItem;
+  showPatient?: boolean;
   onClick: () => void;
 }
 
-// Summary card for a note, showing date, status badge, and a transcript preview.
-export default function NoteCard({ note, onClick }: Props) {
+// One row of a note list: date, format, origin and status; the patient's name in the all-notes list.
+export default function NoteCard({ note, showPatient, onClick }: Props) {
   const { t } = useTranslation();
+  const structureFailed = note.structureStatus === "failed" && note.status !== "Failed";
   return (
     <Card onClick={onClick}>
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-label-md text-onSurfaceVariant normal-case">
-          {new Date(note.createdAt).toLocaleDateString()}
+          {new Date(note.createdAt).toLocaleDateString("pt-BR")}
         </span>
-        <Badge label={t(`notes.status.${note.status}`)} tone={STATUS_TONE[note.status] ?? "neutral"} />
+        <Badge
+          label={structureFailed ? t("notes.detailStatus.structureFailed") : t(`notes.detailStatus.${note.status}`)}
+          tone={structureFailed ? "neutral" : STATUS_TONE[note.status] ?? "neutral"}
+        />
       </div>
-      <p className="text-headline-sm text-[16px] text-onSurface mb-1">
-        {note.structuredContent?.format ?? note.inputMode.replace(/_/g, " ")}
+      {showPatient && <p className="text-headline-sm text-[16px] text-onSurface mb-1 truncate">{note.patientName}</p>}
+      <p className="text-body-md text-onSurfaceVariant">
+        {t(`liveSession.formats.${note.format}`, { defaultValue: note.format })}
+        {" · "}
+        {t(`notes.list.origin.${note.inputMode}`, { defaultValue: note.inputMode })}
+        {note.appointmentStartsAt &&
+          ` · ${t("notes.list.appointment", { date: new Date(note.appointmentStartsAt).toLocaleDateString("pt-BR") })}`}
       </p>
-      {note.rawTranscript && (
-        <p className="text-body-md text-onSurfaceVariant line-clamp-2">{note.rawTranscript}</p>
-      )}
     </Card>
   );
 }

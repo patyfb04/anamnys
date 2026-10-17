@@ -138,6 +138,7 @@ public sealed record AppointmentItem(
     string Status,
     string? CancellationReason,
     DateTimeOffset? ConfirmationDeadlineAt,
-    bool PatientHasEmail);
+    bool PatientHasEmail,
+    bool HasNote);
 
 public sealed record AppointmentListResponse(IReadOnlyList<AppointmentItem> Items);

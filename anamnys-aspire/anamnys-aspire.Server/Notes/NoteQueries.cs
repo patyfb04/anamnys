@@ -9,7 +9,7 @@ public sealed record NoteDetail(
     Guid Id, Guid PatientId, string PatientName, string Status, string InputMode, string Format,
     string? RawTranscript, string? FailureReason, DateTimeOffset CreatedAt,
     string? StructureStatus, string? StructureFailure, IReadOnlyList<NoteSectionDto> Sections,
-    DateTimeOffset? SignedAt, string? SignedByCrp, bool ProviderHasCrp);
+    DateTimeOffset? SignedAt, string? SignedByCrp, bool ProviderHasCrp, bool SectionsByAi);
 
 public static class NoteQueries
 {
@@ -23,6 +23,11 @@ public static class NoteQueries
                               n.Id, n.PatientId, PatientName = p.FirstName + " " + p.LastName, n.Status, n.InputMode, n.Format,
                               n.RawTranscript, n.FailureReason, n.CreatedAt, n.StructureStatus, n.StructureFailure, n.SignedAt, n.SignedByCrp,
                               ProviderHasCrp = db.Providers.Any(pr => pr.Id == n.ProviderId && pr.CrpNumber != null && pr.CrpRegion != null),
+                              SectionsByAi = db.AuditEntries
+                                  .Where(a => a.NoteId == n.Id && (a.Action == "ai_generated" || a.Action == "sections_created"))
+                                  .OrderByDescending(a => a.At).ThenByDescending(a => a.Action == "ai_generated")
+                                  .Select(a => a.Action)
+                                  .FirstOrDefault() == "ai_generated",
                           }).SingleOrDefaultAsync(ct);
         if (note is null)
         {
@@ -37,6 +42,6 @@ public static class NoteQueries
 
         return new NoteDetail(note.Id, note.PatientId, note.PatientName, note.Status, note.InputMode, note.Format,
             note.RawTranscript, note.FailureReason, note.CreatedAt, note.StructureStatus, note.StructureFailure, sections,
-            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp);
+            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi);
     }
 }

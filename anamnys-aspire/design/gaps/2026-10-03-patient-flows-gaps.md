@@ -1,6 +1,6 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-12
+**Started:** 2026-10-03 · **Last updated:** 2026-10-15
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
@@ -21,8 +21,7 @@ feature work are appended to the matching section.
   390px (the portal session pages were checked).
 - **Record actions from the reference mockups not built** (2026-10-12 redesign kept only working
   features): document upload, patient dossier, clinical theme progression chart. "Agendar
-  consulta" only opens the calendar; it does not preselect the patient in the new-appointment
-  form.
+  consulta" only opens the calendar.
 
 ## Calendário
 
@@ -158,15 +157,15 @@ Not built yet; planned for after the calendar deliveries.
   (flow 04, blocked by D-03), billing procedure target (D-04), named-entity redaction (F-27),
   extra note formats (intake, custom evaluation).
 
-- **Notes.** "Notas recentes" on the record links to the note editor, still a placeholder;
-  `PatientNotesView` (`/patients/$id/notes`) calls `notesApi` routes that do not exist.
-- **Appointment → session → note chain is only built for live sessions.** Finalizing a live
-  recording creates the `Sessions` row (`attended`, `ActualStart`/`ActualEnd`) and links it
-  to the appointment (`Appointments.SessionId`) and the note (`Notes.SessionId`). Notes
-  from other inputs, and `Transcripts.SessionId`, are not wired.
+- **Notes.** `/note-editor` lists all of the provider's notes; `PatientNotesView`
+  (`/patients/$id/notes`) uses `POST providers/me/notes/search`.
+- **Appointment → session → note chain.** Finalizing a live recording creates the `Sessions`
+  row (`attended`, `ActualStart`/`ActualEnd`) and links it to the appointment
+  (`Appointments.SessionId`) and the note (`Notes.SessionId`). Typed notes also link (optional
+  appointment), and both paths move the appointment to attended. `Transcripts.SessionId` is
+  not wired.
 - **Note structuring (live session delivery 2) is done**: the transcript is organised into the
   sections of the chosen format (DAP, SOAP, Biopsychosocial) and can be regenerated. Still missing:
-  - Structuring of typed text (flow 03); only live-session transcripts are structured.
   - Transcripts longer than the model context (`too_long`) are not chunked; they fail.
   - Note review and signing (delivery 3) is done: section edit, sign, audit (`AuditEntries`),
     row lock and edit refusal while structuring is pending. Still missing: audit history view;
@@ -186,12 +185,10 @@ Not built yet; planned for after the calendar deliveries.
   discarded restructure keeps the old format. Signing also refuses (Locked) if section keys
   do not match the format.
 - **Audit coverage boundary.** Audited: `ai_generated`, `section_edited`, `sections_created`,
-  `signed`. Not audited: note creation at finalize, `RawTranscript` write, restructure
+  `signed`, `note_created` (typed notes and live finalize). Not audited: `RawTranscript` write, restructure
   request status change, pipeline status/failure changes.
 - **Signed-note immutability and append-only `AuditEntries` are enforced by the application
   only** (no DB triggers).
-- **Header badge shows "Rascunho gerado por IA" for hand-created sections not yet edited**:
-  the server has no signal for hand-written sections.
 - **Production memory sizing**: Whisper medium + Qwen2.5 7B Q4_K_M (~6 GB) + recording buffers
   must fit in the container; size it, or limit concurrency.
 - **No `AccessLogs` writes for notes yet** (`AuditEntries` are written for note mutations).
@@ -205,16 +202,52 @@ Not built yet; planned for after the calendar deliveries.
   buffer plus ~345 MB of samples in memory; size the container, or add a limit.
 - **Hub connections are not closed when the session expires**
   (`CloseOnAuthenticationExpiration` is not set on the hubs).
-- **The appointment `Status` is not moved to attended** when its session becomes attended.
 - **`Sessions.ActualStart` resets to the reconnect time** if a recording begins again after
   its buffer expired or the server restarted.
 - **`BeginRecording` does not check the appointment's status or date**; only the UI filters.
-- **Two concurrent recordings on one appointment orphan the first session** (concurrent
-  finalizes each create a session; the appointment keeps the last link).
+- **Pending: manual browser check of the note editor delivery** (as `dev.provider`):
+  (1) sidebar "Editor de Notas" opens the list with "Pendentes" selected, each filter and the
+  name search work, "Carregar mais" appears past 25; (2) "Nova nota" in AI mode with text lands
+  on the note, shows "Organizando em seções…", then sections with the "Rascunho gerado por IA"
+  badge and a collapsed "Texto original"; (3) manual mode gives empty sections, a non-AI badge,
+  and editing and signing work; (4) "Nova nota" from a patient record preselects the patient;
+  (5) from the calendar a past appointment shows "Escrever nota", preselects patient and
+  appointment, and after creating it is "Realizada" and "Escrever nota" is gone; (6) a live
+  session finalized on a started appointment moves it to "Realizada"; (7) at 390px the "Nova
+  nota" tab opens the create page and the list and create page fit without horizontal scroll.
+- **Typed-note creation and a lost commit acknowledgement**: after the retrying execution
+  strategy re-runs, it can create a duplicate note (no appointment) or report a false 409 (with
+  an appointment); same caveat as the other note writes.
+- **The patient notes page (`/patients/$id/notes`) shows only the first 25 notes** (no
+  "Carregar mais").
+- **The archived-patient check at note creation does not lock the patient row**: a note created
+  at the same moment as archiving can be written.
+- **The mobile "Nova nota" tab no longer highlights on `/notes/$noteId`** (its prefix is
+  `/note-editor`).
+- **Clearing an invalid `appointmentId` from the create page URL skips the preselection** of
+  today's appointment.
 - **The `2026-10-10-live-session.sql` migration must run before the server starts**:
   `OrphanNoteSweep` fails startup otherwise.
 - **Each test-suite AppHost run's `OrphanNoteSweep` fails in-progress live notes** in the
   shared dev database.
+- **Lock order differs between typed-note creation and the confirmation paths**: creation locks the
+  appointment, then closes its confirmations; the confirmation paths lock the confirmation, then the
+  appointment. A deadlock is near impossible (confirming needs a not-yet-started appointment; the
+  attended transition needs a started one); if it happened, PostgreSQL would abort one side (40P01)
+  and the retrying strategy replays it.
+- **`Appointments.SetStatusAsync` reads without a lock or concurrency token** (pre-existing): a
+  calendar status change racing a typed-note creation can overwrite `attended`.
+- **The live finalize does not check whether the appointment already has a note**, so a live
+  recording on an appointment with a typed note adds a second note to the same session (extends the
+  "`BeginRecording` does not check the appointment's status" gap).
+- **Create page (`/note-editor/new`) polish**: a failed load of the preselected patient shows no
+  message; the filter chip group's `aria-label` duplicates the h1; the mode cards have no arrow-key
+  navigation; a disabled "Criar nota" gives no hint why.
+- **The typed prompt's rules 3, 5 and 6 wording is not pinned by tests.**
+- **Legacy `notesApi.get`/`update`/`export` and the old `Note` type still call routes that do not
+  exist** (pre-existing, unused by this delivery).
+- **The `.http` requests for the three new routes were not run against a live AppHost** (pending
+  with the manual browser check).
 
 ## Portal do paciente e convites
 

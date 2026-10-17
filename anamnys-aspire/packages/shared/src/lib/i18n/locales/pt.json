@@ -101,7 +101,8 @@
     "failed": "Falha ao processar esta nota.",
     "transcript": "Transcrição",
     "aiDraft": "Rascunho gerado por IA",
-    "emptySection": "Nada ditado para esta seção.",
+    "emptySection": "Nada registrado nesta seção.",
+    "originalText": "Texto original",
     "structuring": "Organizando em seções…",
     "structureFailed": {
       "model_error": "Não foi possível organizar a transcrição em seções.",
@@ -625,7 +626,8 @@
       "endedRange": "{{from}} – {{to}}",
       "objectives": "Objetivos do plano",
       "noObjectives": "Nenhum objetivo definido.",
-      "add": "Adicionar"
+      "add": "Adicionar",
+      "newNote": "Nova nota"
     },
     "portal": {
       "title": "Portal do paciente",
@@ -648,12 +650,41 @@
     }
   },
   "notes": {
-    "status": {
-      "draft": "Rascunho",
-      "processing": "Processando…",
-      "ready_for_review": "Pronto para revisão",
-      "signed": "Assinado",
-      "exported": "Exportado"
+    "list": {
+      "title": "Notas",
+      "newNote": "Nova nota",
+      "searchPlaceholder": "Buscar por paciente",
+      "filters": { "pending": "Pendentes", "signed": "Assinadas", "failed": "Com falha", "all": "Todas" },
+      "empty": "Nenhuma nota neste filtro.",
+      "failedToLoad": "Falha ao carregar as notas.",
+      "loadMore": "Carregar mais",
+      "origin": { "VoiceLive": "Sessão ao vivo", "Text": "Digitada" },
+      "appointment": "Consulta de {{date}}"
+    },
+    "detailStatus": {
+      "Draft": "Rascunho",
+      "Processing": "Processando…",
+      "ReadyForReview": "Pronta para revisão",
+      "Signed": "Assinada",
+      "Exported": "Exportada",
+      "Failed": "Falhou",
+      "structureFailed": "Organização falhou"
+    },
+    "create": {
+      "title": "Nova nota",
+      "patient": "Paciente",
+      "appointment": "Consulta",
+      "noAppointment": "Sem consulta",
+      "mode": "Como escrever",
+      "modeAi": "Organizar com IA",
+      "modeAiHint": "Escreva livremente; a IA distribui o texto nas seções do formato.",
+      "modeManual": "Escrever nas seções",
+      "modeManualHint": "A nota abre com as seções vazias para você preencher.",
+      "text": "Anotações",
+      "textHint": "A IA organiza o que você escreveu; não acrescenta nada.",
+      "counter": "{{count}} / {{max}}",
+      "submit": "Criar nota",
+      "failed": "Não foi possível criar a nota."
     },
     "liveTranscribe": {
       "title": "Nova nota",
@@ -1247,7 +1278,8 @@
       "statusChanged": "Status atualizado.",
       "statusFailed": "Não foi possível alterar o status.",
       "awaitingConfirmation": "Aguardando confirmação até {{time}}",
-      "noEmail": "Paciente sem e-mail: não receberá confirmação."
+      "noEmail": "Paciente sem e-mail: não receberá confirmação.",
+      "writeNote": "Escrever nota"
     }
   }
 }
