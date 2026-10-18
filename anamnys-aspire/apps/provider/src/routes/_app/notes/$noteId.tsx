@@ -90,7 +90,7 @@ function NotePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => void query.refetch()} />}
+          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => query.refetch()} />}
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}

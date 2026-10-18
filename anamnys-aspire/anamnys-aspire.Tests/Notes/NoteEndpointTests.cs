@@ -72,6 +72,17 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task Export_WithoutSession_Returns401()
+    {
+        using var client = new HttpClient { BaseAddress = ProviderBaseAddress };
+        await BrowserSession.WaitForDevServerAsync(client, "/provider/", Ct);
+
+        using var response = await client.PostAsync($"/api/phi/providers/me/notes/{Guid.NewGuid()}/export", null, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
     [Theory]
     [InlineData("PUT", "sections/data")]
     [InlineData("POST", "sections/blank")]

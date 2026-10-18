@@ -379,6 +379,7 @@ export interface NoteDetail {
   signedByCrp: string | null;
   providerHasCrp: boolean;
   sectionsByAi: boolean;
+  exportedAt: string | null;
 }
 
 export type NoteListFilter = "pending" | "signed" | "failed";

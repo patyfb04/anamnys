@@ -151,7 +151,11 @@
       "no_sections": "A nota não tem seções para assinar.",
       "missing_crp": "Cadastre seu CRP no perfil para assinar.",
       "generic": "Não foi possível assinar a nota."
-    }
+    },
+    "exportPdf": "Exportar PDF",
+    "downloadPdf": "Baixar PDF",
+    "exportedAt": "Exportada em {{date}}",
+    "exportFailed": "Não foi possível exportar a nota."
   },
   "nav": {
     "dashboard": "Painel",

@@ -266,8 +266,9 @@ pequena. A resposta honesta tem três partes.
 aberto, está disponível permanentemente — não é um favor concedido na saída. Não depende
 de a gente estar de bom humor, nem de a gente existir amanhã.
 
-**Os documentos oficiais são PDFs assinados por você**, que você pode arquivar onde
-quiser desde o primeiro dia. Eles não dependem da nossa plataforma para continuar válidos.
+**Os documentos oficiais são PDFs assinados eletronicamente por você no Anamnys** — com seu
+nome, seu CRP, a data e a hora da assinatura. Você pode baixá-los e arquivá-los onde quiser
+desde o primeiro dia.
 
 **Você é o controlador dos dados; nós somos operadores.** Os registros são seus, não
 nossos, e isso está escrito na Política de Privacidade. Não é generosidade — é o que a

@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using Anamnys.Server.Storage;
 using Anamnys.Tests.Auth;
 using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
@@ -29,6 +30,8 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
     // CreateHttpClient resolves whatever port this test run actually got.
     public Uri KeycloakBaseAddress { get; private set; } = null!;
 
+    public StorageOptions StorageOptions { get; private set; } = null!;
+
     public HttpClient CreateServerClient() => _app!.CreateHttpClient("server");
 
     // Mailpit's web/API endpoint at whatever host port this run got (see KeycloakBaseAddress).
@@ -54,8 +57,27 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
         KeycloakAdminPassword = await keycloakResource.AdminPasswordParameter!.GetValueAsync(TestContext.Current.CancellationToken)
             ?? throw new InvalidOperationException("Keycloak admin password parameter had no value.");
 
+        var storageAccessKey = await ParameterValueAsync(appHost, "storage-access-key");
+        var storageSecretKey = await ParameterValueAsync(appHost, "storage-secret-key");
+
         _app = await appHost.BuildAsync(TestContext.Current.CancellationToken);
         await _app.StartAsync(TestContext.Current.CancellationToken);
+
+        using (var storageRunningTimeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken))
+        {
+            storageRunningTimeout.CancelAfter(TimeSpan.FromSeconds(120));
+            await _app.ResourceNotifications.WaitForResourceAsync("storage", KnownResourceStates.Running, storageRunningTimeout.Token);
+        }
+
+        var storageUrl = _app.GetEndpoint("storage", "s3").ToString().TrimEnd('/');
+        StorageOptions = new StorageOptions
+        {
+            ServiceUrl = storageUrl,
+            PublicUrl = storageUrl,
+            AccessKey = storageAccessKey,
+            SecretKey = storageSecretKey,
+            Bucket = "notes",
+        };
 
         // The keycloak resource only registers "http" and "management"
         // endpoints under Aspire.Hosting.Testing — there is no separate
@@ -85,6 +107,13 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
             keycloakReadyTimeout.CancelAfter(TimeSpan.FromSeconds(90));
             await WaitForKeycloakHttpReadyAsync(KeycloakBaseAddress, keycloakReadyTimeout.Token);
         }
+    }
+
+    private static async Task<string> ParameterValueAsync(IDistributedApplicationTestingBuilder appHost, string name)
+    {
+        var parameter = appHost.Resources.OfType<ParameterResource>().Single(r => r.Name == name);
+        return await parameter.GetValueAsync(TestContext.Current.CancellationToken)
+            ?? throw new InvalidOperationException($"Parameter {name} had no value.");
     }
 
     public async ValueTask DisposeAsync()

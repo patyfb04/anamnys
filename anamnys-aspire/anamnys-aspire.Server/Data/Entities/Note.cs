@@ -19,6 +19,9 @@ public class Note
     public string? StructureFailure { get; set; }
     public DateTimeOffset? SignedAt { get; set; }
     public string? SignedByCrp { get; set; }
+    public string? PdfObjectKey { get; set; }
+    public string? PdfSha256 { get; set; }
+    public DateTimeOffset? ExportedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

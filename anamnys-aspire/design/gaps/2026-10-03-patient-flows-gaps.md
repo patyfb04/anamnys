@@ -1,6 +1,6 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-15
+**Started:** 2026-10-03 · **Last updated:** 2026-10-18
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
@@ -169,8 +169,22 @@ Not built yet; planned for after the calendar deliveries.
   - Transcripts longer than the model context (`too_long`) are not chunked; they fail.
   - Note review and signing (delivery 3) is done: section edit, sign, audit (`AuditEntries`),
     row lock and edit refusal while structuring is pending. Still missing: audit history view;
-    correction of a signed note through a new linked version; PDF export (needs private object
-    storage and 1 h presigned URLs); `SignedByCrp` is format-only (no CRP registry check).
+    correction of a signed note through a new linked version; `SignedByCrp` is format-only (no CRP registry check).
+  - PDF export is done (QuestPDF, SeaweedFS, 1 h presigned URLs). Still missing:
+    - ICP-Brasil digital signature in the PDF (future).
+    - Production storage host: a public TLS hostname with a reverse proxy to SeaweedFS's S3 port only. The code side is done: publish mode requires the AppHost parameter `storage-public-url`, and the server refuses to start outside Development unless `Storage:PublicUrl` is an absolute https URL.
+    - Backup of the SeaweedFS volume (`anamnys-storage-data`).
+    - QuestPDF Community license holds only below US$ 1M annual revenue.
+    - The exported PDF is not yet sealed into `DocumentHashes` (F-45); its SHA-256 is stored in `Notes.PdfSha256`.
+    - Test objects (`tests/{guid}.pdf`) accumulate in the dev bucket.
+    - Manual browser check of export/download pending.    - The provider name on the PDF is the name at first export, not at signing.
+    - `Storage` options are not validated at startup; empty settings fail only after the initializer's retries.
+    - No endpoint-level test of the 409/503 export responses.
+    - An unknown section key (e.g. `PtFunctional`) prints its raw key as the PDF section title.
+    - The deployment image needs tzdata for `America/Sao_Paulo`.
+    - Untested PDF cases: Biopsychosocial name, no birth date, unsigned note.
+    - Objects written to the dev storage volume before `-s3.encryptVolumeData` stay unencrypted (recreate `anamnys-storage-data` to clear them).
+    - SeaweedFS's S3 gRPC port (18333) still listens on all interfaces; only HTTP services are loopback-bound.
   - A replay after a lost commit acknowledgement can report Stale, AlreadyHasSections or
     Conflict even though the change was saved (rare; the startup sweep covers pending).
 - **Hub progress sends are not best-effort**: a hub error while sending the "structuring"

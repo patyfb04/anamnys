@@ -1,6 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.Patients;
+using Anamnys.Server.Storage;
 
 namespace Anamnys.Server.Notes;
 
@@ -133,6 +134,23 @@ public static class NoteEndpoints
                 SignOutcome.Locked => Results.Conflict(new { message = LockedMessage, reason = "locked" }),
                 SignOutcome.NoSections => Results.Conflict(new { message = "A nota não tem seções para assinar.", reason = "no_sections" }),
                 _ => Results.UnprocessableEntity(new { message = "Cadastre seu CRP no perfil para assinar.", reason = "missing_crp" }),
+            };
+        });
+
+        notes.MapPost("{noteId:guid}/export", async (Guid noteId, HttpContext http, AnamnysDbContext db, INoteFileStore store, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            var result = await NoteExport.ExportAsync(db, store, providerId, noteId, DateTimeOffset.UtcNow, ct);
+            return result.Outcome switch
+            {
+                ExportOutcome.Ok => Results.Ok(new { url = result.Url, expiresAt = result.ExpiresAt }),
+                ExportOutcome.NotFound => Results.NotFound(),
+                ExportOutcome.NotSigned => Results.Conflict(new { message = "Assine a nota antes de exportar.", code = "not_signed" }),
+                _ => Results.Json(new { message = "Armazenamento indisponível. Tente de novo em instantes.", code = "storage_unavailable" },
+                    statusCode: StatusCodes.Status503ServiceUnavailable),
             };
         });
     }

@@ -28,7 +28,7 @@ the schema still carries every table, but only the features below have code.
 | Fluxo de revisão e assinatura | done: section edit, sign, lock | `Notes/`, spec `2026-10-13-note-review-and-signing-design.md` |
 | Motor de cobrança multipaís | not started | — |
 | Avisos de documentação incompleta | not started | — |
-| Exportação em PDF + S3 + URLs assinadas | not started | — |
+| Exportação em PDF + S3 + URLs assinadas | done | PDF generated once (QuestPDF) and kept in SeaweedFS (self-hosted S3) instead of a cloud S3; downloaded through 1 h presigned URLs |
 | Gestão de pacientes | done: list, search, record, archive, diagnoses, medications, plan objectives | `Patients/` |
 | Trilha de auditoria por documento | partial: `AuditEntries` written for note mutations; no history view | `Notes/NoteAudit.cs` |
 | Pipeline Hangfire + progresso SignalR | partial: progress hub done; the queue is an in-process worker, not Hangfire | `LiveSession/TranscriptionQueue.cs`, `ProgressHub.cs` |
@@ -86,7 +86,7 @@ the schema still carries every table, but only the features below have code.
 | F-25 Captura de áudio da aba | not started | the live session captures the provider's microphone, not a tab |
 | F-26 Áudio transitório | partial | live-session audio is kept only in memory buffers and dropped after transcription; `AudioDestructionLogs` is not written and there is no test proving nothing survives |
 | F-27 Pseudonimização | not started | |
-| F-28 Transcrição como fonte | partial | the transcript is kept in `Notes.RawTranscript`; `Transcripts` table unused; no export or share exists yet to exclude it from |
+| F-28 Transcrição como fonte | partial | the transcript is kept in `Notes.RawTranscript`; `Transcripts` table unused; no export includes the transcript (PDF built only from signed sections) |
 
 ### H · Agenda e mensageria
 

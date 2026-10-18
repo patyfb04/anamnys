@@ -454,6 +454,9 @@ CREATE TABLE "Notes" (
 	"StructureStatus" text,
 	"StructureFailure" text,
 	"SignedByCrp" text,
+	"PdfObjectKey" text,
+	"PdfSha256" text,
+	"ExportedAt" timestamp with time zone,
 	CONSTRAINT "Notes_Format_ck" CHECK (("Format" = ANY (ARRAY['DAP'::text, 'SOAP'::text, 'Biopsychosocial'::text, 'PtFunctional'::text]))),
 	CONSTRAINT "Notes_InputMode_ck" CHECK (("InputMode" = ANY (ARRAY['VoiceBatch'::text, 'VoiceLive'::text, 'VoiceAppointment'::text, 'Text'::text]))),
 	CONSTRAINT "Notes_Signed_ck" CHECK ((("Status" = ANY (ARRAY['Signed'::text, 'Exported'::text])) = ("SignedAt" IS NOT NULL))),
@@ -461,7 +464,8 @@ CREATE TABLE "Notes" (
 	CONSTRAINT "Notes_FailureReason_ck" CHECK ((("Status" = 'Failed'::text) = ("FailureReason" IS NOT NULL)) AND (("FailureReason" IS NULL) OR ("FailureReason" = ANY (ARRAY['no_speech'::text, 'transcription_error'::text, 'server_restart'::text])))),
 	CONSTRAINT "Notes_StructureStatus_ck" CHECK ((("StructureStatus" IS NULL) OR ("StructureStatus" = ANY (ARRAY['pending'::text, 'done'::text, 'failed'::text])))),
 	CONSTRAINT "Notes_StructureFailure_ck" CHECK (((("StructureStatus" IS NOT DISTINCT FROM 'failed'::text) = ("StructureFailure" IS NOT NULL)) AND (("StructureFailure" IS NULL) OR ("StructureFailure" = ANY (ARRAY['model_error'::text, 'too_long'::text, 'server_restart'::text]))))),
-	CONSTRAINT "Notes_SignedByCrp_ck" CHECK ((("SignedAt" IS NULL) = ("SignedByCrp" IS NULL)))
+	CONSTRAINT "Notes_SignedByCrp_ck" CHECK ((("SignedAt" IS NULL) = ("SignedByCrp" IS NULL))),
+	CONSTRAINT "Notes_Exported_ck" CHECK (((("Status" = 'Exported') = ("PdfObjectKey" IS NOT NULL)) AND (("PdfObjectKey" IS NULL) = ("PdfSha256" IS NULL)) AND (("PdfObjectKey" IS NULL) = ("ExportedAt" IS NULL))))
 );
 CREATE TABLE "NoteSections" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

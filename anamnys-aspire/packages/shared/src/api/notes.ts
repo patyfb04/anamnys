@@ -50,8 +50,8 @@ export const notesApi = {
   sign: async (noteId: string): Promise<void> => {
     await api.post(`/phi/providers/me/notes/${noteId}/sign`);
   },
-  export: async (noteId: string): Promise<{ url: string }> => {
-    const { data } = await api.post<{ url: string }>(`/notes/${noteId}/export`);
+  exportPdf: async (noteId: string): Promise<{ url: string; expiresAt: string }> => {
+    const { data } = await api.post<{ url: string; expiresAt: string }>(`/phi/providers/me/notes/${noteId}/export`);
     return data;
   },
 };
