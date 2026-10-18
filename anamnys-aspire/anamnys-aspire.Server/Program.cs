@@ -11,6 +11,7 @@ using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
+using Anamnys.Server.Storage;
 using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +22,9 @@ builder.AddRedisClientBuilder("cache")
     .WithOutputCache();
 
 builder.AddNpgsqlDbContext<AnamnysDbContext>("anamnysdb");
+builder.AddNoteStorage();
+// QuestPDF Community license: free below US$ 1M annual revenue.
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddHostedService<DatabaseInitializer>();
 builder.AddLiveSession();
 builder.AddNoteStructuring();

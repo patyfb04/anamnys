@@ -20,6 +20,32 @@ var postgres = builder.AddPostgres("postgres")
 var keycloakDb = postgres.AddDatabase("keycloakdb");
 var anamnysDb = postgres.AddDatabase("anamnysdb");
 
+// Private object store for exported PDFs (design/specs/2026-10-17-note-pdf-export-design.md §4).
+// SeaweedFS in S3 mode; the identity file is written from the secret parameters at start so no
+// credential is ever committed (the keys must be hex/alphanumeric: they are written into JSON unescaped). -s3.encryptVolumeData
+// (the S3 gateway's own flag; -filer.encryptVolumeData alone does not cover S3 uploads) encrypts the stored chunks.
+// -ip/-ip.bind keep master, volume and filer on loopback; only the S3 port (8333) binds 0.0.0.0, and the
+// Iceberg/Lance listeners are disabled, so other containers reach nothing but S3.
+var storageAccessKey = builder.AddParameter("storage-access-key", secret: true);
+var storageSecretKey = builder.AddParameter("storage-secret-key", secret: true);
+var storage = builder.AddContainer("storage", "chrislusf/seaweedfs", "4.48")
+    .WithVolume("anamnys-storage-data", "/data")
+    .WithEnvironment("S3_ACCESS_KEY", storageAccessKey)
+    .WithEnvironment("S3_SECRET_KEY", storageSecretKey)
+    .WithEntrypoint("/bin/sh")
+    .WithArgs("-c", """
+        printf '{"identities":[{"name":"anamnys","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List"]}]}' "$S3_ACCESS_KEY" "$S3_SECRET_KEY" > /tmp/s3.json && exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=127.0.0.1 -s3 -s3.port=8333 -s3.ip.bind=0.0.0.0 -s3.port.iceberg=0 -s3.port.lance=0 -s3.config=/tmp/s3.json -filer.encryptVolumeData -s3.encryptVolumeData -volume.max=0
+        """)
+    .WithHttpEndpoint(targetPort: 8333, name: "s3")
+    .WithHttpHealthCheck("/healthz", endpointName: "s3");
+
+// The browser downloads straight from the store, so presigned URLs are signed for the host it
+// can reach (SigV4 signs the host). A deployment must supply that public TLS host: publish mode
+// declares the required parameter `storage-public-url`, and the server refuses to start outside
+// Development unless it is an absolute https URL. A dev run uses the localhost endpoint, unless
+// `Parameters:storage-public-url` is set (e.g. to try a tunnel).
+var storagePublicUrl = builder.Configuration["Parameters:storage-public-url"];
+
 // Same discriminator as INCLUDE_DEV_SEED below — see that comment for why both
 // conditions are needed. Named here because it now gates two independent things
 // (the realm's dev-only content, and the Mailpit resource just below).
@@ -66,6 +92,10 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     .WithReference(anamnysDb)
     .WaitFor(cache)
     .WaitFor(anamnysDb)
+    .WithEnvironment("Storage__ServiceUrl", storage.GetEndpoint("s3"))
+    .WithEnvironment("Storage__AccessKey", storageAccessKey)
+    .WithEnvironment("Storage__SecretKey", storageSecretKey)
+    .WaitFor(storage)
     .WithEnvironment("ANAMNYS_PROVIDER_CLIENT_SECRET", providerClientSecret)
     .WithEnvironment("ANAMNYS_PATIENT_CLIENT_SECRET", patientClientSecret)
     .WithEnvironment("ANAMNYS_OWNER_CLIENT_SECRET", ownerClientSecret)
@@ -156,6 +186,19 @@ if (mailpit is not null)
 }
 
 server.WithReference(keycloak).WaitFor(keycloak);
+
+if (builder.ExecutionContext.IsPublishMode)
+{
+    server.WithEnvironment("Storage__PublicUrl", builder.AddParameter("storage-public-url"));
+}
+else if (!string.IsNullOrEmpty(storagePublicUrl))
+{
+    server.WithEnvironment("Storage__PublicUrl", storagePublicUrl);
+}
+else
+{
+    server.WithEnvironment("Storage__PublicUrl", storage.GetEndpoint("s3"));
+}
 
 // Lets the server's outside-Development startup gate (DevOnlyTestClientGuard)
 // query Keycloak's admin API for the dev-only test service-account clients.

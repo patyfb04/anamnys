@@ -132,3 +132,6 @@ Content-Type: application/json
 }
 
 ###
+
+### Export a signed note as PDF (returns a presigned URL valid for 1 hour)
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/export

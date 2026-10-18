@@ -74,6 +74,8 @@ planned package without adding the reference first.
   `design/specs/2026-09-05-keycloak-implementation-design.md`.
 - Whisper.net (CPU runtime) for in-process transcription; models downloaded on first use to `LiveSession:ModelDirectory`, verified by `LiveSession:ModelSha256`
 - LLamaSharp (CPU backend) running Qwen2.5 7B Instruct in-process for note structuring; model files downloaded on first use to NoteStructuring:ModelDirectory, verified by the SHA-256 list in NoteStructuring:Files
+- SeaweedFS `chrislusf/seaweedfs:4.48` (S3 mode, Aspire-managed container `storage`, data volume `anamnys-storage-data`) as the private object store for exported PDFs; the server uses AWSSDK.S3 4.0.104.4 and presigns one-hour GET URLs. The private bucket `notes` is created at server start (with retry); unsigned access returns 403. `-s3.encryptVolumeData` (plus `-filer.encryptVolumeData`) is on, so S3 uploads are encrypted at rest (verified: the object marker is absent from the `.dat` files); the per-chunk keys live in the filer metadata on the same volume, so it protects copied volume files, not a copy of the whole volume. Master/volume/filer are bound to loopback; only S3 (8333) is reachable from other containers. Readiness is `/healthz`. Presigned URLs are signed for `Storage:PublicUrl`, the host the browser downloads from: a dev run uses the localhost endpoint (override with `Parameters:storage-public-url`); publish mode requires the AppHost parameter `storage-public-url`, and outside Development the server refuses to start unless it is an absolute https URL
+- QuestPDF 2026.9.1 (Community license, free below US$ 1M annual revenue) for note PDFs
 - ASP.NET Core SignalR hubs `/hubs/transcription` and `/hubs/progress`
 
 ### Backend — planned
@@ -121,7 +123,7 @@ shells out to it to package the login theme.
 
 ### First-time setup on a new machine
 
-Four AppHost parameters are declared `secret: true` with no default, so they have no
+Six AppHost parameters are declared `secret: true` with no default, so they have no
 value until you set one. User secrets live in `~/.microsoft/usersecrets/<UserSecretsId>/`
 and are deliberately never committed, so **every developer sets their own on every
 machine** — a working checkout on someone else's laptop does not carry them across.
@@ -140,10 +142,15 @@ dotnet user-secrets --project $P set "Parameters:provider-client-secret"  "$(ope
 dotnet user-secrets --project $P set "Parameters:patient-client-secret"   "$(openssl rand -hex 32)"
 dotnet user-secrets --project $P set "Parameters:owner-client-secret"     "$(openssl rand -hex 32)"
 dotnet user-secrets --project $P set "Parameters:keycloak-admin-password" "$(openssl rand -hex 32)"
+dotnet user-secrets --project $P set "Parameters:storage-access-key"      "$(openssl rand -hex 16)"
+dotnet user-secrets --project $P set "Parameters:storage-secret-key"      "$(openssl rand -hex 32)"
 
 # check what landed (values are shown, so not in a shared terminal)
 dotnet user-secrets --project $P list
 ```
+
+The storage keys must be hex or alphanumeric. The object store keeps its data in the Docker
+volume `anamnys-storage-data`.
 
 **Do not copy these values from a teammate.** Each of the three client secrets is read in
 exactly two places that must agree *with each other on one machine* and nowhere else:
@@ -322,7 +329,7 @@ npm run lint    # eslint — root runs this across all workspaces
   startup guard can query Keycloak's admin API for the dev-only test clients and refuse to
   boot if they still exist). Missing either throws `InvalidOperationException` at startup.
 - **`Parameters:keycloak-admin-password` must exist as a user secret in
-  `anamnys-aspire.AppHost`** — it is one of four such parameters; see "First-time setup
+  `anamnys-aspire.AppHost`** — it is one of six such parameters; see "First-time setup
   on a new machine" above for the full set and the volume caveat. Without it the AppHost
   will not start on a fresh clone, because it is
   declared `secret: true` with no default, unlike `keycloak-admin-username`, which

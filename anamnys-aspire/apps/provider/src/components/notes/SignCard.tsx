@@ -2,15 +2,17 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
 import { isAxiosError } from "axios";
-import { PenLine } from "lucide-react";
+import { FileDown, PenLine } from "lucide-react";
+import { ApiError } from "@anamnys/shared/api/client";
 import { notesApi } from "@anamnys/shared/api/notes";
 import type { NoteDetail } from "@anamnys/shared/lib/types";
+import { toast } from "@anamnys/shared/ui/Toaster";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 
 interface Props {
   note: NoteDetail;
-  onSigned: () => void;
+  onSigned: () => unknown | Promise<unknown>;
 }
 
 // Signing locks the note for good. Shown only once the note is ready for review.
@@ -20,6 +22,20 @@ export default function SignCard({ note, onSigned }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [confirming, setConfirming] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const exportPdf = async () => {
+    setExporting(true);
+    try {
+      const { url } = await notesApi.exportPdf(note.id);
+      if (!note.exportedAt) await onSigned(); // refresh: the note is now Exported
+      window.location.assign(url);
+    } catch (e) {
+      toast.error(e instanceof ApiError && (e.status === 409 || e.status === 503) ? e.message : t("noteView.exportFailed"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const sign = async () => {
     setConfirming(false);
@@ -42,6 +58,20 @@ export default function SignCard({ note, onSigned }: Props) {
         <p className="text-body-md text-onSurface">
           {t("noteView.signedAt", { date: new Date(note.signedAt).toLocaleString("pt-BR"), crp: note.signedByCrp ?? "—" })}
         </p>
+        {note.exportedAt && (
+          <p className="mt-1 text-body-sm text-onSurfaceVariant">
+            {t("noteView.exportedAt", { date: new Date(note.exportedAt).toLocaleString("pt-BR") })}
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={exporting}
+          onClick={() => void exportPdf()}
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-radii-lg border border-primary px-4 py-3 text-label-lg text-primary disabled:opacity-60"
+        >
+          <FileDown size={16} aria-hidden />
+          {note.exportedAt ? t("noteView.downloadPdf") : t("noteView.exportPdf")}
+        </button>
       </DetailCard>
     );
   }

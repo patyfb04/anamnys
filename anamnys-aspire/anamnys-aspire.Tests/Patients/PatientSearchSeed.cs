@@ -143,10 +143,14 @@ public sealed class PatientSearchSeed : IAsyncDisposable
         CancellationToken cancellationToken = default) =>
         ExecuteAsync(
             """
-            INSERT INTO "Notes" ("ProviderId", "PatientId", "Status", "InputMode", "SignedAt", "SignedByCrp", "CreatedAt")
+            INSERT INTO "Notes" ("ProviderId", "PatientId", "Status", "InputMode", "SignedAt", "SignedByCrp", "CreatedAt",
+                                 "PdfObjectKey", "PdfSha256", "ExportedAt")
             VALUES (@provider, @patient, @status, 'Text',
                     CASE WHEN @status IN ('Signed', 'Exported') THEN @created END,
-                    CASE WHEN @status IN ('Signed', 'Exported') THEN '000000/00' END, @created)
+                    CASE WHEN @status IN ('Signed', 'Exported') THEN '000000/00' END, @created,
+                    CASE WHEN @status = 'Exported' THEN 'notes/test/' || gen_random_uuid() || '.pdf' END,
+                    CASE WHEN @status = 'Exported' THEN repeat('a', 64) END,
+                    CASE WHEN @status = 'Exported' THEN @created END)
             """,
             cancellationToken,
             ("provider", providerId ?? ProviderId),
