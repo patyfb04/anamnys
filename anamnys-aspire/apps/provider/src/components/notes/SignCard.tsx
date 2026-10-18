@@ -72,6 +72,7 @@ export default function SignCard({ note, onSigned }: Props) {
           <FileDown size={16} aria-hidden />
           {note.exportedAt ? t("noteView.downloadPdf") : t("noteView.exportPdf")}
         </button>
+        <p className="mt-2 text-body-sm text-onSurfaceVariant">{t("noteView.pdfLinkHint")}</p>
       </DetailCard>
     );
   }

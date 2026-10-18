@@ -155,7 +155,8 @@
     "exportPdf": "Exportar PDF",
     "downloadPdf": "Baixar PDF",
     "exportedAt": "Exportada em {{date}}",
-    "exportFailed": "Não foi possível exportar a nota."
+    "exportFailed": "Não foi possível exportar a nota.",
+    "pdfLinkHint": "Cada clique em “Baixar PDF” gera um link novo, válido por 1 hora. O PDF fica guardado na nota."
   },
   "nav": {
     "dashboard": "Painel",
