@@ -10,7 +10,7 @@ public sealed record NoteDetail(
     string? RawTranscript, string? FailureReason, DateTimeOffset CreatedAt,
     string? StructureStatus, string? StructureFailure, IReadOnlyList<NoteSectionDto> Sections,
     DateTimeOffset? SignedAt, string? SignedByCrp, bool ProviderHasCrp, bool SectionsByAi,
-    DateTimeOffset? ExportedAt);
+    DateTimeOffset? ExportedAt, Guid? SessionId);
 
 public static class NoteQueries
 {
@@ -22,7 +22,7 @@ public static class NoteQueries
                           select new
                           {
                               n.Id, n.PatientId, PatientName = p.FirstName + " " + p.LastName, n.Status, n.InputMode, n.Format,
-                              n.RawTranscript, n.FailureReason, n.CreatedAt, n.StructureStatus, n.StructureFailure, n.SignedAt, n.SignedByCrp, n.ExportedAt,
+                              n.RawTranscript, n.FailureReason, n.CreatedAt, n.StructureStatus, n.StructureFailure, n.SignedAt, n.SignedByCrp, n.ExportedAt, n.SessionId,
                               ProviderHasCrp = db.Providers.Any(pr => pr.Id == n.ProviderId && pr.CrpNumber != null && pr.CrpRegion != null),
                               SectionsByAi = db.AuditEntries
                                   .Where(a => a.NoteId == n.Id && (a.Action == "ai_generated" || a.Action == "sections_created"))
@@ -43,6 +43,6 @@ public static class NoteQueries
 
         return new NoteDetail(note.Id, note.PatientId, note.PatientName, note.Status, note.InputMode, note.Format,
             note.RawTranscript, note.FailureReason, note.CreatedAt, note.StructureStatus, note.StructureFailure, sections,
-            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi, note.ExportedAt);
+            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi, note.ExportedAt, note.SessionId);
     }
 }

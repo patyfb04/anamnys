@@ -86,14 +86,17 @@ below, not for note-level tagging.
 `Instruments` models a standardized clinical assessment scale — its item count, score
 range, and, notably, a `SatepsiStatus` and `SatepsiCheckedOn` column. SATEPSI is the
 Sistema de Avaliação de Testes Psicológicos, the Brazilian Federal Psychology Council's
-official registry of validated psychological tests — a Brazilian psychologist is generally
-expected to use only SATEPSI-approved instruments in professional practice, so tracking
-this status per instrument is a real regulatory requirement, not incidental metadata. A
-`LicenseMode` and `MayRenderItems` flag suggest some instruments are licensed such that
-their actual item text can't be reproduced in the app, only referenced. `ScaleApplications`
-records one administration of an instrument to a patient (raw answers, computed score,
-who administered it). `ProviderInstrumentOptIns` tracks a provider's acknowledgment before
-using a given instrument — plausibly tied to licensing or liability requirements.
+official registry of psychological tests; using a test on its unfavourable or not-evaluated
+lists is an ethical offence for the psychologist, so tracking this status per instrument is a
+real regulatory requirement, not incidental metadata. Being on the "non-private" list is not
+an approval: it only means the CFP does not treat the instrument as a psychological test.
+`LicenseMode` and `MayRenderItems` record whether the rights holder allows the item text to be
+reproduced; the product never renders items for any instrument. `ScaleApplications` records
+one application of an instrument to a patient: only the integer score, the date, the provider
+and an optional session link (`RawAnswers` exists but is never written). `ProviderInstrumentOptIns`
+holds a provider's one-time acknowledgment of the explanation shown for an instrument the CFP
+has not classified; only that regime (not those blocked by the CFP lists or by copyright) can
+be opted into, and recording is allowed afterwards. See chapter 21 for the full rules.
 
 ## Intake
 

@@ -11,6 +11,7 @@ using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
+using Anamnys.Server.Scales;
 using Anamnys.Server.Storage;
 using Microsoft.AspNetCore.Authentication;
 
@@ -136,6 +137,7 @@ phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
 phi.MapAppointmentEndpoints();
 phi.MapNoteEndpoints();
+phi.MapScaleEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

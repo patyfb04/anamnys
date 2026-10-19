@@ -135,3 +135,33 @@ Content-Type: application/json
 
 ### Export a signed note as PDF (returns a presigned URL valid for 1 hour)
 POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/export
+
+###
+
+### Psychometric scales (all require the __Host-anamnys-provider cookie - send from a browser session, not this file)
+### Instruments with the provider-specific regime: available | needs_opt_in | opted_in | unavailable. 200 array of 15.
+GET {{Server_HostAddress}}/api/phi/providers/me/instruments
+
+###
+### Opt in to a "sem classificacao" instrument. 204; 404 unknown; 409 opt_in_not_allowed.
+POST {{Server_HostAddress}}/api/phi/providers/me/instruments/00000000-0000-0000-0000-000000000000/opt-in
+
+###
+### Scale series of a patient, grouped by instrument; optional sessionId filter. 200 array; 404 unknown patient.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/scales?sessionId=00000000-0000-0000-0000-000000000000
+
+###
+### Record a score (score and date only). 201 { id }; 400 validation; 404; 409 archived | instrument_unavailable | opt_in_required.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/scales
+Content-Type: application/json
+
+{
+  "instrumentId": "00000000-0000-0000-0000-000000000000",
+  "score": 12,
+  "appliedAt": "2026-10-18T12:00:00Z",
+  "sessionId": null
+}
+
+###
+### Remove a recorded score (soft removal). 204; 404.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/scales/00000000-0000-0000-0000-000000000000
