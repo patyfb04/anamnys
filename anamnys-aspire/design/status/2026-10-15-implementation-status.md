@@ -1,6 +1,7 @@
 # Implementation status against the Notion backlog
 
-**Checked:** 2026-10-15 against `develop` (`fda5b7b`).
+**Checked:** 2026-10-15 against `develop` (`fda5b7b`); updated 2026-10-18 at `develop` (`f99757c`)
+after the note editor and PDF export deliveries.
 **Sources:** Notion "Plano de Implementação" (backlog F-01…F-67, last updated there 2026-08-15)
 and "Diagramas de Sequencia" (flows 01…23). Known defects and loose ends of the shipped work
 live in `design/gaps/2026-10-03-patient-flows-gaps.md`; this file only says what exists.
@@ -39,7 +40,7 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-01 Escalas aplicadas | schema only | `Instruments`, `ScaleApplications`, `ProviderInstrumentOptIns` |
+| F-01 Escalas aplicadas | done | Score-only recording with three regimes, opt-in, soft removal, series chart; `Scales/`, `documentation/21-psychometric-scales.md` |
 | F-02 Vocabulário de temas | schema only | `ThemeVocabularies`, `ThemeTerms`, `ThemeTags`; the structuring prompt does not use them |
 | F-03 Referências de trecho | schema only | `ExcerptRefs` |
 | F-04 Metadados da sessão | partial | `Sessions` (scheduled/actual times, modality, attendance) and appointment status/cancellation are stored; a `Sessions` row is created by a live recording or a typed note linked to an appointment, and no attendance statistics exist |
@@ -145,3 +146,17 @@ the schema still carries every table, but only the features below have code.
 - Account self-service: profile, e-mail change, password and 2FA through Keycloak actions.
 - Keycloakify login theme.
 - Dev clinical seed.
+- Note list (`/note-editor`) with status filters and patient-name search (POST body, never in a URL).
+
+## Next, in priority order (agreed 2026-10-18)
+
+1. **F-05 Validador CFP 006/2019, together with document emission (flow 05)** — documents
+   (`ClinicalDocuments`) have no code yet, so the validator ships with the screen that writes
+   and signs them.
+2. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
+   renamed, split or merged).
+3. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
+   first paying subscriber.
+
+Open verification: the storage/export integration tests have not run since the
+`storage-public-url` change (`develop` `f99757c`); run them with Aspire stopped.
