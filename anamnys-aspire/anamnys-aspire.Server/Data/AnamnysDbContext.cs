@@ -26,6 +26,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<BookingPolicy> BookingPolicies => Set<BookingPolicy>();
+    public DbSet<Instrument> Instruments => Set<Instrument>();
+    public DbSet<ScaleApplication> ScaleApplications => Set<ScaleApplication>();
+    public DbSet<ProviderInstrumentOptIn> ProviderInstrumentOptIns => Set<ProviderInstrumentOptIn>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -176,6 +179,29 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         {
             e.ToTable("BookingPolicies");
             e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<Instrument>(e =>
+        {
+            e.ToTable("Instruments");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<ScaleApplication>(e =>
+        {
+            e.ToTable("ScaleApplications");
+            e.HasKey(x => x.Id);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Session>().WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Instrument>().WithMany().HasForeignKey(x => x.InstrumentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ProviderInstrumentOptIn>(e =>
+        {
+            e.ToTable("ProviderInstrumentOptIns");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Instrument>().WithMany().HasForeignKey(x => x.InstrumentId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

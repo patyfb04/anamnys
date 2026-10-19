@@ -62,6 +62,28 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task GetAsync_NoteLinkedToSession_ReturnsSessionId()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await seed.AddNoteAsync(patient, "Draft", DateTimeOffset.UtcNow, cancellationToken: Ct);
+        var sessionId = Guid.NewGuid();
+        await seed.ExecuteSqlAsync(
+            """INSERT INTO "Sessions" ("Id", "PatientId", "ProviderId") VALUES (@id, @patient, @provider)""",
+            Ct, ("id", sessionId), ("patient", patient), ("provider", seed.ProviderId));
+        await using var db = seed.CreateDbContext();
+        var noteId = await db.Notes.Where(n => n.PatientId == patient).Select(n => n.Id).SingleAsync(Ct);
+        await db.Notes.Where(n => n.Id == noteId).ExecuteUpdateAsync(s => s.SetProperty(n => n.SessionId, sessionId), Ct);
+
+        // Act
+        var detail = await NoteQueries.GetAsync(db, seed.ProviderId, noteId, Ct);
+
+        // Assert
+        detail!.SessionId.Should().Be(sessionId);
+    }
+
+    [Fact]
     public async Task Restructure_WithoutSession_Returns401()
     {
         using var client = new HttpClient { BaseAddress = ProviderBaseAddress };

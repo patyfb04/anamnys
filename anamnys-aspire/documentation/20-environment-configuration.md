@@ -2,7 +2,7 @@
 
 Everything that has to be configured per environment, in one place, so nothing is forgotten
 when a new machine, staging or production is set up. Last checked against the code on
-2026-10-18 (branch `feature/note-pdf-export`).
+2026-10-18 (branch `feature/psychometric-scales`).
 
 ## How environments differ in this codebase
 
@@ -36,7 +36,7 @@ production.
 | `Parameters:storage-secret-key` | same, `openssl rand -hex 32` | |
 | `Parameters:resend-api-key` | optional user secret | Only to receive real e-mail in your own inbox (Resend sandbox delivers only to the Resend account's address). Without it Mailpit is used. |
 | `Parameters:storage-public-url` | optional user secret | Only to test PDF downloads through a tunnel; default is the localhost endpoint. |
-| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf. |
+| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf, 2026-10-18-scales. |
 | AI models | nothing to set | Whisper and Qwen files download on first use into the default model directories (≈ 4.7 GB for Qwen). |
 
 If the AppHost ever ran before the client secrets were set, remove the Keycloak and Postgres

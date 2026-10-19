@@ -262,6 +262,25 @@ Not built yet; planned for after the calendar deliveries.
   exist** (pre-existing, unused by this delivery).
 - **The `.http` requests for the three new routes were not run against a live AppHost** (pending
   with the manual browser check).
+- **Scales (F-01):**
+  - No database trigger enforces the scale regimes (unavailable instruments, opt-in, archived
+    patients); enforcement is in `ScaleRecording` only. Same family as signed-note immutability.
+  - Opt-in cannot be revoked: `RevokedAt` is read but never written, and the unique key
+    `(ProviderId, InstrumentId)` ignores `RevokedAt`, so it will block a new opt-in once
+    revocation exists.
+  - Multidimensional instruments (one application, several scores) do not fit
+    `ScaleApplications."Score"`; F-67.
+  - Scales recorded from the patient record are not linked to a session (only those recorded
+    from the note page are).
+  - The `InstrumentSeries` SQL view selects `RawAnswers` and ignores `RemovedAt`; nothing reads
+    it. Drop or fix it before anything does.
+  - A client clock ahead of the server is absorbed by a 5-minute tolerance (`AppliedAt <= now +
+    5 minutes`, stored as `min(AppliedAt, now)`); a clock more than 5 minutes ahead still fails
+    the check.
+  - Removing a scale entry is allowed for an archived patient (same as the other clinical
+    cards).
+  - Manual browser check of the scales UI (card, modal, help, removal, archived patient) is
+    pending, as are the new `.http` requests against a live AppHost.
 
 ## Portal do paciente e convites
 

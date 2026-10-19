@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   Archive,
@@ -9,6 +9,8 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   FilePlus,
   Mic,
@@ -18,11 +20,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { patientsApi } from "@anamnys/shared/api/patients";
+import { notesApi } from "@anamnys/shared/api/notes";
 import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
-import type { NoteSummary } from "@anamnys/shared/lib/types";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
+import ScalesCard from "@/components/scales/ScalesCard";
 import PatientFormModal from "@/components/patients/PatientFormModal";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import NoteStatusBadge from "@/components/patients/NoteStatusBadge";
@@ -201,7 +204,7 @@ function PatientDetailPage() {
         </DetailCard>
 
         <DetailCard title={t("patients.detail.recentNotes")} icon={<FileText size={20} />}>
-          <RecentNotes notes={patient.recentNotes} />
+          <RecentNotes patientId={patientId} />
         </DetailCard>
       </div>
 
@@ -211,6 +214,9 @@ function PatientDetailPage() {
         <MedicationsCard patientId={patientId} items={patient.medications} readOnly={archived} onChanged={refresh} />
         <ObjectivesCard patientId={patientId} items={patient.objectives} readOnly={archived} onChanged={refresh} />
       </div>
+
+      {/* Full width: each instrument's series gets its own column inside the card. */}
+      <ScalesCard patientId={patientId} readOnly={archived} />
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />
@@ -258,10 +264,28 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RecentNotes({ notes }: { notes: NoteSummary[] }) {
+const RECENT_NOTES_PAGE_SIZE = 3;
+
+// The patient's notes, newest first, three per page so the card keeps its height as the history grows.
+function RecentNotes({ patientId }: { patientId: string }) {
   const { t, i18n } = useTranslation();
-  if (notes.length === 0) return <p className="text-body-md text-onSurfaceVariant">{t("patients.detail.noNotes")}</p>;
+  const [page, setPage] = useState(1);
+  const query = useQuery({
+    queryKey: ["notes", "patient", patientId, "recent", page],
+    queryFn: () => notesApi.search({ patientId, page, pageSize: RECENT_NOTES_PAGE_SIZE }),
+    placeholderData: keepPreviousData,
+  });
+  if (!query.data) {
+    return query.isError ? <p className="text-body-md text-error">{t("patients.notes.failedToLoad")}</p> : null;
+  }
+  const notes = query.data.items;
+  if (notes.length === 0 && page === 1) {
+    return <p className="text-body-md text-onSurfaceVariant">{t("patients.detail.noNotes")}</p>;
+  }
+  const pagerButton =
+    "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-surfaceContainer disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
   return (
+    <div className="flex flex-col gap-3">
     <ul className="flex flex-col gap-2">
       {notes.map((note) => {
         const signed = note.status === "Signed" || note.status === "Exported";
@@ -297,6 +321,32 @@ function RecentNotes({ notes }: { notes: NoteSummary[] }) {
         );
       })}
     </ul>
+      {(page > 1 || query.data.hasMore) && (
+        <div className="flex items-center justify-between">
+          <p className="text-body-sm text-onSurfaceVariant">{t("patients.detail.notesPage", { page })}</p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className={pagerButton}
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              aria-label={t("patients.list.previousPage")}
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              type="button"
+              className={pagerButton}
+              disabled={!query.data.hasMore}
+              onClick={() => setPage((p) => p + 1)}
+              aria-label={t("patients.list.nextPage")}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

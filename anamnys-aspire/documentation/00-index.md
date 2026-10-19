@@ -71,6 +71,10 @@ assuming that because something is *referenced* in the code, it must *exist*.
 **Part 8 — Reference**
 19. Gotchas Cheat-Sheet
 
+**Part 9 — Operations & Features**
+20. Environment Configuration
+21. Psychometric Scales (F-01)
+
 ## Building a single PDF from these files
 
 The chapters are plain Markdown, numbered so a simple glob sorts them in reading order, and
@@ -82,7 +86,7 @@ distribution, or `wkhtmltopdf`/`weasyprint`), the whole book is one command from
 `documentation/` folder:
 
 ```bash
-pandoc 0*.md 1*.md \
+pandoc 0*.md 1*.md 2*.md \
   -o anamnys-handbook.pdf \
   --toc --toc-depth=2 \
   --number-sections \
@@ -94,7 +98,7 @@ pandoc 0*.md 1*.md \
 If you don't have a LaTeX engine installed, swap in a non-LaTeX PDF engine:
 
 ```bash
-pandoc 0*.md 1*.md -o anamnys-handbook.pdf --toc --pdf-engine=weasyprint
+pandoc 0*.md 1*.md 2*.md -o anamnys-handbook.pdf --toc --pdf-engine=weasyprint
 ```
 
 Either way, pandoc reads the YAML block at the top of this file as the document's title-page

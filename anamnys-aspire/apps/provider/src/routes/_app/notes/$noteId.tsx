@@ -12,6 +12,7 @@ import DetailCard from "@/components/patients/detail/DetailCard";
 import NoteSections from "@/components/notes/NoteSections";
 import RestructureControl from "@/components/notes/RestructureControl";
 import SignCard from "@/components/notes/SignCard";
+import SessionScalesCard from "@/components/scales/SessionScalesCard";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
   component: NotePage,
@@ -94,6 +95,7 @@ function NotePage() {
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}
+          {note.sessionId && <SessionScalesCard patientId={note.patientId} sessionId={note.sessionId} />}
         </div>
       </div>
     </div>

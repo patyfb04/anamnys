@@ -137,6 +137,43 @@ public class NoteListTests(SharedAppHostFixture fixture)
         errors.Should().ContainKey("name");
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(NoteList.PageSize + 1)]
+    public void Validate_PageSizeOutOfRange_ReportsPageSize(int pageSize)
+    {
+        // Act
+        var errors = new NoteSearchRequest(null, null, null, null, pageSize).Validate();
+
+        // Assert
+        errors.Should().ContainKey("pageSize");
+    }
+
+    [Fact]
+    public async Task SearchAsync_PageSizeFour_PagesByFour()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        for (var i = 0; i < 6; i++)
+        {
+            await seed.AddNoteAsync(patient, "ReadyForReview", Now.AddMinutes(-i), cancellationToken: Ct);
+        }
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var first = await NoteList.SearchAsync(db, seed.ProviderId, new NoteSearchRequest(null, patient, null, 1, 4), Ct);
+        var second = await NoteList.SearchAsync(db, seed.ProviderId, new NoteSearchRequest(null, patient, null, 2, 4), Ct);
+
+        // Assert
+        first.Items.Should().HaveCount(4);
+        first.HasMore.Should().BeTrue();
+        first.Items[0].CreatedAt.Should().Be(Now);
+        second.Items.Should().HaveCount(2);
+        second.HasMore.Should().BeFalse();
+        second.Items[0].CreatedAt.Should().Be(Now.AddMinutes(-4));
+    }
+
     // Labels: Draft, ReadyForReview, Signed, Failed, StructureFailed (ReadyForReview + StructureStatus failed).
     private async Task<Dictionary<Guid, string>> AddLabelledNotesAsync(PatientSearchSeed seed, Guid patient)
     {

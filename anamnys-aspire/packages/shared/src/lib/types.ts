@@ -366,6 +366,7 @@ export interface NoteDetail {
   id: string;
   patientId: string;
   patientName: string;
+  sessionId: string | null;
   status: NoteDetailStatus;
   inputMode: string;
   format: string;
@@ -403,6 +404,7 @@ export interface NoteSearchRequest {
   patientId?: string;
   name?: string;
   page?: number;
+  pageSize?: number;
 }
 
 export interface NoteSearchResponse {
@@ -429,4 +431,40 @@ export interface NoteSnapshot {
   status: NoteDetailStatus;
   queuePosition: number;
   failureReason: NoteFailureReason | null;
+}
+
+export type ScaleRegime = "available" | "needs_opt_in" | "opted_in" | "unavailable";
+
+export interface InstrumentItem {
+  id: string;
+  code: string;
+  name: string;
+  minScore: number;
+  maxScore: number;
+  regime: ScaleRegime;
+  explanation: string;
+}
+
+export interface ScaleEntry {
+  id: string;
+  score: number;
+  appliedAt: string;
+  sessionId: string | null;
+  appointmentStartsAt: string | null;
+}
+
+export interface ScaleSeries {
+  instrumentId: string;
+  code: string;
+  name: string;
+  minScore: number;
+  maxScore: number;
+  entries: ScaleEntry[];
+}
+
+export interface RecordScaleRequest {
+  instrumentId: string;
+  score: number;
+  appliedAt: string;
+  sessionId: string | null;
 }

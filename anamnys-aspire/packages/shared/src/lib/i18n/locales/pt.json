@@ -21,6 +21,48 @@
       "symbol": "Um símbolo"
     }
   },
+  "scales": {
+    "title": "Escalas",
+    "sessionTitle": "Escalas desta sessão",
+    "record": "Registrar escala",
+    "help": "Como funcionam as escalas",
+    "helpLabel": "Ajuda sobre escalas",
+    "empty": "Nenhuma escala registrada.",
+    "sessionEmpty": "Nenhuma escala registrada nesta sessão.",
+    "remove": "Remover",
+    "removeTitle": "Remover este registro?",
+    "removeConfirm": "Remover este registro? Ele sai da série, mas fica guardado.",
+    "removed": "Registro removido.",
+    "removeFailed": "Não foi possível remover o registro.",
+    "recorded": "Escala registrada.",
+    "recordFailed": "Não foi possível registrar a escala.",
+    "instrument": "Instrumento",
+    "choose": "Escolha um instrumento",
+    "loadFailed": "Não foi possível carregar os instrumentos.",
+    "seriesLoadFailed": "Não foi possível carregar as escalas.",
+    "unavailableSuffix": "indisponível",
+    "optedInSuffix": "adesão registrada",
+    "groups": {
+      "available": "Disponíveis",
+      "needsOptIn": "Requer sua adesão",
+      "unavailable": "Indisponíveis"
+    },
+    "optInButton": "Li e quero registrar este instrumento",
+    "optInFailed": "Não foi possível registrar sua adesão.",
+    "score": "Escore",
+    "range": "{{min}}–{{max}}",
+    "date": "Data de aplicação",
+    "linkedAppointment": "consulta de {{date}}",
+    "entriesPage": "Página {{page}} de {{pages}}",
+    "chartLabel": "Evolução de {{name}}",
+    "helpItems": {
+      "available": "Disponíveis: escalas que o CFP classificou como não privativas; você registra o escore direto.",
+      "needsOptIn": "Requer sua adesão: o CFP ainda não se pronunciou; você registra depois de ler o aviso e confirmar uma única vez.",
+      "unavailable": "Indisponíveis: proibidas pelo CFP (art. 12) ou bloqueadas pelo autor; o Anamnys não aceita registros delas.",
+      "stored": "O Anamnys guarda só o número e a data. A interpretação é sua.",
+      "mistake": "Errou o escore? Remova e lance de novo; o registro removido fica guardado."
+    }
+  },
   "liveSession": {
     "title": "Sessão ao Vivo",
     "subtitle": "Dite a evolução da sessão; a transcrição e a nota em seções são geradas no nosso servidor.",
@@ -617,6 +659,7 @@
       "schedule": "Agendar consulta",
       "moreActions": "Mais ações",
       "viewNote": "Ver nota",
+      "notesPage": "Página {{page}}",
       "continueNote": "Continuar nota",
       "diagnoses": "Diagnósticos",
       "noDiagnoses": "Nenhum diagnóstico registrado.",

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Anamnys.Server.Notes;
 
 // A POST body, not a query string: the patient name must never land in a URL.
-public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? Name, int? Page)
+public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? Name, int? Page, int? PageSize = null)
 {
     public const int MaxName = 100;
     public const int MaxPage = 10_000;
@@ -25,6 +25,10 @@ public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? 
         if (Page is < 1 or > MaxPage)
         {
             errors["page"] = ["Página inválida."];
+        }
+        if (PageSize is < 1 or > NoteList.PageSize)
+        {
+            errors["pageSize"] = [$"O tamanho da página vai de 1 a {NoteList.PageSize}."];
         }
         return errors;
     }
@@ -66,10 +70,11 @@ public static class NoteList
         }
 
         var page = request.Page ?? 1;
+        var size = request.PageSize ?? PageSize;
         var items = await rows
             .OrderByDescending(r => r.n.CreatedAt).ThenByDescending(r => r.n.Id)
-            .Skip((page - 1) * PageSize)
-            .Take(PageSize + 1)
+            .Skip((page - 1) * size)
+            .Take(size + 1)
             .Select(r => new NoteListItem(
                 r.n.Id, r.n.PatientId, r.p.FirstName + " " + r.p.LastName, r.n.Status, r.n.StructureStatus, r.n.InputMode, r.n.Format,
                 r.n.CreatedAt, r.n.SignedAt,
@@ -78,7 +83,7 @@ public static class NoteList
                     .Select(a => (DateTimeOffset?)a.StartsAt)
                     .FirstOrDefault()))
             .ToListAsync(ct);
-        var hasMore = items.Count > PageSize;
-        return new NoteSearchResponse(hasMore ? items[..PageSize] : items, hasMore);
+        var hasMore = items.Count > size;
+        return new NoteSearchResponse(hasMore ? items[..size] : items, hasMore);
     }
 }
