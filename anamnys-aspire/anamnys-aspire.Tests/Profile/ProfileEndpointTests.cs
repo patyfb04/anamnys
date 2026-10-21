@@ -78,7 +78,7 @@ public class ProfileEndpointTests
             using var put = await session.SendAsync(
                 new HttpRequestMessage(HttpMethod.Put, "/api/phi/providers/me/profile")
                 {
-                    Content = JsonContent.Create(new { name = newName, crpNumber = "06/99999", crpRegion = "SP" }),
+                    Content = JsonContent.Create(new { name = newName, crpNumber = "06/99999", crpRegion = "SP", practiceCity = "  Campinas  " }),
                 },
                 TestContext.Current.CancellationToken);
             var saved = await GetProviderProfileAsync(session);
@@ -88,6 +88,7 @@ public class ProfileEndpointTests
             saved.GetProperty("name").GetString().Should().Be(newName);
             saved.GetProperty("crpNumber").GetString().Should().Be("06/99999");
             saved.GetProperty("crpRegion").GetString().Should().Be("SP");
+            saved.GetProperty("practiceCity").GetString().Should().Be("Campinas");
             saved.GetProperty("email").GetString().Should().Be(original.GetProperty("email").GetString());
         }
         finally
@@ -101,6 +102,7 @@ public class ProfileEndpointTests
                         name = original.GetProperty("name").GetString(),
                         crpNumber = original.GetProperty("crpNumber").GetString(),
                         crpRegion = original.GetProperty("crpRegion").GetString(),
+                        practiceCity = original.GetProperty("practiceCity").GetString(),
                     }),
                 },
                 TestContext.Current.CancellationToken);

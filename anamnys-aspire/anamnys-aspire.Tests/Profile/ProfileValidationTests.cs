@@ -88,6 +88,19 @@ public class ProfileValidationTests
     }
 
     [Fact]
+    public void Validate_WhenPracticeCityIsTooLong_ReportsPracticeCity()
+    {
+        // Arrange
+        var request = new UpdateProviderProfileRequest("Ana Souza", null, null, new string('c', 121));
+
+        // Act
+        var errors = request.Validate();
+
+        // Assert
+        errors.Should().ContainKey("practiceCity");
+    }
+
+    [Fact]
     public void Validate_WhenPatientRequestIsComplete_ReturnsNoErrors()
     {
         // Arrange

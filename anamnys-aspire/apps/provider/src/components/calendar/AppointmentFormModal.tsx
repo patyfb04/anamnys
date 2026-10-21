@@ -75,7 +75,7 @@ export default function AppointmentFormModal({ mode, onClose }: Props) {
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-radii-lg text-label-lg text-onSurfaceVariant hover:bg-surfaceContainer">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-radii-lg text-label-lg text-onSurfaceVariant hover:bg-pastelLavender">
             {t("common.cancel")}
           </button>
           <button type="submit" form="appointment-form" disabled={pending} className="px-4 py-2 rounded-radii-lg bg-primary text-label-lg text-onPrimary disabled:opacity-60">

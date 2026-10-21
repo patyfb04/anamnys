@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Anamnys.Server.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Anamnys.Server.Data;
 
@@ -29,6 +31,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<Instrument> Instruments => Set<Instrument>();
     public DbSet<ScaleApplication> ScaleApplications => Set<ScaleApplication>();
     public DbSet<ProviderInstrumentOptIn> ProviderInstrumentOptIns => Set<ProviderInstrumentOptIn>();
+    public DbSet<ClinicalDocument> ClinicalDocuments => Set<ClinicalDocument>();
+    public DbSet<ConformityRuleset> ConformityRulesets => Set<ConformityRuleset>();
+    public DbSet<ConformityCheck> ConformityChecks => Set<ConformityCheck>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -202,6 +207,46 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasKey(x => x.Id);
             e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Instrument>().WithMany().HasForeignKey(x => x.InstrumentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ConformityRuleset>(e =>
+        {
+            e.ToTable("ConformityRulesets");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Elements).HasColumnType("jsonb");
+            e.Property(x => x.Prohibitions).HasColumnType("jsonb");
+        });
+
+        modelBuilder.Entity<ClinicalDocument>(e =>
+        {
+            e.ToTable("ClinicalDocuments");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Fields).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<Dictionary<string, string>>(
+                    (a, b) => a != null && b != null && a.Count == b.Count && !a.Except(b).Any(),
+                    v => v.Aggregate(0, (h, kv) => HashCode.Combine(h, kv.Key, kv.Value)),
+                    v => new Dictionary<string, string>(v)));
+            e.Property(x => x.Confirmations).HasColumnType("jsonb");
+            e.Property(x => x.Team).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<TeamMember>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<List<TeamMember>>(
+                    (a, b) => a != null && b != null && a.SequenceEqual(b),
+                    v => v.Aggregate(0, (h, m) => HashCode.Combine(h, m)),
+                    v => v.ToList()));
+            e.HasOne<ConformityRuleset>().WithMany().HasForeignKey(x => x.RulesetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ConformityCheck>(e =>
+        {
+            e.ToTable("ConformityChecks");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MissingElements).HasColumnType("jsonb");
+            e.Property(x => x.ForbiddenFound).HasColumnType("jsonb");
+            e.HasOne<ClinicalDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<ConformityRuleset>().WithMany().HasForeignKey(x => x.RulesetId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

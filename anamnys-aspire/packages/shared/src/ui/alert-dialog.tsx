@@ -96,7 +96,7 @@ function AlertDialogCancel({ className, ...props }: AlertDialogPrimitive.Close.P
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
       className={clsx(
-        "border border-outlineVariant text-onSurfaceVariant rounded-radii-md px-5 py-2.5 text-label-lg hover:bg-surfaceContainerLow transition-colors",
+        "border border-outlineVariant text-onSurfaceVariant rounded-radii-md px-5 py-2.5 text-label-lg hover:bg-pastelLavender transition-colors",
         className
       )}
       {...props}

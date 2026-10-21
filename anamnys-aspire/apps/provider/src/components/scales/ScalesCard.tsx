@@ -13,7 +13,7 @@ import ScaleChart from "./ScaleChart";
 import ScaleHelpPanel from "./ScaleHelpPanel";
 import ScaleRecordModal from "./ScaleRecordModal";
 
-const actionClass = "rounded-radii-full px-3 py-1.5 text-label-lg text-primary hover:bg-surfaceContainer";
+const actionClass = "inline-flex items-center gap-1 px-3 py-1.5 text-label-lg text-primary hover:underline";
 
 // Patient record card: one small chart plus the entry list per instrument used. Shows scores and
 // dates only, never an interpretation (design/specs/2026-10-18-psychometric-scales-design.md §6).
@@ -46,7 +46,7 @@ export default function ScalesCard({ patientId, readOnly }: { patientId: string;
       icon={<Activity size={20} />}
       action={
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setHelping(true)} aria-label={t("scales.helpLabel")} className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-surfaceContainer">
+          <button type="button" onClick={() => setHelping(true)} aria-label={t("scales.helpLabel")} className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-pastelLavender">
             <HelpCircle size={18} />
           </button>
           {!readOnly && (
@@ -97,7 +97,7 @@ function SeriesBlock({ series, readOnly, onRemove }: { series: ScaleSeries; read
   const current = Math.min(page, pages);
   const visible = entries.slice((current - 1) * ENTRIES_PAGE_SIZE, current * ENTRIES_PAGE_SIZE);
   const pagerButton =
-    "p-1 rounded-radii-md text-onSurfaceVariant hover:bg-surfaceContainer disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
+    "p-1 rounded-radii-md text-onSurfaceVariant hover:bg-pastelLavender disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
 
   return (
     <div className="flex flex-col gap-2 rounded-radii-lg border border-outlineVariant p-4">

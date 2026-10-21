@@ -49,7 +49,7 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-05 Validador CFP 006/2019 | schema only | `ConformityRulesets`, `ConformityChecks`, `ClinicalDocuments` |
+| F-05 Validador CFP 006/2019 | done | all six kinds of art. 8 (declaração, atestado, relatório, relatório multiprofissional with a typed team, laudo, parecer): form per kind, conformity check, confirmations, blocking/advisory modes, signing, correction by new version, PDF export. `Documents/`, `documentation/22-psychological-documents.md` |
 | F-06 Guarda e descarte | schema only | `RetentionRules`, `DisposalRecords` |
 
 ### C · Documentos externos
@@ -150,13 +150,12 @@ the schema still carries every table, but only the features below have code.
 
 ## Next, in priority order (agreed 2026-10-18)
 
-1. **F-05 Validador CFP 006/2019, together with document emission (flow 05)** — documents
-   (`ClinicalDocuments`) have no code yet, so the validator ships with the screen that writes
-   and signs them.
-2. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
-   renamed, split or merged).
-3. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
+1. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
+   renamed, split or merged). The old seed has a reviewed mental-health vocabulary to copy.
+2. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
    first paying subscriber.
 
-Open verification: the storage/export integration tests have not run since the
-`storage-public-url` change (`develop` `f99757c`); run them with Aspire stopped.
+Open verification: the note search `pageSize` tests (`develop` `e1a5553`) compiled but have not
+run; run `-class "*NoteListTests*"` with Aspire stopped. The F-05 delivery-2 database tests
+(`DocumentsTeamMigrationTests`, `DocumentJsonbRoundTripTests`, `ClinicalDocumentServiceTests`,
+`DocumentEndpointTests`, `DocumentExportTests`) compiled but await a run with Aspire stopped.

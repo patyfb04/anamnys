@@ -208,7 +208,22 @@ CREATE TABLE "ClinicalDocuments" (
 	"RetentionUntil" date,
 	"SupersededBy" uuid,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "ClinicalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['declaracao'::text, 'atestado'::text, 'relatorio'::text, 'relatorio_multiprofissional'::text, 'laudo'::text, 'parecer'::text])))
+	"Fields" jsonb DEFAULT '{}' NOT NULL,
+	"Confirmations" jsonb DEFAULT '[]' NOT NULL,
+	"Team" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"RulesetId" uuid,
+	"SignedByCrp" text,
+	"SignedCity" text,
+	"SignedByName" text,
+	"SignedPatientName" text,
+	"PdfObjectKey" text,
+	"PdfSha256" text,
+	"ExportedAt" timestamp with time zone,
+	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ClinicalDocuments_Signed_ck" CHECK ((("SignedAt" IS NULL) = ("SignedByCrp" IS NULL) AND ("SignedAt" IS NULL) = ("SignedCity" IS NULL) AND ("SignedAt" IS NULL) = ("SignedByName" IS NULL) AND ("SignedAt" IS NULL) = ("SignedPatientName" IS NULL))),
+	CONSTRAINT "ClinicalDocuments_Pdf_ck" CHECK ((("PdfObjectKey" IS NULL AND "PdfSha256" IS NULL AND "ExportedAt" IS NULL) OR ("PdfObjectKey" IS NOT NULL AND "PdfSha256" IS NOT NULL AND "ExportedAt" IS NOT NULL AND "SignedAt" IS NOT NULL))),
+	CONSTRAINT "ClinicalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['declaracao'::text, 'atestado'::text, 'relatorio'::text, 'relatorio_multiprofissional'::text, 'laudo'::text, 'parecer'::text]))),
+	CONSTRAINT "ClinicalDocuments_Team_array" CHECK (jsonb_typeof("Team") = 'array')
 );
 CREATE TABLE "ConformityChecks" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -633,6 +648,9 @@ CREATE TABLE "Providers" (
 	"BillingSystem" integer DEFAULT 2 NOT NULL,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"PracticeCity" text,
+	"DocumentCheckMode" text DEFAULT 'blocking' NOT NULL,
+	CONSTRAINT "Providers_DocumentCheckMode_ck" CHECK (("DocumentCheckMode" = ANY (ARRAY['blocking'::text, 'advisory'::text]))),
 	CONSTRAINT "Providers_Crp_ck" CHECK ((("CrpNumber" IS NULL) = ("CrpRegion" IS NULL))),
 	CONSTRAINT "Providers_NoteFormat_ck" CHECK (("PreferredNoteFormat" = ANY (ARRAY['DAP'::text, 'SOAP'::text, 'Biopsychosocial'::text, 'PtFunctional'::text])))
 );
@@ -975,6 +993,7 @@ ALTER TABLE "BreakGlassGrants" ADD CONSTRAINT "BreakGlassGrants_AuthorizedBy_fke
 ALTER TABLE "CalendarConnections" ADD CONSTRAINT "CalendarConnections_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE SET NULL;
 ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
+ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_RulesetId_fkey" FOREIGN KEY ("RulesetId") REFERENCES "ConformityRulesets"("Id") ON DELETE RESTRICT;
 ALTER TABLE "ClinicalDocuments" ADD CONSTRAINT "ClinicalDocuments_SupersededBy_fkey" FOREIGN KEY ("SupersededBy") REFERENCES "ClinicalDocuments"("Id") ON DELETE SET NULL;
 ALTER TABLE "ConformityChecks" ADD CONSTRAINT "ConformityChecks_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE CASCADE;
 ALTER TABLE "ConformityChecks" ADD CONSTRAINT "ConformityChecks_RulesetId_fkey" FOREIGN KEY ("RulesetId") REFERENCES "ConformityRulesets"("Id") ON DELETE RESTRICT;
@@ -1183,3 +1202,170 @@ insert into "Instruments"
    'scottdmiller.com/downloadmeasures')
 
 on conflict ("Code") do nothing;
+
+-- Conformity rulesets, Res. CFP 006/2019 (seed)
+insert into "ConformityRulesets"
+  ("DocumentKind","Version","ArticleRef","Elements","Prohibitions","EffectiveFrom") values
+
+  -- DECLARAÇÃO — registra prestação de serviço, e nada além disso.
+  -- Note que a norma NÃO pede identificação do solicitante aqui: a declaração
+  -- é sobre quem foi atendido.
+  ('declaracao', 'cfp-006-2019.1', 'Art. 9º, §§1º e 2º; Art. 5º §8º; Art. 17',
+   '["titulo_declaracao",
+     "nome_pessoa_atendida",
+     "finalidade",
+     "local_dias_horarios_e_duracao_do_acompanhamento",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nome_psicologo",
+     "inscricao_crp",
+     "assinatura",
+     "laudas_numeradas_rubricadas",
+     "prazo_validade"]',
+   -- Art. 9º §1º. A vedação é o coração da declaração: é o que a separa do
+   -- atestado. Documento que descreve estado psicológico não é declaração.
+   '["sintomas_situacoes_ou_estados_psicologicos"]',
+   '2019-06-01'),
+
+  -- ATESTADO PSICOLÓGICO — certifica situação, estado ou funcionamento
+  -- psicológico com base em avaliação psicológica.
+  ('atestado', 'cfp-006-2019.1', 'Art. 10, §§5º e 6º; Art. 5º §8º; Art. 17',
+   '["titulo_atestado_psicologico",
+     "nome_pessoa_ou_instituicao_atendida",
+     "nome_solicitante",
+     "finalidade",
+     "descricao_condicoes_psicologicas",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nome_psicologo",
+     "inscricao_crp",
+     "laudas_numeradas_rubricadas",
+     "assinatura",
+     "prazo_validade"]',
+   -- Art. 10 §5º: texto corrido, separado só por pontuação, sem parágrafos,
+   -- para evitar adulteração; havendo parágrafo, preencher com traços. E o
+   -- documento restringe-se à informação solicitada.
+   '["quebra_de_paragrafo_sem_preenchimento",
+     "informacao_alem_do_solicitado"]',
+   '2019-06-01'),
+
+  -- RELATÓRIO PSICOLÓGICO — cinco itens. Sem referências obrigatórias.
+  ('relatorio', 'cfp-006-2019.1', 'Art. 11, §§1º a 6º; Art. 5º §8º; Art. 17',
+   '["identificacao",
+     "titulo_relatorio_psicologico",
+     "nome_pessoa_ou_instituicao_atendida",
+     "nome_solicitante",
+     "finalidade",
+     "nome_autor_e_inscricao_crp",
+     "descricao_demanda",
+     "procedimento",
+     "referencial_teorico",
+     "pessoas_ouvidas_numero_de_encontros_e_duracao",
+     "analise",
+     "conclusao",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nome_psicologo",
+     "inscricao_crp",
+     "laudas_numeradas_rubricadas",
+     "assinatura",
+     "prazo_validade"]',
+   -- Art. 11 §5º III e Art. 6º §5º / Art. 11 III.
+   '["afirmacao_sem_fonte_ou_sustentacao",
+     "descricao_literal_das_sessoes"]',
+   '2019-06-01'),
+
+  -- RELATÓRIO MULTIPROFISSIONAL — modalidade própria do Art. 12, não é uma
+  -- variação do relatório psicológico: a autoria é coletiva, os procedimentos
+  -- privativos da Psicologia vêm separados e cada profissional assina a sua
+  -- análise. Faltava inteiramente no rascunho anterior.
+  ('relatorio_multiprofissional', 'cfp-006-2019.1', 'Art. 12, §§1º a 9º; Art. 5º §8º; Art. 17',
+   '["identificacao",
+     "titulo_relatorio_multiprofissional",
+     "nome_pessoa_ou_instituicao_atendida",
+     "nome_solicitante",
+     "finalidade",
+     "nomes_autores_categorias_e_registros_profissionais",
+     "descricao_demanda",
+     "procedimento",
+     "procedimentos_privativos_da_psicologia_em_secao_separada",
+     "analise",
+     "analise_identificada_por_profissional_e_categoria",
+     "conclusao",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nomes_profissionais",
+     "inscricoes_profissionais",
+     "laudas_numeradas_rubricadas",
+     "assinatura_do_psicologo",
+     "prazo_validade"]',
+   -- Art. 12 §7º remete ao Art. 11 §5º, então as vedações do relatório valem.
+   '["afirmacao_sem_fonte_ou_sustentacao",
+     "descricao_literal_das_sessoes"]',
+   '2019-06-01'),
+
+  -- LAUDO PSICOLÓGICO — seis itens, obrigatoriamente em forma de itens, e
+  -- referências obrigatórias. Não existe item "metodologia": o referencial
+  -- teórico-metodológico é conteúdo do Procedimento (Art. 13 §4º).
+  ('laudo', 'cfp-006-2019.1', 'Art. 13, §§1º a 7º; Art. 5º §8º; Art. 17',
+   '["secoes_em_forma_de_itens",
+     "identificacao",
+     "titulo_laudo_psicologico",
+     "nome_pessoa_ou_instituicao_atendida",
+     "nome_solicitante",
+     "finalidade",
+     "nome_autor_e_inscricao_crp",
+     "descricao_demanda",
+     "procedimento",
+     "referencial_teorico_metodologico",
+     "pessoas_ouvidas_numero_de_encontros_e_duracao",
+     "analise",
+     "conclusao",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nome_psicologo",
+     "inscricao_crp",
+     "laudas_numeradas_rubricadas",
+     "assinatura",
+     "referencias",
+     "prazo_validade"]',
+   -- Art. 13 §5º I e III.
+   '["descricao_literal_das_sessoes",
+     "afirmacao_sem_fonte_ou_sustentacao"]',
+   '2019-06-01'),
+
+  -- PARECER PSICOLÓGICO — cinco itens, SEM procedimento, com referências
+  -- obrigatórias e com exigência extra na identificação: a titulação que
+  -- comprove conhecimento específico no assunto (Art. 14 §2º V).
+  ('parecer', 'cfp-006-2019.1', 'Art. 14, §§1º a 6º; Art. 5º §8º; Art. 17',
+   '["secoes_em_forma_de_itens",
+     "identificacao",
+     "titulo_parecer_psicologico",
+     "nome_pessoa_ou_instituicao_objeto_do_questionamento",
+     "nome_solicitante",
+     "finalidade",
+     "nome_autor_inscricao_crp_e_titulacao",
+     "descricao_demanda",
+     "analise",
+     "conclusao",
+     "local_emissao",
+     "data_emissao",
+     "carimbo",
+     "nome_psicologo",
+     "inscricao_crp",
+     "laudas_numeradas_rubricadas",
+     "assinatura",
+     "referencias",
+     "prazo_validade"]',
+   -- Art. 14, inciso IV: o parecer NÃO é documento resultante de processo de
+   -- avaliação psicológica ou de intervenção psicológica. Parecer que conclui
+   -- a partir de avaliação é laudo com o título errado.
+   '["resultado_de_avaliacao_ou_intervencao_psicologica"]',
+   '2019-06-01')
+
+on conflict ("DocumentKind","Version") do nothing;

@@ -93,7 +93,7 @@ export default function ScaleRecordModal({ patientId, sessionId, onClose, onReco
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className={`${buttonClass} text-onSurfaceVariant hover:bg-surfaceContainer`}>
+          <button type="button" onClick={onClose} className={`${buttonClass} text-onSurfaceVariant hover:bg-pastelLavender`}>
             {t("common.cancel")}
           </button>
           {canRecord && (

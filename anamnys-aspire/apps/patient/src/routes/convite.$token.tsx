@@ -68,7 +68,7 @@ function InvitationPage() {
               <button
                 type="button"
                 onClick={() => window.location.assign(`/auth/patient/register?returnUrl=${encodeURIComponent(returnUrl)}`)}
-                className="px-4 py-2.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-surfaceContainerLow"
+                className="px-4 py-2.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-pastelLavender"
               >
                 {t("patientPortal.invite.register")}
               </button>
@@ -94,7 +94,7 @@ function InvitationPage() {
               <button
                 type="button"
                 onClick={() => logout("patient")}
-                className="mt-5 px-4 py-2.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-surfaceContainerLow"
+                className="mt-5 px-4 py-2.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-pastelLavender"
               >
                 {t("patientPortal.invite.switchAccount")}
               </button>

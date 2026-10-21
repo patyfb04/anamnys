@@ -11,6 +11,7 @@ export type ProviderProfile = {
   name: string;
   crpNumber: string | null;
   crpRegion: string | null;
+  practiceCity: string | null;
 };
 export type ProviderProfileUpdate = Omit<ProviderProfile, "email">;
 

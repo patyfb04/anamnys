@@ -138,7 +138,7 @@ export default function PatientFormModal({ mode, onClose, onSaved }: Props) {
           <button
             type="button"
             onClick={requestClose}
-            className="px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-surfaceContainerLow"
+            className="px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-pastelLavender"
           >
             {t("common.cancel")}
           </button>
@@ -371,7 +371,7 @@ function Row({ onRemove, children }: { onRemove: () => void; children: React.Rea
         type="button"
         onClick={onRemove}
         aria-label={t("common.remove")}
-        className="self-end mb-1 p-2 rounded-radii-full text-onSurfaceVariant hover:text-error hover:bg-surfaceContainer"
+        className="self-end mb-1 p-2 rounded-radii-full text-onSurfaceVariant hover:text-error hover:bg-pastelLavender"
       >
         <Trash2 size={18} />
       </button>

@@ -52,7 +52,7 @@ export default function PatientFilterPanel({ filters, onApply, onClose }: Props)
             type="button"
             onClick={onClose}
             aria-label={t("patients.list.filters.close")}
-            className="p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-surfaceContainer"
+            className="p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-pastelLavender"
           >
             <X size={20} />
           </button>
@@ -105,7 +105,7 @@ export default function PatientFilterPanel({ filters, onApply, onClose }: Props)
           <button
             type="button"
             onClick={() => setDraft({})}
-            className="flex-1 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-surfaceContainerLow"
+            className="flex-1 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-pastelLavender"
           >
             {t("patients.list.filters.clear")}
           </button>

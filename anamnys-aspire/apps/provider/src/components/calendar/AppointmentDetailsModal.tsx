@@ -48,7 +48,7 @@ export default function AppointmentDetailsModal({ appointment: a, onClose, onEdi
     }
   };
 
-  const button = "px-3 py-2 rounded-radii-lg border border-outlineVariant text-label-lg text-onSurface hover:bg-surfaceContainer disabled:opacity-60";
+  const button = "px-3 py-2 rounded-radii-lg border border-outlineVariant text-label-lg text-onSurface hover:bg-pastelLavender disabled:opacity-60";
 
   return (
     <Modal title={a.patientName} onClose={onClose}>

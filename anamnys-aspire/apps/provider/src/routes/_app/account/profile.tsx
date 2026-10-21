@@ -30,10 +30,18 @@ function ProfileForm({ initial }: { initial: ProviderProfile }) {
   const [name, setName] = useState(initial.name);
   const [crpNumber, setCrpNumber] = useState(initial.crpNumber ?? "");
   const [crpRegion, setCrpRegion] = useState(initial.crpRegion ?? "");
+  const [practiceCity, setPracticeCity] = useState(initial.practiceCity ?? "");
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
   const save = useMutation({
-    mutationFn: () => profileApi.updateProvider({ name, crpNumber: crpNumber || null, crpRegion: crpRegion || null }),
+    // practiceCity is always sent: the server overwrites it with whatever the request carries.
+    mutationFn: () =>
+      profileApi.updateProvider({
+        name,
+        crpNumber: crpNumber || null,
+        crpRegion: crpRegion || null,
+        practiceCity: practiceCity || null,
+      }),
     onMutate: () => setErrors({}),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["profile", "provider"] });
@@ -73,6 +81,14 @@ function ProfileForm({ initial }: { initial: ProviderProfile }) {
           />
         </Field>
       </div>
+      <Field error={errors.practiceCity?.[0]}>
+        <TextField
+          label={t("accountPages.profile.practiceCity")}
+          value={practiceCity}
+          onChange={(e) => setPracticeCity(e.target.value)}
+        />
+        <p className="mt-1 text-body-sm text-onSurfaceVariant">{t("accountPages.profile.practiceCityHint")}</p>
+      </Field>
       <div className="mt-2">
         <Button type="submit" title={t("accountPages.profile.save")} loading={save.isPending} fullWidth={false} rounded="md" />
       </div>

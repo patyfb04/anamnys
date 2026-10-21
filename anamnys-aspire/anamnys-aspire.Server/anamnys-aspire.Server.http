@@ -165,3 +165,91 @@ Content-Type: application/json
 ###
 ### Remove a recorded score (soft removal). 204; 404.
 DELETE {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/scales/00000000-0000-0000-0000-000000000000
+
+###
+### Psychological documents (all require the __Host-anamnys-provider cookie - send from a browser session, not this file)
+### Available kinds with their ruleset elements and prohibitions. 200 array of 3.
+GET {{Server_HostAddress}}/api/phi/providers/me/document-kinds
+
+###
+### Document check mode. 200 { documentCheckMode }.
+GET {{Server_HostAddress}}/api/phi/providers/me/document-settings
+
+###
+### Change the check mode (blocking | advisory). 200; 400 on other values.
+PUT {{Server_HostAddress}}/api/phi/providers/me/document-settings
+Content-Type: application/json
+
+{
+  "documentCheckMode": "advisory"
+}
+
+###
+### Documents of a patient, newest first. 200 array; 404 unknown patient.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/documents
+
+###
+### Create a draft. 201 { id }; 404; 409 archived | kind_not_available.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/documents
+Content-Type: application/json
+
+{
+  "kind": "declaracao",
+  "noteId": null
+}
+
+###
+### Document detail with the conformity check. 200; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000
+
+###
+### Save a draft. 200 detail; 400 field too long; 404; 409 locked.
+PUT {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "fields": { "finalidade": "" },
+  "confirmations": []
+}
+
+###
+### Save a relatorio_multiprofissional draft with its team (max 10 members; name 200, category 100, registry 50, analysis 20000 chars; empty members are dropped). 200 detail with team[]; 400 team | team[i].name|category|registry|analysis; 400 team on any other kind; 404; 409 locked.
+PUT {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "fields": { "finalidade": "" },
+  "confirmations": [],
+  "team": [
+    { "name": "Rita Lima", "category": "Psiquiatria", "registry": "CRM 12345", "analysis": "" }
+  ]
+}
+
+###
+### Sign. 200; 404; 409 locked | missing_elements | confirmations_required (+ missing[]); 422 missing_crp | missing_city.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/sign
+Content-Type: application/json
+
+{
+  "acknowledgeMissing": false
+}
+
+###
+### Correct a signed document (new draft copy). 201 { id }; 404; 409 locked | archived.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/correct
+
+###
+### Export a signed document as PDF (presigned URL valid for 1 hour). 200 { url, expiresAt }; 404; 409 not_signed; 503 storage_unavailable.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/export###
+### Search the provider's documents. Filters live in the body: patient names never go in a URL. status: draft | signed | superseded (omit for all); 25 per page, newest first; 200 { items, hasMore }.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/search
+Content-Type: application/json
+
+{
+  "status": "signed",
+  "patientId": null,
+  "name": null,
+  "page": 1
+}
+
+

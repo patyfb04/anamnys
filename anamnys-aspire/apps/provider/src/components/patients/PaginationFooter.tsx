@@ -13,7 +13,7 @@ export default function PaginationFooter({ page, pageSize, totalCount, onPage }:
   const from = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, totalCount);
   const buttonClass =
-    "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-surfaceContainer disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
+    "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-pastelLavender disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
 
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-outlineVariant">

@@ -49,7 +49,7 @@ export default function Modal({ title, onClose, children, footer }: Props) {
             type="button"
             onClick={onClose}
             aria-label={t("common.close")}
-            className="p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-surfaceContainer"
+            className="p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-pastelLavender"
           >
             <X size={20} />
           </button>

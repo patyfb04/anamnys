@@ -13,6 +13,7 @@ import {
   ChevronRight,
   FileText,
   FilePlus,
+  FileSignature,
   Mic,
   MoreHorizontal,
   Pencil,
@@ -26,6 +27,8 @@ import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
+import DocumentsCard from "@/components/documents/DocumentsCard";
+import NewDocumentModal from "@/components/documents/NewDocumentModal";
 import PatientFormModal from "@/components/patients/PatientFormModal";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import NoteStatusBadge from "@/components/patients/NoteStatusBadge";
@@ -51,6 +54,7 @@ function PatientDetailPage() {
   const [editing, setEditing] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [creatingDocument, setCreatingDocument] = useState(false);
 
   const query = useQuery({ queryKey: ["patient", patientId], queryFn: () => patientsApi.get(patientId) });
   const patient = query.data;
@@ -99,7 +103,7 @@ function PatientDetailPage() {
   const age = ageFrom(patient.dateOfBirth);
   const archived = patient.archivedAt !== null;
   const actionButton =
-    "inline-flex items-center gap-2 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface bg-surfaceContainerLowest hover:bg-surfaceContainerLow transition-colors";
+    "inline-flex items-center gap-2 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface bg-surfaceContainerLowest hover:bg-pastelLavender transition-colors";
 
   return (
     <div className="p-4 md:p-8 flex flex-col gap-6">
@@ -146,6 +150,12 @@ function PatientDetailPage() {
               {t("patients.detail.newNote")}
             </Link>
           )}
+          {!archived && (
+            <button type="button" onClick={() => setCreatingDocument(true)} className={actionButton}>
+              <FileSignature size={18} />
+              {t("patients.detail.newDocument")}
+            </button>
+          )}
           <MoreActions label={t("patients.detail.moreActions")}>
             <MenuItem icon={<Pencil size={18} />} label={t("common.edit")} onSelect={() => setEditing(true)} />
             {archived ? (
@@ -171,6 +181,7 @@ function PatientDetailPage() {
       </header>
 
       {actionError && <p className="text-body-md text-error">{actionError}</p>}
+      {creatingDocument && <NewDocumentModal patientId={patientId} onClose={() => setCreatingDocument(false)} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <DetailCard title={t("patients.detail.contact")} icon={<UserRound size={20} />}>
@@ -217,6 +228,8 @@ function PatientDetailPage() {
 
       {/* Full width: each instrument's series gets its own column inside the card. */}
       <ScalesCard patientId={patientId} readOnly={archived} />
+
+      <DocumentsCard patientId={patientId} readOnly={archived} />
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />
@@ -283,7 +296,7 @@ function RecentNotes({ patientId }: { patientId: string }) {
     return <p className="text-body-md text-onSurfaceVariant">{t("patients.detail.noNotes")}</p>;
   }
   const pagerButton =
-    "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-surfaceContainer disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
+    "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-pastelLavender disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
   return (
     <div className="flex flex-col gap-3">
     <ul className="flex flex-col gap-2">
@@ -377,7 +390,7 @@ function MoreActions({ label, children }: { label: string; children: ReactNode }
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center justify-center p-2 border border-outlineVariant rounded-radii-md text-onSurface bg-surfaceContainerLowest hover:bg-surfaceContainerLow"
+        className="inline-flex items-center justify-center p-2 border border-outlineVariant rounded-radii-md text-onSurface bg-surfaceContainerLowest hover:bg-pastelLavender"
       >
         <MoreHorizontal size={18} />
       </button>
@@ -401,7 +414,7 @@ function MenuItem(props: { icon: ReactNode; label: string; onSelect: () => void;
       role="menuitem"
       disabled={props.disabled}
       onClick={props.onSelect}
-      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-label-lg hover:bg-surfaceContainerLow disabled:opacity-60 ${
+      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-label-lg hover:bg-pastelLavender disabled:opacity-60 ${
         props.destructive ? "text-error" : "text-onSurface"
       }`}
     >

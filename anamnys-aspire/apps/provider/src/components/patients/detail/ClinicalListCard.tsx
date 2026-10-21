@@ -164,7 +164,7 @@ function IconButton({
       aria-label={label}
       title={label}
       onClick={onClick}
-      className={`p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-surfaceContainer ${danger ? "hover:text-error" : "hover:text-primary"}`}
+      className={`p-1.5 rounded-radii-full text-onSurfaceVariant hover:bg-pastelLavender ${danger ? "hover:text-error" : "hover:text-primary"}`}
     >
       {children}
     </button>

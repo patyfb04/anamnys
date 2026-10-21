@@ -38,15 +38,15 @@ export default function CalendarHeader(props: Props) {
         <div className="flex flex-wrap items-center gap-4">
           <h1 className="text-headline-lg text-onSurface">{t("calendar.title")}</h1>
           <div className="flex items-center gap-1 rounded-radii-lg border border-outlineVariant bg-surfaceContainerLowest px-2 py-1">
-            <button type="button" onClick={props.onPrevious} aria-label={t("calendar.previous")} className="p-1.5 rounded-radii-full hover:bg-surfaceContainer">
+            <button type="button" onClick={props.onPrevious} aria-label={t("calendar.previous")} className="p-1.5 rounded-radii-full hover:bg-pastelLavender">
               <ChevronLeft size={18} />
             </button>
             <span className="min-w-48 text-center text-label-lg text-onSurface">{periodLabel(days)}</span>
-            <button type="button" onClick={props.onNext} aria-label={t("calendar.next")} className="p-1.5 rounded-radii-full hover:bg-surfaceContainer">
+            <button type="button" onClick={props.onNext} aria-label={t("calendar.next")} className="p-1.5 rounded-radii-full hover:bg-pastelLavender">
               <ChevronRight size={18} />
             </button>
           </div>
-          <button type="button" onClick={props.onToday} className="rounded-radii-lg border border-outlineVariant px-3 py-1.5 text-label-lg text-onSurface hover:bg-surfaceContainer">
+          <button type="button" onClick={props.onToday} className="rounded-radii-lg border border-outlineVariant px-3 py-1.5 text-label-lg text-onSurface hover:bg-pastelLavender">
             {t("calendar.today")}
           </button>
         </div>

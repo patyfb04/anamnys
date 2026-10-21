@@ -462,6 +462,104 @@ export interface ScaleSeries {
   entries: ScaleEntry[];
 }
 
+export type DocumentStatus = "draft" | "signed" | "superseded";
+export type DocumentElementOrigin = "system" | "pdf" | "provider";
+export type DocumentCheckMode = "blocking" | "advisory";
+
+export interface DocumentElement {
+  code: string;
+  origin: DocumentElementOrigin;
+  label: string;
+  hint: string | null;
+}
+
+export interface DocumentProhibition {
+  code: string;
+  byConstruction: boolean;
+  confirmationText: string | null;
+}
+
+export interface DocumentKindInfo {
+  kind: string;
+  title: string;
+  rulesetVersion: string;
+  elements: DocumentElement[];
+  prohibitions: DocumentProhibition[];
+}
+
+export interface DocumentSummary {
+  id: string;
+  kind: string;
+  title: string;
+  status: DocumentStatus;
+  createdAt: string;
+  signedAt: string | null;
+  supersededBy: string | null;
+}
+
+export interface DocumentListItem {
+  id: string;
+  patientId: string;
+  patientName: string;
+  kind: string;
+  title: string;
+  status: DocumentStatus;
+  createdAt: string;
+  signedAt: string | null;
+  supersededBy: string | null;
+}
+
+export interface DocumentSearchRequest {
+  status?: DocumentStatus;
+  patientId?: string;
+  name?: string;
+  page?: number;
+}
+
+export interface DocumentSearchResponse {
+  items: DocumentListItem[];
+  hasMore: boolean;
+}
+
+export interface DocumentCheck {
+  missingElements: string[];
+  missingConfirmations: string[];
+  elementsComplete: boolean;
+  confirmationsComplete: boolean;
+}
+
+export interface DocumentTeamMember {
+  name: string;
+  category: string;
+  registry: string;
+  analysis: string;
+}
+
+export interface DocumentDetail {
+  team: DocumentTeamMember[];
+  id: string;
+  patientId: string;
+  patientName: string;
+  kind: string;
+  title: string;
+  status: DocumentStatus;
+  fields: Record<string, string>;
+  confirmations: string[];
+  check: DocumentCheck;
+  mode: DocumentCheckMode;
+  createdAt: string;
+  signedAt: string | null;
+  signedByCrp: string | null;
+  supersededBy: string | null;
+  exportedAt: string | null;
+  providerHasCrp: boolean;
+  hasPracticeCity: boolean;
+  /** Frozen at signing; null for drafts. */
+  signedCity: string | null;
+  signedByName: string | null;
+  signedPatientName: string | null;
+}
+
 export interface RecordScaleRequest {
   instrumentId: string;
   score: number;

@@ -48,7 +48,7 @@ export default function PortalAccessBlock({ patient, onChanged, initialError = n
       className={
         primary
           ? "px-3 py-1.5 bg-primary text-onPrimary rounded-radii-md text-label-lg hover:opacity-90 disabled:opacity-60"
-          : "px-3 py-1.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-surfaceContainerLow disabled:opacity-60"
+          : "px-3 py-1.5 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface hover:bg-pastelLavender disabled:opacity-60"
       }
     >
       {label}

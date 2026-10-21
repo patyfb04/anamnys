@@ -282,6 +282,39 @@ Not built yet; planned for after the calendar deliveries.
   - Manual browser check of the scales UI (card, modal, help, removal, archived patient) is
     pending, as are the new `.http` requests against a live AppHost.
 
+## Documentos
+
+Psychological documents and the CFP 006/2019 validator (F-05 deliveries 1 and 2, all six kinds;
+chapter `documentation/22-psychological-documents.md`).
+
+- **A parecer about an institution or a person who is not a patient is not supported.** The parecer
+  is bound to a patient like every other document, and the subject named in it is that patient
+  (art. 14 allows an institution or another person as the subject).
+- **Co-authors of the relatório multiprofissional have no account and do not sign.** The team is
+  typed text (name, category, registry, analysis) inside the provider's document; only the
+  psychologist signs in Anamnys. Co-authors with an account or their own signature are not built.
+- **Delivery protocol** signed by the requester (art. 16 §1) is not built; it belongs to F-07.
+- **Retention**: `ClinicalDocuments."RetentionUntil"` is never written (F-06).
+- **`ConformityChecks."ForbiddenFound"` is always empty by design.** Prohibitions are explicit
+  confirmations (and one by construction), not text detection. Do not fill it with guesses.
+- **No endpoint-level tests** for the sign, locked and archived response bodies (the service is
+  covered; only the 401 and routing are tested at the endpoint).
+- **Typing during an in-flight save can be overwritten**: the editor applies the server response
+  of a save over the form, so characters typed while a save is in flight may be lost.
+- **An archived patient does not block save or sign** of an existing draft (only create and
+  correct answer `409 archived`), like notes.
+- **An abandoned correction draft cannot be discarded**, and the original shows "Substituído"
+  meanwhile.
+- **The editor uses the latest ruleset**, and `LatestRulesetAsync` has no tie-break on equal
+  `EffectiveFrom`.
+- **The atestado prints a "Paciente:" identification line above the continuous text.** Decide with
+  legal review whether identification may sit outside the continuous paragraph (art. 10 §5º).
+- **No database trigger** enforces signed-document immutability; it is in
+  `ClinicalDocumentService` only (same family as signed notes and scales).
+- **Manual browser check pending** for the card "Documentos", the editor (conformity panel, "?"
+  help, sign in both modes, correction, PDF export and download), the Ajustes section and the
+  "Cidade de atendimento" profile field; so are the new `.http` requests against a live AppHost.
+
 ## Portal do paciente e convites
 
 - **Invitations:** no re-send rate limit; no reminder before expiry; the registration form

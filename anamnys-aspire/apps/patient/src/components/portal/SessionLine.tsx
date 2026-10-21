@@ -40,7 +40,7 @@ export default function SessionLine({ session, onConfirm, confirming }: Props) {
             type="button"
             disabled={confirming}
             onClick={() => onConfirm(session)}
-            className="px-3 py-1 border border-outlineVariant rounded-radii-md text-label-md text-primary hover:bg-surfaceContainerLow disabled:opacity-60"
+            className="px-3 py-1 border border-outlineVariant rounded-radii-md text-label-md text-primary hover:bg-pastelLavender disabled:opacity-60"
           >
             {t("patientPortal.sessions.confirm")}
           </button>

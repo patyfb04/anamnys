@@ -29,7 +29,7 @@ export default function SessionScalesCard({ patientId, sessionId }: { patientId:
           <button
             type="button"
             onClick={() => setRecording(true)}
-            className="rounded-radii-full px-3 py-1.5 text-label-lg text-primary hover:bg-surfaceContainer"
+            className="rounded-radii-full px-3 py-1.5 text-label-lg text-primary hover:bg-pastelLavender"
           >
             {t("scales.record")}
           </button>

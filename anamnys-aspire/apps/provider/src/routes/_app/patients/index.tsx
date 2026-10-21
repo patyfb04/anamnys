@@ -60,7 +60,7 @@ function PatientListPage() {
               type="button"
               onClick={() => setFiltersOpen((open) => !open)}
               aria-expanded={filtersOpen}
-              className="flex items-center gap-2 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface bg-surfaceContainerLowest hover:bg-surfaceContainerLow transition-colors"
+              className="flex items-center gap-2 px-4 py-2 border border-outlineVariant rounded-radii-md text-label-lg text-onSurface bg-surfaceContainerLowest hover:bg-pastelLavender transition-colors"
             >
               <Filter size={18} />
               {t("patients.list.filter")}
