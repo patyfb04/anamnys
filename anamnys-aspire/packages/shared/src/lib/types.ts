@@ -528,7 +528,15 @@ export interface DocumentCheck {
   confirmationsComplete: boolean;
 }
 
+export interface DocumentTeamMember {
+  name: string;
+  category: string;
+  registry: string;
+  analysis: string;
+}
+
 export interface DocumentDetail {
+  team: DocumentTeamMember[];
   id: string;
   patientId: string;
   patientName: string;

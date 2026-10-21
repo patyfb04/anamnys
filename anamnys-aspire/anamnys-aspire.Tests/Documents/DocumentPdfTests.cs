@@ -39,12 +39,14 @@ public class DocumentPdfTests
     private static Dictionary<string, string> FilledFields(string kind, string[] elements) =>
         DocumentBody.ProviderFieldOrder(kind, elements).ToDictionary(code => code, code => $"Texto de {code}.");
 
-    private static DocumentPdfModel ModelFor(string kind, string[] elements, Dictionary<string, string> fields)
+    private static DocumentPdfModel ModelFor(
+        string kind, string[] elements, Dictionary<string, string> fields, List<TeamMember>? team = null)
     {
         var document = new ClinicalDocument
         {
             Id = DocumentId, Kind = kind, Fields = fields, SignedAt = Signed, SignedByCrp = "06/12345",
-            Body = DocumentBody.Assemble(kind, elements, fields),
+            Team = team ?? [],
+            Body = DocumentBody.Assemble(kind, elements, fields, team ?? [], "Dra. Paula Souza", "06/12345", "Ana Souza"),
         };
         return DocumentPdfModel.From(
             document, new ConformityRuleset { DocumentKind = kind, Elements = [.. elements] },
@@ -69,7 +71,8 @@ public class DocumentPdfTests
         model.Sections.Should().OnlyContain(s => !s.Text.Contains("\n\n"));
         model.Sections[^1].Text.Should().StartWith("Prazo de validade:");
         AssertEveryProviderLabelPresent("declaracao", DeclaracaoElements, string.Join(" ", model.Sections.Select(s => s.Text)));
-        model.Author.Should().BeNull();
+        model.IdentificationHeading.Should().BeNull();
+        model.Identification.Select(l => l.Label).Should().Equal("Paciente");
     }
 
     [Fact]
@@ -119,7 +122,9 @@ public class DocumentPdfTests
         expected.Last().Should().Be("Prazo de validade");
         model.Sections.Select(s => s.Text).Should().Equal(
             DocumentBody.ProviderFieldOrder("relatorio", RelatorioElements).Select(code => $"Texto de {code}."));
-        model.Author.Should().Be("Dra. Paula Souza");
+        model.IdentificationHeading.Should().BeNull();
+        model.Identification.Select(l => l.Label).Should().Equal("Paciente", "Autor(a)", "CRP");
+        model.Identification.Should().Contain(new DocumentPdfLine("Autor(a)", "Dra. Paula Souza"));
         model.Crp.Should().Be("06/12345");
     }
 
@@ -157,6 +162,73 @@ public class DocumentPdfTests
 
         // Assert
         rendered.Should().OnlyContain(bytes => bytes.Length > 0 && Encoding.ASCII.GetString(bytes, 0, 4) == "%PDF");
+    }
+
+    [Fact]
+    public void From_Laudo_NumberedIdentificationLinesAndSections()
+    {
+        // Arrange
+        var fields = FilledFields("laudo", DocumentConformityTests.LaudoElements);
+
+        // Act
+        var model = ModelFor("laudo", DocumentConformityTests.LaudoElements, fields);
+
+        // Assert
+        model.IdentificationHeading.Should().Be("1. Identificação");
+        model.Identification.Select(l => l.Label).Should().Equal(
+            "Pessoa atendida", "Autor(a)", "CRP", "Solicitante", "Finalidade");
+        model.Sections.Should().NotBeEmpty();
+        DocumentPdf.Render(model).Take(4).Should().Equal("%PDF"u8.ToArray());
+    }
+
+    [Fact]
+    public void From_Laudo_SectionHeadingsFollowTheResolutionOrder()
+    {
+        // Arrange
+        var fields = FilledFields("laudo", DocumentConformityTests.LaudoElements);
+
+        // Act
+        var model = ModelFor("laudo", DocumentConformityTests.LaudoElements, fields);
+
+        // Assert
+        model.Sections.Select(s => s.Heading).Should().Equal(
+            "2. Descrição da demanda", "3. Procedimento", "Referencial teórico-metodológico",
+            "Pessoas ouvidas, número de encontros e duração", "4. Análise", "5. Conclusão", "6. Referências",
+            "Prazo de validade");
+    }
+
+    [Fact]
+    public void From_Parecer_AddsTitulacaoLine()
+    {
+        // Arrange
+        var fields = FilledFields("parecer", DocumentConformityTests.ParecerElements);
+
+        // Act
+        var model = ModelFor("parecer", DocumentConformityTests.ParecerElements, fields);
+
+        // Assert
+        model.IdentificationHeading.Should().Be("1. Identificação");
+        model.Identification.Select(l => l.Label).Should().Equal(
+            "Pessoa objeto do questionamento", "Autor(a)", "CRP", "Titulação", "Solicitante", "Finalidade");
+        DocumentPdf.Render(model).Take(4).Should().Equal("%PDF"u8.ToArray());
+    }
+
+    [Fact]
+    public void From_Multiprofissional_ListsAuthorshipOfEveryProfessional()
+    {
+        // Arrange
+        var fields = FilledFields("relatorio_multiprofissional", DocumentConformityTests.MultiElements);
+        List<TeamMember> team = [new("Rita Lima", "Psiquiatria", "CRM 1", "Análise da Rita")];
+
+        // Act
+        var model = ModelFor("relatorio_multiprofissional", DocumentConformityTests.MultiElements, fields, team);
+
+        // Assert
+        model.IdentificationHeading.Should().Be("Identificação");
+        model.Identification.Should().Contain(new DocumentPdfLine(
+            "Autoria", "Dra. Paula Souza — Psicologia — CRP 06/12345\nRita Lima — Psiquiatria — CRM 1"));
+        model.Sections.Select(s => s.Heading).Should().Contain("Análise — Rita Lima (Psiquiatria)");
+        DocumentPdf.Render(model).Take(4).Should().Equal("%PDF"u8.ToArray());
     }
 
     private static void AssertEveryProviderLabelPresent(string kind, string[] elements, string text)

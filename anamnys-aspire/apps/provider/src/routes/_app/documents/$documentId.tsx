@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, FileDown, FileText, HelpCircle, PenLine } from "lucide-react";
 import { ApiError } from "@anamnys/shared/api/client";
 import { documentsApi } from "@anamnys/shared/api/documents";
-import type { DocumentDetail, DocumentKindInfo } from "@anamnys/shared/lib/types";
+import type { DocumentDetail, DocumentKindInfo, DocumentTeamMember } from "@anamnys/shared/lib/types";
 import { toast } from "@anamnys/shared/ui/Toaster";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import ConformityPanel from "@/components/documents/ConformityPanel";
 import DocumentHelpPanel from "@/components/documents/DocumentHelpPanel";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
+import TeamEditor from "@/components/documents/TeamEditor";
 
 export const Route = createFileRoute("/_app/documents/$documentId")({
   component: DocumentPage,
@@ -47,6 +48,8 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
   const navigate = useNavigate();
   const [fields, setFields] = useState<Record<string, string>>(detail.fields);
   const [confirmations, setConfirmations] = useState<string[]>(detail.confirmations);
+  const [team, setTeam] = useState<DocumentTeamMember[]>(detail.team ?? []);
+  const [teamErrors, setTeamErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
@@ -60,6 +63,7 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
   const dirty =
     draft &&
     (!sameSet(confirmations, detail.confirmations) ||
+      JSON.stringify(team) !== JSON.stringify(detail.team ?? []) ||
       ordered.some((e) => (fields[e.code] ?? "") !== (detail.fields[e.code] ?? "")));
 
   // In-app navigation asks through a dialog; closing or reloading the tab gets the browser's prompt.
@@ -83,13 +87,24 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
     setSignError(null);
     try {
       const payload = Object.fromEntries(ordered.map((e) => [e.code, fields[e.code] ?? ""]));
-      const next = await documentsApi.save(detail.id, payload, confirmations);
+      const next = await documentsApi.save(detail.id, payload, confirmations, team);
       // The server trims values: re-seed so the form matches what was stored.
       setFields(next.fields);
       setConfirmations(next.confirmations);
+      setTeam(next.team ?? []);
+      setTeamErrors({});
       store(next);
       toast.success(t("documents.saved"));
     } catch (e) {
+      const teamKeys =
+        e instanceof ApiError && e.status === 400 && e.errors
+          ? Object.entries(e.errors).filter(([k]) => k === "team" || k.startsWith("team["))
+          : [];
+      if (teamKeys.length > 0) {
+        setTeamErrors(Object.fromEntries(teamKeys.map(([k, v]) => [k, v[0]])));
+        toast.error(t("documents.saveFailed"));
+        return;
+      }
       toast.error(e instanceof ApiError && e.status === 409 ? e.message : t("documents.saveFailed"));
       if (e instanceof ApiError && e.code === "locked") await refetch();
     } finally {
@@ -187,18 +202,29 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
           <DetailCard title={t("documents.formTitle")} icon={<PenLine size={20} />}>
             <div className="flex flex-col gap-5">
               {detail.kind === "atestado" && <p className="text-body-sm text-onSurfaceVariant">{t("documents.atestadoHint")}</p>}
+              {detail.kind === "laudo" && <p className="text-body-sm text-onSurfaceVariant">{t("documents.laudoHint")}</p>}
+              {detail.kind === "parecer" && <p className="text-body-sm text-onSurfaceVariant">{t("documents.parecerHint")}</p>}
               {ordered.map((el) => (
-                <label key={el.code} className="flex flex-col gap-1 text-label-md text-onSurfaceVariant">
-                  <span className="text-label-lg text-onSurface">{el.label}</span>
-                  {el.hint && <span className="text-body-sm">{el.hint}</span>}
-                  <textarea
-                    className={textareaClass}
-                    value={fields[el.code] ?? ""}
-                    readOnly={!draft || saving}
-                    maxLength={20000}
-                    onChange={(e) => setFields((f) => ({ ...f, [el.code]: e.target.value }))}
-                  />
-                </label>
+                <Fragment key={el.code}>
+                  <label className="flex flex-col gap-1 text-label-md text-onSurfaceVariant">
+                    <span className="text-label-lg text-onSurface">{el.label}</span>
+                    {el.hint && <span className="text-body-sm">{el.hint}</span>}
+                    <textarea
+                      className={textareaClass}
+                      value={fields[el.code] ?? ""}
+                      readOnly={!draft || saving}
+                      maxLength={20000}
+                      onChange={(e) => setFields((f) => ({ ...f, [el.code]: e.target.value }))}
+                    />
+                  </label>
+                  {detail.kind === "relatorio_multiprofissional" && el.code === "analise" && (
+                    <section className="flex flex-col gap-2">
+                      <h3 className="text-label-lg text-onSurface">{t("documents.teamTitle")}</h3>
+                      <p className="text-body-sm text-onSurfaceVariant">{t("documents.teamHint")}</p>
+                      <TeamEditor members={team} onChange={(next) => { setTeam(next); setTeamErrors({}); }} readOnly={!draft || saving} errors={teamErrors} />
+                    </section>
+                  )}
+                </Fragment>
               ))}
             </div>
             {draft && (

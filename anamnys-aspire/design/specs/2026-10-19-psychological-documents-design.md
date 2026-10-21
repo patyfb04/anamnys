@@ -1,7 +1,7 @@
 # Psychological Documents and the CFP 006/2019 Validator (F-05, delivery 1)
 
 **Date:** 2026-10-19
-**Status:** Implemented (delivery 1)
+**Status:** Implemented (delivery 1); delivery 2 (laudo, parecer, relatório multiprofissional) implemented, see `design/specs/2026-10-20-psychological-documents-delivery-2-design.md`
 **Scope:** Backlog F-05 with flow 05. The provider writes a psychological document for a patient
 through a form built from the document kind's required elements (Res. CFP 006/2019), sees a live
 conformity check, confirms the kind's prohibitions, signs it (blocked when elements are missing,

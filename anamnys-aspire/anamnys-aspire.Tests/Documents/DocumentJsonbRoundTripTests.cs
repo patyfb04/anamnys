@@ -47,4 +47,33 @@ public class DocumentJsonbRoundTripTests(SharedAppHostFixture fixture)
         check.ForbiddenFound.Should().BeEmpty();
         ruleset2.Elements.Should().NotBeEmpty();
     }
+
+    [Fact]
+    public async Task Team_SavedAndReloaded_KeepsMembersInOrder()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patientId = await seed.AddPatientAsync("Ana", "Souza", cancellationToken: Ct);
+        var docId = Guid.NewGuid();
+        List<TeamMember> team =
+        [
+            new("Carla Dias", "Fonoaudiologia", "CRFa 2-12345", "Avaliação da linguagem"),
+            new("Bruno Alves", "Terapia ocupacional", "CREFITO 3/67890", "Avaliação sensorial"),
+        ];
+        await using (var db = seed.CreateDbContext())
+        {
+            db.ClinicalDocuments.Add(new ClinicalDocument
+            {
+                Id = docId, PatientId = patientId, ProviderId = seed.ProviderId, Kind = "relatorio_multiprofissional", Team = team,
+            });
+            await db.SaveChangesAsync(Ct);
+        }
+
+        // Act
+        await using var read = seed.CreateDbContext();
+        var doc = await read.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == docId, Ct);
+
+        // Assert
+        doc.Team.Should().Equal(team);
+    }
 }

@@ -43,7 +43,7 @@ public class DocumentEndpointTests
     }
 
     [Fact]
-    public async Task DocumentKinds_LoggedIn_ReturnsTheThreeAvailableKinds()
+    public async Task DocumentKinds_LoggedIn_ReturnsTheSixAvailableKinds()
     {
         // Arrange
         using var session = await LoginAsProviderAsync();
@@ -55,7 +55,7 @@ public class DocumentEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
         var kinds = body.RootElement.EnumerateArray().ToList();
-        kinds.Select(k => k.GetProperty("kind").GetString()).Should().Equal("declaracao", "atestado", "relatorio");
+        kinds.Select(k => k.GetProperty("kind").GetString()).Should().Equal("declaracao", "atestado", "relatorio", "relatorio_multiprofissional", "laudo", "parecer");
         kinds.Should().OnlyContain(k => k.GetProperty("elements").GetArrayLength() > 0
             && !string.IsNullOrEmpty(k.GetProperty("rulesetVersion").GetString())
             && !string.IsNullOrEmpty(k.GetProperty("title").GetString()));
@@ -139,7 +139,7 @@ public class DocumentEndpointTests
         using var response = await session.SendAsync(
             new HttpRequestMessage(HttpMethod.Post, $"/api/phi/providers/me/patients/{Guid.NewGuid()}/documents")
             {
-                Content = JsonContent.Create(new { kind = "laudo" }),
+                Content = JsonContent.Create(new { kind = "carta" }),
             }, Ct);
 
         // Assert
@@ -147,6 +147,60 @@ public class DocumentEndpointTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
         body.RootElement.GetProperty("code").GetString().Should().Be("kind_not_available");
     }
+
+    [Fact]
+    public async Task PutDocument_TeamOverTenMembers_Returns400WithTeamKey()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        var team = Enumerable.Range(0, 11).Select(i => new { name = $"P{i}", category = "Psiquiatria", registry = "1", analysis = "a" });
+
+        // Act
+        using var response = await PutTeamAsync(session, team);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        body.RootElement.GetProperty("errors").TryGetProperty("team", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PutDocument_TeamNameTooLong_Returns400WithIndexedKey()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        var team = new[] { new { name = new string('a', 201), category = "Psiquiatria", registry = "1", analysis = "a" } };
+
+        // Act
+        using var response = await PutTeamAsync(session, team);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        body.RootElement.GetProperty("errors").TryGetProperty("team[0].name", out _).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PutDocument_TeamWithNullMember_Returns400WithIndexedKey()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+
+        // Act
+        using var response = await PutTeamAsync(session, new object?[] { null });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
+        body.RootElement.GetProperty("errors").TryGetProperty("team[0]", out _).Should().BeTrue();
+    }
+
+    private static Task<HttpResponseMessage> PutTeamAsync(BrowserSession session, object team) =>
+        session.SendAsync(
+            new HttpRequestMessage(HttpMethod.Put, $"/api/phi/providers/me/documents/{Guid.NewGuid()}")
+            {
+                Content = JsonContent.Create(new { fields = new { }, confirmations = Array.Empty<string>(), team }),
+            }, Ct);
 
     private static async Task<string> GetModeAsync(BrowserSession session)
     {

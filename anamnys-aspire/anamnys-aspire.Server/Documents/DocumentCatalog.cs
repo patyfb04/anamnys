@@ -12,7 +12,7 @@ public sealed record ProhibitionInfo(string Code, bool ByConstruction, string? C
 // Art. 17 (prazo_validade) and Art. 5º §8º (laudas_numeradas_rubricadas).
 public static class DocumentCatalog
 {
-    public static readonly string[] AvailableKinds = ["declaracao", "atestado", "relatorio"];
+    public static readonly string[] AvailableKinds = ["declaracao", "atestado", "relatorio", "relatorio_multiprofissional", "laudo", "parecer"];
 
     private static readonly Dictionary<string, string> KindTitles = new()
     {
@@ -81,16 +81,20 @@ public static class DocumentCatalog
         ["analise"] = Prov("Análise", "Análise fundamentada, sem afirmação sem fonte nem transcrição literal das sessões."),
         ["conclusao"] = Prov("Conclusão", "Conclusões a que se chegou, de acordo com a análise."),
 
-        ["secoes_em_forma_de_itens"] = Pdf("Seções em forma de itens", "O texto é organizado em itens."),
-        ["referencias"] = Prov("Referências", "Referências obrigatórias."),
-        ["referencial_teorico_metodologico"] = Prov("Referencial teórico-metodológico", "Faz parte do Procedimento."),
-        ["nome_pessoa_ou_instituicao_objeto_do_questionamento"] = Prov("Pessoa ou instituição objeto do questionamento", "Quem ou o que é objeto do parecer."),
-        ["nome_autor_inscricao_crp_e_titulacao"] = Prov("Autora(or), inscrição no CRP e titulação", "Inclua a titulação que comprove conhecimento no assunto."),
-        ["nomes_autores_categorias_e_registros_profissionais"] = Prov("Autoras(es), categorias e registros profissionais", "Autoria coletiva."),
-        ["procedimentos_privativos_da_psicologia_em_secao_separada"] = Prov("Procedimentos privativos da Psicologia", "Em seção separada."),
-        ["analise_identificada_por_profissional_e_categoria"] = Prov("Análise por profissional e categoria", "Cada análise identifica o profissional e a categoria."),
-        ["nomes_profissionais"] = Prov("Nomes das(os) profissionais", "Nomes de quem assina o documento."),
-        ["inscricoes_profissionais"] = Prov("Inscrições profissionais", "Registros de quem assina o documento."),
+        ["nome_pessoa_ou_instituicao_objeto_do_questionamento"] = Sys("Pessoa objeto do questionamento", PatientNameText),
+        ["nome_autor_inscricao_crp_e_titulacao"] = Prov("Titulação da(o) autora(or)",
+            "Titulação que comprove conhecimento específico no assunto; nome e CRP vêm do perfil."),
+        ["nomes_autores_categorias_e_registros_profissionais"] = Sys("Autoras(es), categorias e registros profissionais",
+            "Você e a equipe informada no documento, com categoria e registro."),
+        ["procedimentos_privativos_da_psicologia_em_secao_separada"] = Prov("Procedimentos privativos da Psicologia",
+            "Procedimentos exclusivos da Psicologia, em seção separada."),
+        ["analise_identificada_por_profissional_e_categoria"] = Sys("Análise por profissional e categoria",
+            "Cada profissional da equipe tem sua análise, identificada por nome e categoria."),
+        ["nomes_profissionais"] = Sys("Nomes das(os) profissionais", "Você e a equipe informada no documento."),
+        ["inscricoes_profissionais"] = Sys("Inscrições profissionais", "Seu CRP e os registros da equipe."),
+        ["referencias"] = Prov("Referências", "Referências obrigatórias, uma por linha."),
+        ["referencial_teorico_metodologico"] = Prov("Referencial teórico-metodológico", "Impresso dentro do item Procedimento."),
+        ["secoes_em_forma_de_itens"] = Pdf("Seções em forma de itens", "O PDF organiza o documento em itens numerados."),
         ["assinatura_do_psicologo"] = Pdf("Assinatura da(o) psicóloga(o)", "Assinatura eletrônica na última página."),
     };
 
@@ -101,13 +105,16 @@ public static class DocumentCatalog
         new ProhibitionInfo("quebra_de_paragrafo_sem_preenchimento", true, null),
         new ProhibitionInfo("informacao_alem_do_solicitado", false,
             "Confirmo que o atestado se restringe à informação solicitada."),
-        new ProhibitionInfo("afirmacao_sem_fonte_ou_sustentacao", false,
-            "Confirmo que toda afirmação do relatório tem fonte ou sustentação técnica."),
-        new ProhibitionInfo("descricao_literal_das_sessoes", false,
-            "Confirmo que o relatório não transcreve literalmente as sessões."),
         new ProhibitionInfo("resultado_de_avaliacao_ou_intervencao_psicologica", false,
             "Confirmo que este parecer não resulta de processo de avaliação ou intervenção psicológica."),
     }.ToDictionary(p => p.Code);
+
+    private static readonly Dictionary<string, string> ReportNouns = new()
+    {
+        ["relatorio"] = "relatório",
+        ["laudo"] = "laudo",
+        ["relatorio_multiprofissional"] = "relatório multiprofissional",
+    };
 
     public static string KindTitle(string kind) =>
         KindTitles.TryGetValue(kind, out var title) ? title : kind;
@@ -129,6 +136,14 @@ public static class DocumentCatalog
     };
 
     // Unknown codes require an explicit confirmation without text.
-    public static ProhibitionInfo Prohibition(string code) =>
-        Prohibitions.TryGetValue(code, out var info) ? info : new ProhibitionInfo(code, false, null);
+    public static ProhibitionInfo Prohibition(string kind, string code)
+    {
+        var noun = ReportNouns.GetValueOrDefault(kind, "relatório");
+        return code switch
+        {
+            "afirmacao_sem_fonte_ou_sustentacao" => new(code, false, $"Confirmo que toda afirmação do {noun} tem fonte ou sustentação técnica."),
+            "descricao_literal_das_sessoes" => new(code, false, $"Confirmo que o {noun} não transcreve literalmente as sessões."),
+            _ => Prohibitions.TryGetValue(code, out var info) ? info : new ProhibitionInfo(code, false, null),
+        };
+    }
 }

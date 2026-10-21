@@ -55,7 +55,25 @@
       "confirmations": "As vedações que o sistema não consegue verificar viram confirmações: você marca que o texto respeita cada uma.",
       "mode": "Em Ajustes você escolhe se a falta de um elemento obrigatório bloqueia a assinatura ou apenas avisa.",
       "correction": "Um documento assinado não muda. Corrigir cria uma nova versão e mantém o original.",
-      "soon": "Laudo, parecer e relatório multiprofissional chegam em breve."
+      "laudo": "O laudo registra o resultado de uma avaliação psicológica: descreve a demanda, o procedimento, a análise e a conclusão. Exige as referências usadas e, ao assinar, você confirma as vedações que o sistema não verifica.",
+      "parecer": "O parecer responde a uma questão específica com base em sua análise técnica: apresenta a descrição da demanda, a análise e a conclusão. Exige as referências usadas e as confirmações das vedações.",
+      "multiprofissional": "O relatório multiprofissional resume o trabalho de uma equipe. Você lista os profissionais (nome, categoria, registro e a análise de cada um), mas só você assina no Anamnys; a assinatura dos demais não é registrada aqui."
+    },
+    "teamTitle": "Equipe",
+    "teamHint": "Profissionais que elaboram o relatório com você. Só você assina no Anamnys (Res. CFP 006/2019, art. 12).",
+    "laudoHint": "O PDF organiza este documento em itens numerados (Res. CFP 006/2019, art. 13).",
+    "parecerHint": "O PDF organiza este documento em itens numerados (Res. CFP 006/2019, art. 14).",
+    "team": {
+      "member": "Profissional {{n}}",
+      "name": "Nome",
+      "category": "Categoria",
+      "categoryPlaceholder": "ex.: Psiquiatria",
+      "registry": "Registro",
+      "registryPlaceholder": "ex.: CRM 12345",
+      "analysis": "Análise",
+      "add": "Adicionar profissional",
+      "remove": "Remover",
+      "limit": "Até 10 profissionais."
     },
     "notFound": "Documento não encontrado.",
     "backToPatient": "Voltar ao paciente",

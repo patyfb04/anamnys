@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import Modal from "@/components/patients/Modal";
 
-const ITEMS = ["form", "system", "panel", "confirmations", "mode", "correction", "soon"] as const;
+const ITEMS = ["form", "system", "panel", "confirmations", "mode", "correction", "laudo", "parecer", "multiprofissional"] as const;
 
 export default function DocumentHelpPanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();

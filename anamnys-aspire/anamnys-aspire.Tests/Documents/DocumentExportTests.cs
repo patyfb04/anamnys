@@ -38,7 +38,7 @@ public class DocumentExportTests(SharedAppHostFixture fixture)
                 ["local_dias_horarios_e_duracao_do_acompanhamento"] = "Consultório, às terças.",
                 ["prazo_validade"] = "30 dias.",
             },
-            ["sintomas_situacoes_ou_estados_psicologicos"], Now, Ct);
+            ["sintomas_situacoes_ou_estados_psicologicos"], [], Now, Ct);
         if (signed)
         {
             var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);

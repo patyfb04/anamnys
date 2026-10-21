@@ -49,7 +49,7 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-05 Validador CFP 006/2019 | partial | delivery 1 done: declaração, atestado and relatório (form per kind, conformity check, confirmations, blocking/advisory modes, signing, correction by new version, PDF export); all six rulesets seeded. Missing: laudo, parecer, relatório multiprofissional (delivery 2, REQUIRED). `Documents/`, `documentation/22-psychological-documents.md` |
+| F-05 Validador CFP 006/2019 | done | all six kinds of art. 8 (declaração, atestado, relatório, relatório multiprofissional with a typed team, laudo, parecer): form per kind, conformity check, confirmations, blocking/advisory modes, signing, correction by new version, PDF export. `Documents/`, `documentation/22-psychological-documents.md` |
 | F-06 Guarda e descarte | schema only | `RetentionRules`, `DisposalRecords` |
 
 ### C · Documentos externos
@@ -150,15 +150,12 @@ the schema still carries every table, but only the features below have code.
 
 ## Next, in priority order (agreed 2026-10-18)
 
-1. **F-05 delivery 2 — laudo, parecer and relatório multiprofissional (REQUIRED)** — F-05 is not
-   done until every kind of Res. CFP 006/2019 art. 8 can be written and checked. Laudo and parecer
-   are the documents of psychological assessment and require references (arts. 13 §7, 14 §6); the
-   relatório multiprofissional needs a co-authorship model (art. 12). Their rulesets are already
-   seeded by delivery 1.
-2. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
+1. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
    renamed, split or merged). The old seed has a reviewed mental-health vocabulary to copy.
-3. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
+2. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
    first paying subscriber.
 
 Open verification: the note search `pageSize` tests (`develop` `e1a5553`) compiled but have not
-run; run `-class "*NoteListTests*"` with Aspire stopped.
+run; run `-class "*NoteListTests*"` with Aspire stopped. The F-05 delivery-2 database tests
+(`DocumentsTeamMigrationTests`, `DocumentJsonbRoundTripTests`, `ClinicalDocumentServiceTests`,
+`DocumentEndpointTests`, `DocumentExportTests`) compiled but await a run with Aspire stopped.

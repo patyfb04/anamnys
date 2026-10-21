@@ -284,16 +284,15 @@ Not built yet; planned for after the calendar deliveries.
 
 ## Documentos
 
-Psychological documents and the CFP 006/2019 validator (F-05 delivery 1; chapter
-`documentation/22-psychological-documents.md`).
+Psychological documents and the CFP 006/2019 validator (F-05 deliveries 1 and 2, all six kinds;
+chapter `documentation/22-psychological-documents.md`).
 
-- **Delivery 2 is REQUIRED to close F-05**: laudo, parecer and relatório multiprofissional (rulesets
-  already seeded). Needs, from the spec's "Delivery 2 notes": the parecer confirmation text already
-  in the catalog (`resultado_de_avaliacao_ou_intervencao_psicologica`); kind-aware confirmation
-  texts, because `DocumentCatalog.Prohibition(code)` is kind-agnostic and shared codes read "do
-  relatório"; and a CRP/co-authorship design for the Provider placeholders
-  `nome_autor_inscricao_crp_e_titulacao`, `nomes_profissionais` and `inscricoes_profissionais`
-  (art. 12 co-authorship model).
+- **A parecer about an institution or a person who is not a patient is not supported.** The parecer
+  is bound to a patient like every other document, and the subject named in it is that patient
+  (art. 14 allows an institution or another person as the subject).
+- **Co-authors of the relatório multiprofissional have no account and do not sign.** The team is
+  typed text (name, category, registry, analysis) inside the provider's document; only the
+  psychologist signs in Anamnys. Co-authors with an account or their own signature are not built.
 - **Delivery protocol** signed by the requester (art. 16 §1) is not built; it belongs to F-07.
 - **Retention**: `ClinicalDocuments."RetentionUntil"` is never written (F-06).
 - **`ConformityChecks."ForbiddenFound"` is always empty by design.** Prohibitions are explicit

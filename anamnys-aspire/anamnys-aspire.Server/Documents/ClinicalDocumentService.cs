@@ -1,6 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Anamnys.Server.Documents;
 
@@ -12,11 +13,12 @@ public sealed record DocumentDetail(
     IReadOnlyDictionary<string, string> Fields, IReadOnlyList<string> Confirmations, ConformityResult Check,
     string Mode, DateTimeOffset CreatedAt, DateTimeOffset? SignedAt, string? SignedByCrp, Guid? SupersededBy,
     DateTimeOffset? ExportedAt, bool ProviderHasCrp, bool HasPracticeCity,
-    string? SignedCity, string? SignedByName, string? SignedPatientName);
+    string? SignedCity, string? SignedByName, string? SignedPatientName, IReadOnlyList<TeamMember> Team);
 
 public enum DocumentOutcome
 {
     Ok, NotFound, Archived, Locked, KindNotAvailable, MissingElements, ConfirmationsRequired, MissingCrp, MissingCity, Invalid,
+    TeamNotAllowed,
 }
 
 public sealed record DocumentResult(DocumentOutcome Outcome, Guid? Id = null, IReadOnlyList<string>? Missing = null);
@@ -125,12 +127,12 @@ public static class ClinicalDocumentService
             check, mode, document.CreatedAt, document.SignedAt, document.SignedByCrp, document.SupersededBy, document.ExportedAt,
             signed ? !string.IsNullOrWhiteSpace(document.SignedByCrp) : HasCrp(provider),
             signed ? !string.IsNullOrWhiteSpace(document.SignedCity) : !string.IsNullOrWhiteSpace(provider.PracticeCity),
-            document.SignedCity, document.SignedByName, document.SignedPatientName);
+            document.SignedCity, document.SignedByName, document.SignedPatientName, document.Team);
     }
 
     public static async Task<DocumentResult> SaveAsync(
         AnamnysDbContext db, Guid providerId, Guid documentId, IReadOnlyDictionary<string, string> fields,
-        IReadOnlyCollection<string> confirmations, DateTimeOffset now, CancellationToken ct)
+        IReadOnlyCollection<string> confirmations, IReadOnlyList<TeamMember> team, DateTimeOffset now, CancellationToken ct)
     {
         return await InTransactionAsync(db, async () =>
         {
@@ -168,7 +170,16 @@ public static class ClinicalDocumentService
                 .ToList();
             var previousSet = string.Join(",", document.Confirmations.Order());
             var nextSet = string.Join(",", nextConfirmations.Order());
-            if (changedCodes.Count == 0 && previousSet == nextSet)
+            var nextTeam = team
+                .Select(m => new TeamMember(m.Name.Trim(), m.Category.Trim(), m.Registry.Trim(), m.Analysis.Trim()))
+                .Where(m => m.Name.Length + m.Category.Length + m.Registry.Length + m.Analysis.Length > 0)
+                .ToList();
+            if (nextTeam.Count > 0 && document.Kind != "relatorio_multiprofissional")
+            {
+                return new DocumentResult(DocumentOutcome.TeamNotAllowed);
+            }
+            var teamChanged = !nextTeam.SequenceEqual(document.Team);
+            if (changedCodes.Count == 0 && previousSet == nextSet && !teamChanged)
             {
                 return new DocumentResult(DocumentOutcome.Ok, document.Id);
             }
@@ -181,6 +192,12 @@ public static class ClinicalDocumentService
             if (previousSet != nextSet)
             {
                 DocumentAudit.Add(db, document.Id, providerId, "document_saved", "confirmations", previousSet, nextSet, now);
+            }
+            if (teamChanged)
+            {
+                DocumentAudit.Add(db, document.Id, providerId, "document_saved", "team",
+                    JsonSerializer.Serialize(document.Team), JsonSerializer.Serialize(nextTeam), now);
+                document.Team = nextTeam;
             }
             document.Fields = kept;
             document.Confirmations = nextConfirmations;
@@ -227,13 +244,15 @@ public static class ClinicalDocumentService
                 return new DocumentResult(DocumentOutcome.MissingElements, Missing: check.MissingElements);
             }
 
-            document.Body = DocumentBody.Assemble(document.Kind, ruleset.Elements, document.Fields);
-            document.SignedAt = now;
-            document.SignedByCrp = $"{provider.CrpNumber}/{provider.CrpRegion}";
-            document.SignedCity = provider.PracticeCity!.Trim();
-            document.SignedByName = provider.Name;
             var patient = await db.Patients.AsNoTracking().SingleAsync(p => p.Id == document.PatientId, ct);
+            document.SignedByCrp = $"{provider.CrpNumber}/{provider.CrpRegion}";
+            document.SignedByName = provider.Name;
             document.SignedPatientName = $"{patient.FirstName} {patient.LastName}".Trim();
+            document.Body = DocumentBody.Assemble(
+                document.Kind, ruleset.Elements, document.Fields, document.Team,
+                document.SignedByName, document.SignedByCrp, document.SignedPatientName);
+            document.SignedAt = now;
+            document.SignedCity = provider.PracticeCity!.Trim();
             document.UpdatedAt = now;
             db.ConformityChecks.Add(new ConformityCheck
             {
@@ -282,6 +301,7 @@ public static class ClinicalDocumentService
                 Kind = original.Kind,
                 RulesetId = original.RulesetId,
                 Fields = new Dictionary<string, string>(original.Fields),
+                Team = original.Team.ToList(),
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -316,7 +336,7 @@ public static class ClinicalDocumentService
     private static ConformityResult Check(ClinicalDocument d, ConformityRuleset ruleset, Provider provider) =>
         DocumentConformity.Check(new ConformityInput(
             d.Kind, ruleset.Elements, ruleset.Prohibitions, d.Fields, d.Confirmations,
-            HasCrp(provider), !string.IsNullOrWhiteSpace(provider.PracticeCity)));
+            HasCrp(provider), !string.IsNullOrWhiteSpace(provider.PracticeCity), d.Team));
 
     // Unlike Data/DbTransactions, commits only on Ok: refusals must leave no trace.
     private static async Task<DocumentResult> InTransactionAsync(

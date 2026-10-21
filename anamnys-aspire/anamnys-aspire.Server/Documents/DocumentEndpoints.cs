@@ -1,4 +1,5 @@
 using Anamnys.Server.Data;
+using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Notes;
 using Anamnys.Server.Patients;
 using Anamnys.Server.Storage;
@@ -8,7 +9,50 @@ namespace Anamnys.Server.Documents;
 
 public sealed record CreateDocumentRequest(string? Kind, Guid? NoteId);
 
-public sealed record SaveDocumentRequest(Dictionary<string, string>? Fields, List<string>? Confirmations);
+public sealed record TeamMemberRequest(string? Name, string? Category, string? Registry, string? Analysis);
+
+public sealed record SaveDocumentRequest(Dictionary<string, string>? Fields, List<string>? Confirmations, List<TeamMemberRequest>? Team)
+{
+    public const int MaxTeam = 10;
+    public const int MaxName = 200;
+    public const int MaxCategory = 100;
+    public const int MaxRegistry = 50;
+
+    public Dictionary<string, string[]> Validate()
+    {
+        var errors = new Dictionary<string, string[]>();
+        var team = Team ?? [];
+        if (team.Count > MaxTeam)
+        {
+            errors["team"] = [$"No máximo {MaxTeam} profissionais."];
+            return errors;
+        }
+        for (var i = 0; i < team.Count; i++)
+        {
+            if (team[i] is null)
+            {
+                errors[$"team[{i}]"] = ["Profissional inválido."];
+                continue;
+            }
+            Limit(errors, $"team[{i}].name", team[i].Name, MaxName);
+            Limit(errors, $"team[{i}].category", team[i].Category, MaxCategory);
+            Limit(errors, $"team[{i}].registry", team[i].Registry, MaxRegistry);
+            Limit(errors, $"team[{i}].analysis", team[i].Analysis, ClinicalDocumentService.MaxFieldLength);
+        }
+        return errors;
+    }
+
+    public IReadOnlyList<TeamMember> TeamMembers() =>
+        (Team ?? []).Where(m => m is not null).Select(m => new TeamMember(m.Name ?? "", m.Category ?? "", m.Registry ?? "", m.Analysis ?? "")).ToList();
+
+    private static void Limit(Dictionary<string, string[]> errors, string key, string? value, int max)
+    {
+        if ((value?.Trim().Length ?? 0) > max)
+        {
+            errors[key] = [$"Use no máximo {max} caracteres."];
+        }
+    }
+}
 
 public sealed record SignDocumentRequest(bool AcknowledgeMissing);
 
@@ -39,7 +83,7 @@ public static class DocumentEndpoints
                     rulesetVersion = r.Version,
                     elements = r.Elements.Select(code => DocumentCatalog.Element(r.DocumentKind, code))
                         .Select(e => new { code = e.Code, origin = e.Origin.ToString().ToLowerInvariant(), label = e.Label, hint = e.Hint }),
-                    prohibitions = r.Prohibitions.Select(DocumentCatalog.Prohibition)
+                    prohibitions = r.Prohibitions.Select(code => DocumentCatalog.Prohibition(r.DocumentKind, code))
                         .Select(p => new { code = p.Code, byConstruction = p.ByConstruction, confirmationText = p.ConfirmationText }),
                 })
                 .ToList();
@@ -126,8 +170,14 @@ public static class DocumentEndpoints
             {
                 return Results.Unauthorized();
             }
+            var errors = request.Validate();
+            if (errors.Count > 0)
+            {
+                return Results.ValidationProblem(errors);
+            }
             var result = await ClinicalDocumentService.SaveAsync(
-                db, providerId, documentId, request.Fields ?? [], request.Confirmations ?? [], DateTimeOffset.UtcNow, ct);
+                db, providerId, documentId, request.Fields ?? [], request.Confirmations ?? [], request.TeamMembers(),
+                DateTimeOffset.UtcNow, ct);
             if (result.Outcome != DocumentOutcome.Ok)
             {
                 return ToResult(result);
@@ -197,6 +247,10 @@ public static class DocumentEndpoints
         }),
         DocumentOutcome.MissingCrp => Results.UnprocessableEntity(new { message = "Cadastre seu CRP no perfil para assinar.", code = "missing_crp" }),
         DocumentOutcome.MissingCity => Results.UnprocessableEntity(new { message = "Cadastre a cidade de atendimento no perfil para assinar.", code = "missing_city" }),
+        DocumentOutcome.TeamNotAllowed => Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["team"] = ["A equipe só existe no relatório multiprofissional."],
+        }),
         _ => Results.ValidationProblem((result.Missing ?? []).ToDictionary(
             code => code, _ => new[] { $"Use no máximo {ClinicalDocumentService.MaxFieldLength} caracteres." })),
     };

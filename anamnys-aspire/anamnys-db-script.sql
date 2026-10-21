@@ -210,6 +210,7 @@ CREATE TABLE "ClinicalDocuments" (
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"Fields" jsonb DEFAULT '{}' NOT NULL,
 	"Confirmations" jsonb DEFAULT '[]' NOT NULL,
+	"Team" jsonb DEFAULT '[]'::jsonb NOT NULL,
 	"RulesetId" uuid,
 	"SignedByCrp" text,
 	"SignedCity" text,
@@ -221,7 +222,8 @@ CREATE TABLE "ClinicalDocuments" (
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "ClinicalDocuments_Signed_ck" CHECK ((("SignedAt" IS NULL) = ("SignedByCrp" IS NULL) AND ("SignedAt" IS NULL) = ("SignedCity" IS NULL) AND ("SignedAt" IS NULL) = ("SignedByName" IS NULL) AND ("SignedAt" IS NULL) = ("SignedPatientName" IS NULL))),
 	CONSTRAINT "ClinicalDocuments_Pdf_ck" CHECK ((("PdfObjectKey" IS NULL AND "PdfSha256" IS NULL AND "ExportedAt" IS NULL) OR ("PdfObjectKey" IS NOT NULL AND "PdfSha256" IS NOT NULL AND "ExportedAt" IS NOT NULL AND "SignedAt" IS NOT NULL))),
-	CONSTRAINT "ClinicalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['declaracao'::text, 'atestado'::text, 'relatorio'::text, 'relatorio_multiprofissional'::text, 'laudo'::text, 'parecer'::text])))
+	CONSTRAINT "ClinicalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['declaracao'::text, 'atestado'::text, 'relatorio'::text, 'relatorio_multiprofissional'::text, 'laudo'::text, 'parecer'::text]))),
+	CONSTRAINT "ClinicalDocuments_Team_array" CHECK (jsonb_typeof("Team") = 'array')
 );
 CREATE TABLE "ConformityChecks" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),

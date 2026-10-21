@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Anamnys.Server.Data.Entities;
 
 namespace Anamnys.Server.Documents;
 
@@ -21,8 +22,21 @@ public static partial class DocumentBody
         return provider;
     }
 
-    public static string Assemble(string kind, IReadOnlyList<string> elements, IReadOnlyDictionary<string, string> fields)
+    public static string Assemble(string kind, IReadOnlyList<string> elements, IReadOnlyDictionary<string, string> fields) =>
+        Assemble(kind, elements, fields, [], "", "", "");
+
+    public static string Assemble(
+        string kind, IReadOnlyList<string> elements, IReadOnlyDictionary<string, string> fields,
+        IReadOnlyList<TeamMember> team, string authorName, string crp, string patientName)
     {
+        if (DocumentSections.ItemKinds.Contains(kind))
+        {
+            var (heading, lines) = DocumentSections.Identification(kind, fields, team, authorName, crp, patientName);
+            var identification = $"{heading}\n" + string.Join("\n",
+                lines.Where(l => l.Value.Trim().Length > 0).Select(l => $"{l.Label}: {l.Value}"));
+            return string.Join(ParagraphBreak, DocumentSections.Build(kind, elements, fields, team, authorName)
+                .Select(s => $"{s.Heading}\n{s.Text}").Prepend(identification));
+        }
         var order = ProviderFieldOrder(kind, elements);
         return kind is "declaracao" or "atestado"
             ? AssembleParagraphs(kind, order, fields)

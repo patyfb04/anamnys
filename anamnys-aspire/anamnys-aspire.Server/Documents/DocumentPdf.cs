@@ -20,22 +20,16 @@ public static class DocumentPdf
             {
                 col.Spacing(10);
                 col.Item().AlignCenter().PaddingBottom(8).Text(m.Title.ToUpper(PtBr)).FontSize(16).Bold();
-                col.Item().Text(t =>
+                if (m.IdentificationHeading is not null)
                 {
-                    t.Span("Paciente: ").SemiBold();
-                    t.Span(m.PatientName);
-                });
-                if (m.Author is not null)
+                    col.Item().PaddingTop(6).Text(m.IdentificationHeading).SemiBold();
+                }
+                foreach (var line in m.Identification)
                 {
                     col.Item().Text(t =>
                     {
-                        t.Span("Autor(a): ").SemiBold();
-                        t.Span(m.Author);
-                    });
-                    col.Item().Text(t =>
-                    {
-                        t.Span("CRP: ").SemiBold();
-                        t.Span(m.Crp);
+                        t.Span($"{line.Label}: ").SemiBold();
+                        t.Span(line.Value);
                     });
                 }
                 foreach (var section in m.Sections)

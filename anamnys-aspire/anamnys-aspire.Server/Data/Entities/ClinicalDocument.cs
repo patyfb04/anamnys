@@ -10,6 +10,7 @@ public class ClinicalDocument
     public string Body { get; set; } = "";
     public Dictionary<string, string> Fields { get; set; } = [];
     public List<string> Confirmations { get; set; } = [];
+    public List<TeamMember> Team { get; set; } = [];
     public Guid? RulesetId { get; set; }
     public DateTimeOffset? SignedAt { get; set; }
     public string? SignedByCrp { get; set; }

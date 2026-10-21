@@ -213,6 +213,19 @@ Content-Type: application/json
 }
 
 ###
+### Save a relatorio_multiprofissional draft with its team (max 10 members; name 200, category 100, registry 50, analysis 20000 chars; empty members are dropped). 200 detail with team[]; 400 team | team[i].name|category|registry|analysis; 400 team on any other kind; 404; 409 locked.
+PUT {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "fields": { "finalidade": "" },
+  "confirmations": [],
+  "team": [
+    { "name": "Rita Lima", "category": "Psiquiatria", "registry": "CRM 12345", "analysis": "" }
+  ]
+}
+
+###
 ### Sign. 200; 404; 409 locked | missing_elements | confirmations_required (+ missing[]); 422 missing_crp | missing_city.
 POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/sign
 Content-Type: application/json

@@ -1,3 +1,4 @@
+using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Documents;
 using Anamnys.Tests.Patients;
 using FluentAssertions;
@@ -37,22 +38,56 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
     }
 
     private static async Task<Guid> CreateDraftAsync(
-        PatientSearchSeed seed, Guid patientId, string kind, Dictionary<string, string>? fields = null, string[]? confirmations = null)
+        PatientSearchSeed seed, Guid patientId, string kind, Dictionary<string, string>? fields = null, string[]? confirmations = null,
+        TeamMember[]? team = null)
     {
         await using var db = seed.CreateDbContext();
         var created = await ClinicalDocumentService.CreateAsync(db, seed.ProviderId, patientId, kind, null, Now, Ct);
         var id = created.Id!.Value;
         if (fields is not null)
         {
-            await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, confirmations ?? [], Now, Ct);
+            await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, confirmations ?? [], team ?? [], Now, Ct);
         }
         return id;
     }
+
+    private static readonly Dictionary<string, string> CompleteLaudo = new()
+    {
+        ["nome_solicitante"] = "Juízo", ["finalidade"] = "Avaliar", ["descricao_demanda"] = "Queixa",
+        ["procedimento"] = "Entrevistas", ["referencial_teorico_metodologico"] = "TCC",
+        ["pessoas_ouvidas_numero_de_encontros_e_duracao"] = "1 pessoa", ["analise"] = "Análise", ["conclusao"] = "Fim",
+        ["referencias"] = "Fonte A", ["prazo_validade"] = "60 dias",
+    };
+
+    private static readonly string[] LaudoConfirmations = ["descricao_literal_das_sessoes", "afirmacao_sem_fonte_ou_sustentacao"];
+
+    private static readonly Dictionary<string, string> CompleteParecer = new()
+    {
+        ["nome_solicitante"] = "Juízo", ["finalidade"] = "Esclarecer", ["nome_autor_inscricao_crp_e_titulacao"] = "Dra. Paula, CRP 06/12345, mestre",
+        ["descricao_demanda"] = "Questão", ["analise"] = "Análise", ["conclusao"] = "Fim", ["referencias"] = "Fonte A",
+        ["prazo_validade"] = "60 dias",
+    };
+
+    private static readonly string[] ParecerConfirmations = ["resultado_de_avaliacao_ou_intervencao_psicologica"];
+
+    private static readonly Dictionary<string, string> CompleteMulti = new()
+    {
+        ["nome_solicitante"] = "Escola", ["finalidade"] = "Avaliar", ["descricao_demanda"] = "Queixa",
+        ["procedimento"] = "Entrevistas", ["procedimentos_privativos_da_psicologia_em_secao_separada"] = "Testes",
+        ["analise"] = "Análise psi", ["conclusao"] = "Fim", ["prazo_validade"] = "60 dias",
+    };
+
+    private static readonly string[] MultiConfirmations = ["afirmacao_sem_fonte_ou_sustentacao", "descricao_literal_das_sessoes"];
+
+    private static readonly TeamMember[] RitaTeam = [new("Rita", "Psiquiatria", "CRM 1", "Análise da Rita")];
 
     [Theory]
     [InlineData("declaracao")]
     [InlineData("atestado")]
     [InlineData("relatorio")]
+    [InlineData("laudo")]
+    [InlineData("parecer")]
+    [InlineData("relatorio_multiprofissional")]
     public async Task Create_AvailableKind_CreatesDraftWithLatestRulesetAndAudit(string kind)
     {
         // Arrange
@@ -76,7 +111,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
-    public async Task Create_LaudoKind_ReturnsKindNotAvailable()
+    public async Task Create_UnknownKind_ReturnsKindNotAvailable()
     {
         // Arrange
         var (seed, patientId) = await SeedAsync();
@@ -84,7 +119,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
 
         // Act
-        var result = await ClinicalDocumentService.CreateAsync(db, seed.ProviderId, patientId, "laudo", null, Now, Ct);
+        var result = await ClinicalDocumentService.CreateAsync(db, seed.ProviderId, patientId, "carta", null, Now, Ct);
 
         // Assert
         result.Outcome.Should().Be(DocumentOutcome.KindNotAvailable);
@@ -156,7 +191,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         };
 
         // Act
-        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, ["inventada", "sintomas_situacoes_ou_estados_psicologicos"], Now, Ct);
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, ["inventada", "sintomas_situacoes_ou_estados_psicologicos"], [], Now, Ct);
 
         // Assert
         result.Outcome.Should().Be(DocumentOutcome.Ok);
@@ -187,7 +222,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         // Act
         await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id,
             new Dictionary<string, string> { ["finalidade"] = "B", ["prazo_validade"] = "90 dias" },
-            ["sintomas_situacoes_ou_estados_psicologicos"], Now, Ct);
+            ["sintomas_situacoes_ou_estados_psicologicos"], [], Now, Ct);
 
         // Assert
         var added = (await db.AuditEntries.AsNoTracking().Where(a => a.DocumentId == id).ToListAsync(Ct)).Count - before;
@@ -210,7 +245,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         var before = await db.AuditEntries.AsNoTracking().CountAsync(a => a.DocumentId == id, Ct);
 
         // Act
-        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, ["sintomas_situacoes_ou_estados_psicologicos"], Now, Ct);
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, ["sintomas_situacoes_ou_estados_psicologicos"], [], Now, Ct);
 
         // Assert
         result.Outcome.Should().Be(DocumentOutcome.Ok);
@@ -302,7 +337,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         var fields = new Dictionary<string, string> { ["finalidade"] = new string('a', 20_001) };
 
         // Act
-        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, [], Now, Ct);
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, fields, [], [], Now, Ct);
 
         // Assert
         result.Outcome.Should().Be(DocumentOutcome.Invalid);
@@ -321,7 +356,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         (await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct)).Outcome.Should().Be(DocumentOutcome.Ok);
 
         // Act
-        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, new Dictionary<string, string>(), [], Now, Ct);
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, new Dictionary<string, string>(), [], [], Now, Ct);
 
         // Assert
         result.Outcome.Should().Be(DocumentOutcome.Locked);
@@ -512,7 +547,7 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         detail.HasPracticeCity.Should().BeTrue();
         model.PracticeCity.Should().Be("São Paulo");
         model.ProviderName.Should().Be(signedName);
-        model.Author.Should().Be(signedName);
+        model.Identification.Should().Contain(new DocumentPdfLine("Autor(a)", signedName));
         model.PatientName.Should().Be("Ana Souza");
         model.Crp.Should().Be("12345/06");
     }
@@ -602,5 +637,187 @@ public class ClinicalDocumentServiceTests(SharedAppHostFixture fixture)
         detail.Check.ElementsComplete.Should().BeTrue();
         foreign.Should().BeNull();
         foreignList.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Save_MultiTeam_TrimsDropsEmptyMembersAndAudits()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional");
+        await using var db = seed.CreateDbContext();
+        TeamMember[] team = [new(" Rita ", "Psiquiatria", "CRM 1", "A"), new("", " ", "", "")];
+
+        // Act
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, new Dictionary<string, string>(), [], team, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+        var detail = await ClinicalDocumentService.GetAsync(db, seed.ProviderId, id, Ct);
+        detail!.Team.Should().Equal(new TeamMember("Rita", "Psiquiatria", "CRM 1", "A"));
+        (await db.AuditEntries.AsNoTracking().CountAsync(a => a.DocumentId == id && a.FieldChanged == "team", Ct)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Save_TeamOnLaudo_ReturnsTeamNotAllowedAndStoresNothing()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "laudo");
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, new Dictionary<string, string>(), [], RitaTeam, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.TeamNotAllowed);
+        (await db.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == id, Ct)).Team.Should().BeEmpty();
+        (await db.AuditEntries.AsNoTracking().AnyAsync(a => a.DocumentId == id && a.FieldChanged == "team", Ct)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Save_SameTeamAgain_WritesNoAuditEntry()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional", new(), [], RitaTeam);
+        await using var db = seed.CreateDbContext();
+        var before = await db.AuditEntries.AsNoTracking().CountAsync(a => a.DocumentId == id, Ct);
+
+        // Act
+        var result = await ClinicalDocumentService.SaveAsync(db, seed.ProviderId, id, new Dictionary<string, string>(), [], RitaTeam, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+        (await db.AuditEntries.AsNoTracking().CountAsync(a => a.DocumentId == id, Ct)).Should().Be(before);
+    }
+
+    [Fact]
+    public async Task Sign_CompleteLaudo_SignsWithNumberedBody()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "laudo", CompleteLaudo, LaudoConfirmations);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+        (await db.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == id, Ct)).Body.Should().StartWith("1. Identificação\nPessoa atendida: ");
+    }
+
+    [Fact]
+    public async Task Sign_CompleteParecer_Signs()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "parecer", CompleteParecer, ParecerConfirmations);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+    }
+
+    [Fact]
+    public async Task Sign_ParecerWithoutTitulacaoBlocking_ReturnsMissingElements()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var fields = new Dictionary<string, string>(CompleteParecer);
+        fields.Remove("nome_autor_inscricao_crp_e_titulacao");
+        var id = await CreateDraftAsync(seed, patientId, "parecer", fields, ParecerConfirmations);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.MissingElements);
+        result.Missing.Should().Contain("nome_autor_inscricao_crp_e_titulacao");
+    }
+
+    [Fact]
+    public async Task Sign_MultiWithoutTeamBlocking_ReturnsMissingElementsWithTeamCodes()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional", CompleteMulti, MultiConfirmations);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.MissingElements);
+        result.Missing.Should().Contain(
+            "nomes_autores_categorias_e_registros_profissionais", "nomes_profissionais", "inscricoes_profissionais",
+            "analise_identificada_por_profissional_e_categoria");
+    }
+
+    [Fact]
+    public async Task Sign_CompleteMulti_SignsAndBodyHasMemberAnalysis()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional", CompleteMulti, MultiConfirmations, RitaTeam);
+        await using var db = seed.CreateDbContext();
+
+        // Act
+        var result = await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+        var body = (await db.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == id, Ct)).Body;
+        body.Should().Contain("Análise — Rita (Psiquiatria)").And.Contain("Análise da Rita");
+    }
+
+    [Fact]
+    public async Task Save_MultiAfterSign_ReturnsLocked()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional", CompleteMulti, MultiConfirmations, RitaTeam);
+        await using var db = seed.CreateDbContext();
+        (await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct)).Outcome.Should().Be(DocumentOutcome.Ok);
+
+        // Act
+        var result = await ClinicalDocumentService.SaveAsync(
+            db, seed.ProviderId, id, CompleteMulti, MultiConfirmations, [new("Outro", "Fono", "CRFa 2", "B")], Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Locked);
+        (await db.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == id, Ct)).Team.Should().Equal(RitaTeam);
+    }
+
+    [Fact]
+    public async Task Correct_SignedMulti_CopiesTeamToNewDraft()
+    {
+        // Arrange
+        var (seed, patientId) = await SeedAsync();
+        await using var _ = seed;
+        var id = await CreateDraftAsync(seed, patientId, "relatorio_multiprofissional", CompleteMulti, MultiConfirmations, RitaTeam);
+        await using var db = seed.CreateDbContext();
+        await ClinicalDocumentService.SignAsync(db, seed.ProviderId, id, false, Now, Ct);
+
+        // Act
+        var result = await ClinicalDocumentService.CorrectAsync(db, seed.ProviderId, id, Now, Ct);
+
+        // Assert
+        result.Outcome.Should().Be(DocumentOutcome.Ok);
+        (await db.ClinicalDocuments.AsNoTracking().SingleAsync(d => d.Id == result.Id, Ct)).Team.Should().Equal(RitaTeam);
     }
 }

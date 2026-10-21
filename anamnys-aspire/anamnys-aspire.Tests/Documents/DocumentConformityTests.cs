@@ -1,3 +1,4 @@
+using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Documents;
 using FluentAssertions;
 
@@ -28,11 +29,42 @@ public class DocumentConformityTests
         "carimbo", "nome_psicologo", "inscricao_crp", "laudas_numeradas_rubricadas", "assinatura", "prazo_validade",
     ];
 
+    internal static readonly string[] LaudoElements =
+    [
+        "secoes_em_forma_de_itens", "identificacao", "titulo_laudo_psicologico", "nome_pessoa_ou_instituicao_atendida",
+        "nome_solicitante", "finalidade", "nome_autor_e_inscricao_crp", "descricao_demanda", "procedimento",
+        "referencial_teorico_metodologico", "pessoas_ouvidas_numero_de_encontros_e_duracao", "analise", "conclusao",
+        "local_emissao", "data_emissao", "carimbo", "nome_psicologo", "inscricao_crp", "laudas_numeradas_rubricadas",
+        "assinatura", "referencias", "prazo_validade",
+    ];
+
+    internal static readonly string[] ParecerElements =
+    [
+        "secoes_em_forma_de_itens", "identificacao", "titulo_parecer_psicologico",
+        "nome_pessoa_ou_instituicao_objeto_do_questionamento", "nome_solicitante", "finalidade",
+        "nome_autor_inscricao_crp_e_titulacao", "descricao_demanda", "analise", "conclusao", "local_emissao",
+        "data_emissao", "carimbo", "nome_psicologo", "inscricao_crp", "laudas_numeradas_rubricadas", "assinatura",
+        "referencias", "prazo_validade",
+    ];
+
+    internal static readonly string[] MultiElements =
+    [
+        "identificacao", "titulo_relatorio_multiprofissional", "nome_pessoa_ou_instituicao_atendida", "nome_solicitante",
+        "finalidade", "nomes_autores_categorias_e_registros_profissionais", "descricao_demanda", "procedimento",
+        "procedimentos_privativos_da_psicologia_em_secao_separada", "analise",
+        "analise_identificada_por_profissional_e_categoria", "conclusao", "local_emissao", "data_emissao", "carimbo",
+        "nomes_profissionais", "inscricoes_profissionais", "laudas_numeradas_rubricadas", "assinatura_do_psicologo",
+        "prazo_validade",
+    ];
+
     private static readonly Dictionary<string, string[]> ElementsByKind = new()
     {
         ["declaracao"] = DeclaracaoElements,
         ["atestado"] = AtestadoElements,
         ["relatorio"] = RelatorioElements,
+        ["laudo"] = LaudoElements,
+        ["parecer"] = ParecerElements,
+        ["relatorio_multiprofissional"] = MultiElements,
     };
 
     private static readonly Dictionary<string, string[]> ProhibitionsByKind = new()
@@ -40,6 +72,9 @@ public class DocumentConformityTests
         ["declaracao"] = ["sintomas_situacoes_ou_estados_psicologicos"],
         ["atestado"] = ["quebra_de_paragrafo_sem_preenchimento", "informacao_alem_do_solicitado"],
         ["relatorio"] = ["afirmacao_sem_fonte_ou_sustentacao", "descricao_literal_das_sessoes"],
+        ["laudo"] = ["descricao_literal_das_sessoes", "afirmacao_sem_fonte_ou_sustentacao"],
+        ["parecer"] = ["resultado_de_avaliacao_ou_intervencao_psicologica"],
+        ["relatorio_multiprofissional"] = ["afirmacao_sem_fonte_ou_sustentacao", "descricao_literal_das_sessoes"],
     };
 
     private static readonly string[] SystemCrpElements = ["nome_psicologo", "inscricao_crp", "nome_autor_e_inscricao_crp"];
@@ -49,6 +84,9 @@ public class DocumentConformityTests
         ["declaracao"] = "Art. 9º",
         ["atestado"] = "Art. 10",
         ["relatorio"] = "Art. 11",
+        ["laudo"] = "Art. 13",
+        ["parecer"] = "Art. 14",
+        ["relatorio_multiprofissional"] = "Art. 12",
     };
 
     public static TheoryData<string> Kinds => ["declaracao", "atestado", "relatorio"];
@@ -62,6 +100,21 @@ public class DocumentConformityTests
         [
             "nome_solicitante", "finalidade", "descricao_demanda", "procedimento", "referencial_teorico",
             "pessoas_ouvidas_numero_de_encontros_e_duracao", "analise", "conclusao", "prazo_validade",
+        ],
+        ["laudo"] =
+        [
+            "nome_solicitante", "finalidade", "descricao_demanda", "procedimento", "referencial_teorico_metodologico",
+            "pessoas_ouvidas_numero_de_encontros_e_duracao", "analise", "conclusao", "referencias", "prazo_validade",
+        ],
+        ["parecer"] =
+        [
+            "nome_solicitante", "finalidade", "nome_autor_inscricao_crp_e_titulacao", "descricao_demanda", "analise",
+            "conclusao", "referencias", "prazo_validade",
+        ],
+        ["relatorio_multiprofissional"] =
+        [
+            "nome_solicitante", "finalidade", "descricao_demanda", "procedimento",
+            "procedimentos_privativos_da_psicologia_em_secao_separada", "analise", "conclusao", "prazo_validade",
         ],
     };
 
@@ -82,6 +135,16 @@ public class DocumentConformityTests
         ["carimbo"] = ElementOrigin.Pdf,
         ["assinatura"] = ElementOrigin.Pdf,
         ["laudas_numeradas_rubricadas"] = ElementOrigin.Pdf,
+        ["titulo_laudo_psicologico"] = ElementOrigin.Pdf,
+        ["titulo_parecer_psicologico"] = ElementOrigin.Pdf,
+        ["titulo_relatorio_multiprofissional"] = ElementOrigin.Pdf,
+        ["secoes_em_forma_de_itens"] = ElementOrigin.Pdf,
+        ["assinatura_do_psicologo"] = ElementOrigin.Pdf,
+        ["nome_pessoa_ou_instituicao_objeto_do_questionamento"] = ElementOrigin.System,
+        ["nomes_autores_categorias_e_registros_profissionais"] = ElementOrigin.System,
+        ["analise_identificada_por_profissional_e_categoria"] = ElementOrigin.System,
+        ["nomes_profissionais"] = ElementOrigin.System,
+        ["inscricoes_profissionais"] = ElementOrigin.System,
     };
 
     private static string[] ProviderElements(string kind) => ExpectedProviderElements[kind];
@@ -183,7 +246,7 @@ public class DocumentConformityTests
     {
         // Arrange
         var required = ProhibitionsByKind[kind]
-            .Where(c => !DocumentCatalog.Prohibition(c).ByConstruction).ToArray();
+            .Where(c => !DocumentCatalog.Prohibition(kind, c).ByConstruction).ToArray();
 
         foreach (var code in required)
         {
@@ -215,26 +278,148 @@ public class DocumentConformityTests
     public void Prohibition_QuebraDeParagrafo_IsByConstructionWithoutText()
     {
         // Act
-        var info = DocumentCatalog.Prohibition("quebra_de_paragrafo_sem_preenchimento");
+        var info = DocumentCatalog.Prohibition("atestado", "quebra_de_paragrafo_sem_preenchimento");
 
         // Assert
         info.ByConstruction.Should().BeTrue();
         info.ConfirmationText.Should().BeNull();
     }
 
-    [Theory]
-    [InlineData("sintomas_situacoes_ou_estados_psicologicos", "Confirmo que esta declaração não descreve sintomas, situações ou estados psicológicos.")]
-    [InlineData("informacao_alem_do_solicitado", "Confirmo que o atestado se restringe à informação solicitada.")]
-    [InlineData("afirmacao_sem_fonte_ou_sustentacao", "Confirmo que toda afirmação do relatório tem fonte ou sustentação técnica.")]
-    [InlineData("descricao_literal_das_sessoes", "Confirmo que o relatório não transcreve literalmente as sessões.")]
-    public void Prohibition_ConfirmationCodes_HaveSpecText(string code, string text)
+    private static readonly TeamMember FullMember = new("Rita Lima", "Psiquiatria", "CRM 12345", "Análise da psiquiatria.");
+
+    private static ConformityResult CheckFull(string kind, IReadOnlyList<TeamMember>? team, bool crp = true, Dictionary<string, string>? fields = null)
     {
+        var elements = ElementsByKind[kind];
+        var allFields = fields ?? elements
+            .Where(code => DocumentCatalog.Element(kind, code).Origin == ElementOrigin.Provider)
+            .ToDictionary(code => code, _ => "texto");
+        return DocumentConformity.Check(new ConformityInput(
+            kind, elements, ProhibitionsByKind[kind], allFields, ProhibitionsByKind[kind], crp, true, team));
+    }
+
+    [Theory]
+    [InlineData("laudo")]
+    [InlineData("parecer")]
+    [InlineData("relatorio_multiprofissional")]
+    public void Check_NewKindComplete_ReportsNothingMissing(string kind)
+    {
+        // Arrange
+        IReadOnlyList<TeamMember>? team = kind == "relatorio_multiprofissional" ? [FullMember] : null;
+
         // Act
-        var info = DocumentCatalog.Prohibition(code);
+        var result = CheckFull(kind, team);
 
         // Assert
+        result.MissingElements.Should().BeEmpty();
+        result.MissingConfirmations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Check_ParecerWithoutCrp_ReportsTitulacaoMissing()
+    {
+        // Act
+        var result = CheckFull("parecer", null, crp: false);
+
+        // Assert
+        result.MissingElements.Should().Contain("nome_autor_inscricao_crp_e_titulacao");
+    }
+
+    [Fact]
+    public void Check_ParecerSubject_IsSystemAndNeverMissing()
+    {
+        // Act
+        var info = DocumentCatalog.Element("parecer", "nome_pessoa_ou_instituicao_objeto_do_questionamento");
+
+        // Assert
+        info.Origin.Should().Be(ElementOrigin.System);
+    }
+
+    [Fact]
+    public void Check_MultiEmptyTeam_ReportsAuthorsAndAnalysisMissing()
+    {
+        // Act
+        var result = CheckFull("relatorio_multiprofissional", []);
+
+        // Assert
+        result.MissingElements.Should().BeEquivalentTo([
+            "nomes_autores_categorias_e_registros_profissionais", "nomes_profissionais", "inscricoes_profissionais",
+            "analise_identificada_por_profissional_e_categoria",
+        ]);
+    }
+
+    [Fact]
+    public void Check_MultiMemberWithoutRegistry_ReportsOnlyAuthorElements()
+    {
+        // Act
+        var result = CheckFull("relatorio_multiprofissional", [FullMember with { Registry = " " }]);
+
+        // Assert
+        result.MissingElements.Should().BeEquivalentTo([
+            "nomes_autores_categorias_e_registros_profissionais", "nomes_profissionais", "inscricoes_profissionais",
+        ]);
+    }
+
+    [Fact]
+    public void Check_MultiMemberWithoutAnalysis_ReportsOnlyIdentifiedAnalysis()
+    {
+        // Act
+        var result = CheckFull("relatorio_multiprofissional", [FullMember, FullMember with { Analysis = "" }]);
+
+        // Assert
+        result.MissingElements.Should().Equal("analise_identificada_por_profissional_e_categoria");
+    }
+
+    [Fact]
+    public void Check_MultiWithoutCrp_ReportsAuthorElements()
+    {
+        // Act
+        var result = CheckFull("relatorio_multiprofissional", [FullMember], crp: false);
+
+        // Assert
+        result.MissingElements.Should().Contain(["nomes_profissionais", "inscricoes_profissionais"]);
+    }
+
+    [Theory]
+    [InlineData("relatorio", "afirmacao_sem_fonte_ou_sustentacao", "Confirmo que toda afirmação do relatório tem fonte ou sustentação técnica.")]
+    [InlineData("relatorio", "descricao_literal_das_sessoes", "Confirmo que o relatório não transcreve literalmente as sessões.")]
+    [InlineData("laudo", "afirmacao_sem_fonte_ou_sustentacao", "Confirmo que toda afirmação do laudo tem fonte ou sustentação técnica.")]
+    [InlineData("laudo", "descricao_literal_das_sessoes", "Confirmo que o laudo não transcreve literalmente as sessões.")]
+    [InlineData("relatorio_multiprofissional", "afirmacao_sem_fonte_ou_sustentacao", "Confirmo que toda afirmação do relatório multiprofissional tem fonte ou sustentação técnica.")]
+    [InlineData("relatorio_multiprofissional", "descricao_literal_das_sessoes", "Confirmo que o relatório multiprofissional não transcreve literalmente as sessões.")]
+    [InlineData("parecer", "resultado_de_avaliacao_ou_intervencao_psicologica", "Confirmo que este parecer não resulta de processo de avaliação ou intervenção psicológica.")]
+    [InlineData("declaracao", "sintomas_situacoes_ou_estados_psicologicos", "Confirmo que esta declaração não descreve sintomas, situações ou estados psicológicos.")]
+    [InlineData("atestado", "informacao_alem_do_solicitado", "Confirmo que o atestado se restringe à informação solicitada.")]
+    public void Prohibition_KindAndCode_ReturnsKindSpecificText(string kind, string code, string expected)
+    {
+        // Act
+        var info = DocumentCatalog.Prohibition(kind, code);
+
+        // Assert
+        info.ConfirmationText.Should().Be(expected);
         info.ByConstruction.Should().BeFalse();
-        info.ConfirmationText.Should().Be(text);
+    }
+
+    [Theory]
+    [InlineData("laudo")]
+    [InlineData("parecer")]
+    [InlineData("relatorio_multiprofissional")]
+    public void Check_NewKindNoConfirmationsGiven_ReportsEveryProhibition(string kind)
+    {
+        // Arrange
+        IReadOnlyList<TeamMember>? team = kind == "relatorio_multiprofissional" ? [FullMember] : null;
+        var elements = ElementsByKind[kind];
+        var fields = elements
+            .Where(code => DocumentCatalog.Element(kind, code).Origin == ElementOrigin.Provider)
+            .ToDictionary(code => code, _ => "texto");
+
+        // Act
+        var result = DocumentConformity.Check(new ConformityInput(
+            kind, elements, ProhibitionsByKind[kind], fields, [], true, true, team));
+
+        // Assert
+        result.MissingElements.Should().BeEmpty();
+        result.MissingConfirmations.Should().BeEquivalentTo(ProhibitionsByKind[kind]);
+        result.ConfirmationsComplete.Should().BeFalse();
     }
 
     [Fact]
@@ -304,8 +489,8 @@ public class DocumentConformityTests
     }
 
     [Fact]
-    public void AvailableKinds_Delivery1_AreTheThreeKinds()
+    public void AvailableKinds_AreAllSixKinds()
     {
-        DocumentCatalog.AvailableKinds.Should().Equal("declaracao", "atestado", "relatorio");
+        DocumentCatalog.AvailableKinds.Should().Equal("declaracao", "atestado", "relatorio", "relatorio_multiprofissional", "laudo", "parecer");
     }
 }

@@ -229,6 +229,13 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
                     v => v.Aggregate(0, (h, kv) => HashCode.Combine(h, kv.Key, kv.Value)),
                     v => new Dictionary<string, string>(v)));
             e.Property(x => x.Confirmations).HasColumnType("jsonb");
+            e.Property(x => x.Team).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<List<TeamMember>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<List<TeamMember>>(
+                    (a, b) => a != null && b != null && a.SequenceEqual(b),
+                    v => v.Aggregate(0, (h, m) => HashCode.Combine(h, m)),
+                    v => v.ToList()));
             e.HasOne<ConformityRuleset>().WithMany().HasForeignKey(x => x.RulesetId).OnDelete(DeleteBehavior.Restrict);
         });
 

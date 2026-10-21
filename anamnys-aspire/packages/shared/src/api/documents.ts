@@ -6,6 +6,7 @@ import type {
   DocumentSearchRequest,
   DocumentSearchResponse,
   DocumentSummary,
+  DocumentTeamMember,
 } from "@anamnys/shared/lib/types";
 
 export const documentsApi = {
@@ -29,8 +30,13 @@ export const documentsApi = {
     const { data } = await api.get<DocumentDetail>(`/phi/providers/me/documents/${id}`);
     return data;
   },
-  save: async (id: string, fields: Record<string, string>, confirmations: string[]): Promise<DocumentDetail> => {
-    const { data } = await api.put<DocumentDetail>(`/phi/providers/me/documents/${id}`, { fields, confirmations });
+  save: async (
+    id: string,
+    fields: Record<string, string>,
+    confirmations: string[],
+    team: DocumentTeamMember[],
+  ): Promise<DocumentDetail> => {
+    const { data } = await api.put<DocumentDetail>(`/phi/providers/me/documents/${id}`, { fields, confirmations, team });
     return data;
   },
   sign: async (id: string, acknowledgeMissing: boolean): Promise<void> => {
