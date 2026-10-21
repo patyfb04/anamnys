@@ -64,11 +64,10 @@ const NAV_ITEMS: NavItem[] = [
     feature: "noteEditor",
   },
   {
-    href: "/document-intake",
+    href: "/documents",
     Icon: FileInput,
     labelKey: "nav.documentIntake",
-    matchPrefix: "/document-intake",
-    feature: "documentIntake",
+    matchPrefix: "/documents",
   },
   {
     href: "/analytics",

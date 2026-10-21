@@ -13,7 +13,7 @@ import ScaleChart from "./ScaleChart";
 import ScaleHelpPanel from "./ScaleHelpPanel";
 import ScaleRecordModal from "./ScaleRecordModal";
 
-const actionClass = "rounded-radii-full px-3 py-1.5 text-label-lg text-primary hover:bg-surfaceContainer";
+const actionClass = "inline-flex items-center gap-1 px-3 py-1.5 text-label-lg text-primary hover:underline";
 
 // Patient record card: one small chart plus the entry list per instrument used. Shows scores and
 // dates only, never an interpretation (design/specs/2026-10-18-psychometric-scales-design.md §6).

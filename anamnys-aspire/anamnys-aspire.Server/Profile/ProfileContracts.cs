@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace Anamnys.Server.Profile;
 
-public sealed record ProviderProfileResponse(string Email, string Name, string? CrpNumber, string? CrpRegion);
+public sealed record ProviderProfileResponse(string Email, string Name, string? CrpNumber, string? CrpRegion, string? PracticeCity);
 
 public sealed record PatientProfileResponse(
     string? Email, string FirstName, string LastName, string? Phone, DateOnly? DateOfBirth);
@@ -10,7 +10,7 @@ public sealed record PatientProfileResponse(
 // Email is deliberately absent from both update requests: it is the Keycloak login and
 // changes only through the UPDATE_EMAIL action (see the account self-service spec §4).
 // Limits mirror the realms' declarative user profile config where one exists there.
-public sealed record UpdateProviderProfileRequest(string? Name, string? CrpNumber, string? CrpRegion)
+public sealed record UpdateProviderProfileRequest(string? Name, string? CrpNumber, string? CrpRegion, string? PracticeCity = null)
 {
     public Dictionary<string, string[]> Validate()
     {
@@ -26,6 +26,11 @@ public sealed record UpdateProviderProfileRequest(string? Name, string? CrpNumbe
         if (crpRegion is not null && crpRegion.Length > 10)
         {
             errors["crpRegion"] = ["A região do CRP pode ter no máximo 10 caracteres."];
+        }
+
+        if (ProfileText.Clean(PracticeCity) is { Length: > 120 })
+        {
+            errors["practiceCity"] = ["A cidade pode ter no máximo 120 caracteres."];
         }
 
         // Providers_Crp_ck: both set or both null.

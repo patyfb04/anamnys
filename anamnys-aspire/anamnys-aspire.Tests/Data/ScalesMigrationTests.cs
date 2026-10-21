@@ -31,6 +31,7 @@ public class ScalesMigrationTests(SharedAppHostFixture fixture)
             await RunPreviousMigrationsAsync(db);
             await RunMigrationAsync(db, "2026-10-18-scales.sql");
             await RunMigrationAsync(db, "2026-10-18-scales.sql");
+            await RunMigrationAsync(db, "2026-10-19-documents.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

@@ -23,7 +23,7 @@ public static class ProfileEndpoints
             var provider = await db.Providers.SingleOrDefaultAsync(p => p.Id == localId, cancellationToken);
             return provider is null
                 ? Results.NotFound()
-                : Results.Ok(new ProviderProfileResponse(provider.Email, provider.Name, provider.CrpNumber, provider.CrpRegion));
+                : Results.Ok(new ProviderProfileResponse(provider.Email, provider.Name, provider.CrpNumber, provider.CrpRegion, provider.PracticeCity));
         });
 
         phi.MapPut("providers/me/profile", async (
@@ -52,6 +52,7 @@ public static class ProfileEndpoints
             provider.Name = ProfileText.Clean(request.Name)!;
             provider.CrpNumber = ProfileText.Clean(request.CrpNumber);
             provider.CrpRegion = ProfileText.Clean(request.CrpRegion);
+            provider.PracticeCity = ProfileText.Clean(request.PracticeCity);
             provider.UpdatedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(cancellationToken);
             return Results.NoContent();

@@ -16,6 +16,9 @@ public class Provider
     public string? CrpRegion { get; set; }
     public string Specialty { get; set; } = "MentalHealth";
     public string PreferredNoteFormat { get; set; } = "DAP";
+    public string? PracticeCity { get; set; }
+    // 'blocking' (default) or 'advisory'; constrained by Providers_DocumentCheckMode_ck.
+    public string DocumentCheckMode { get; set; } = "blocking";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
