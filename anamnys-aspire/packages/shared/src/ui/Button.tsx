@@ -39,8 +39,8 @@ export default function Button({
         fullWidth && "self-stretch w-full",
         variant === "primary" && "bg-primary hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5",
         variant === "outline" &&
-          "bg-transparent border-[1.5px] border-primary hover:bg-surfaceContainerLow",
-        variant === "ghost" && "bg-transparent hover:bg-surfaceContainerLow",
+          "bg-transparent border-[1.5px] border-primary hover:bg-pastelLavender",
+        variant === "ghost" && "bg-transparent hover:bg-pastelLavender",
         "active:scale-[0.97]",
         isDisabled && "opacity-50 cursor-not-allowed",
         className

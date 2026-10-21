@@ -27,7 +27,7 @@ export default function TopBar({ title }: { title?: string }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <NotificationBell className="p-2 rounded-full text-primary hover:bg-surfaceContainerLow" />
+          <NotificationBell className="p-2 rounded-full text-primary hover:bg-pastelLavender" />
           <AccountMenu realm="provider" />
         </div>
       </div>
@@ -37,15 +37,15 @@ export default function TopBar({ title }: { title?: string }) {
           security and sign-out. Settings is the gear icon (and AppTabBar on mobile). */}
       <div className="hidden md:flex h-16 items-center justify-end gap-4 px-6 bg-surface/80 backdrop-blur-md border-b border-surfaceVariant sticky top-0 z-30">
         <div className="flex items-center gap-1.5 shrink-0">
-          <NotificationBell className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors" />
+          <NotificationBell className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-pastelLavender transition-colors" />
           <Link
             to="/settings"
             aria-label={t("nav.settings")}
-            className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors"
+            className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-pastelLavender transition-colors"
           >
             <Settings size={22} />
           </Link>
-          <button className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-surfaceContainerLow transition-colors">
+          <button className="p-2 rounded-full text-onSurfaceVariant hover:text-primary hover:bg-pastelLavender transition-colors">
             <HelpCircle size={22} />
           </button>
           <AccountMenu realm="provider" />

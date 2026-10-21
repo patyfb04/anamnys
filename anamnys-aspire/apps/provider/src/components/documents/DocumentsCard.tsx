@@ -26,7 +26,7 @@ export default function DocumentsCard({ patientId, readOnly }: { patientId: stri
       icon={<FileSignature size={20} />}
       action={
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setHelping(true)} aria-label={t("documents.helpLabel")} className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-surfaceContainer">
+          <button type="button" onClick={() => setHelping(true)} aria-label={t("documents.helpLabel")} className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-pastelLavender">
             <HelpCircle size={18} />
           </button>
           {!readOnly && (
@@ -48,7 +48,7 @@ export default function DocumentsCard({ patientId, readOnly }: { patientId: stri
               <Link
                 to="/documents/$documentId"
                 params={{ documentId: d.id }}
-                className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-surfaceContainerLow"
+                className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-pastelLavender"
               >
                 <span className="text-label-lg text-onSurface">{d.title}</span>
                 <span className="flex items-center gap-3">

@@ -35,7 +35,7 @@ export default function NewDocumentModal({ patientId: fixedPatientId, onClose }:
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="rounded-radii-md px-4 py-2 text-label-lg text-onSurfaceVariant hover:bg-surfaceContainer">
+          <button type="button" onClick={onClose} className="rounded-radii-md px-4 py-2 text-label-lg text-onSurfaceVariant hover:bg-pastelLavender">
             {t("common.cancel")}
           </button>
           <button

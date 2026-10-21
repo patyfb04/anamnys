@@ -187,7 +187,7 @@ function WelcomePage() {
             </Link>
             <Link
               to="/demo"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surfaceContainerLowest border border-outlineVariant rounded-radii-md py-3.5 px-7 hover:bg-surfaceContainerLow transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-surfaceContainerLowest border border-outlineVariant rounded-radii-md py-3.5 px-7 hover:bg-pastelLavender transition-colors"
             >
               <PlayCircle size={20} className="text-onSurface" />
               <span className="text-label-lg text-[15px] text-onSurface">

@@ -100,7 +100,7 @@ function ProductPage() {
           </Link>
           <Link
             to="/demo"
-            className="w-full sm:w-auto text-center border border-outlineVariant rounded-radii-md py-3 px-8 text-label-lg text-onSurface hover:bg-surfaceContainerLow transition-colors"
+            className="w-full sm:w-auto text-center border border-outlineVariant rounded-radii-md py-3 px-8 text-label-lg text-onSurface hover:bg-pastelLavender transition-colors"
           >
             {t("product.hero.ctaSecondary")}
           </Link>

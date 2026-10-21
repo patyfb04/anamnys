@@ -86,7 +86,7 @@ function SectionBlock({ section, editable, noteId, onSaved }: Omit<Props, "secti
           <button
             type="button"
             onClick={start}
-            className="ml-auto inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:bg-surfaceContainerHigh"
+            className="ml-auto inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:bg-pastelLavender"
           >
             <Pencil size={14} aria-hidden />
             {t("noteView.edit")}
@@ -124,7 +124,7 @@ function SectionBlock({ section, editable, noteId, onSaved }: Omit<Props, "secti
               type="button"
               disabled={saving}
               onClick={() => setEditing(false)}
-              className="rounded-radii-lg px-4 py-2 text-label-lg text-primary hover:bg-surfaceContainerHigh disabled:opacity-60"
+              className="rounded-radii-lg px-4 py-2 text-label-lg text-primary hover:bg-pastelLavender disabled:opacity-60"
             >
               {t("noteView.cancel")}
             </button>

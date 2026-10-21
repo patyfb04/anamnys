@@ -142,7 +142,7 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
           type="button"
           onClick={() => setHelping(true)}
           aria-label={t("documents.helpLabel")}
-          className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-surfaceContainer"
+          className="rounded-radii-full p-1.5 text-onSurfaceVariant hover:bg-pastelLavender"
         >
           <HelpCircle size={20} />
         </button>
@@ -350,7 +350,7 @@ function SignedActions({
             type="button"
             disabled={correcting}
             onClick={() => setConfirming(true)}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-radii-lg px-4 py-3 text-label-lg text-primary hover:bg-surfaceContainer disabled:opacity-60"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-radii-lg px-4 py-3 text-label-lg text-primary hover:bg-pastelLavender disabled:opacity-60"
           >
             {t("documents.correct")}
           </button>

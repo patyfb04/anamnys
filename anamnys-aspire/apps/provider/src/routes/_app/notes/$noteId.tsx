@@ -160,7 +160,7 @@ function TranscriptCard({ text, defaultOpen, title }: { text: string; defaultOpe
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls="note-transcript"
-          className="inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:bg-surfaceContainerLow"
+          className="inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:bg-pastelLavender"
         >
           {open ? t("noteView.hideTranscript") : t("noteView.showTranscript")}
           <ChevronDown size={16} aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`} />

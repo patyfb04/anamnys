@@ -6,7 +6,7 @@ import { useAuthStore } from "@anamnys/shared/lib/store/authStore";
 import type { AccountRealm } from "@anamnys/shared/api/profile";
 
 const itemClass =
-  "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-onSurface hover:bg-surfaceContainerLow";
+  "w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-onSurface hover:bg-pastelLavender";
 
 // Signed-in user's avatar: clicking it opens a menu with their name/email, links to
 // their own profile and security pages, and Sign Out. `realm` picks which BFF session
@@ -51,7 +51,7 @@ export default function AccountMenu({ realm }: { realm: AccountRealm }) {
                 setOpen(false);
                 logout(realm);
               }}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-error hover:bg-surfaceContainerLow"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-body-lg text-error hover:bg-pastelLavender"
             >
               <LogOut size={18} />
               {t("settings.signOut")}
