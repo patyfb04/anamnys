@@ -147,6 +147,8 @@ the schema still carries every table, but only the features below have code.
 - Keycloakify login theme.
 - Dev clinical seed.
 - Note list (`/note-editor`) with status filters and patient-name search (POST body, never in a URL).
+- Documents list (`/documents`, sidebar "Documentos") with status filters and patient-name search
+  (POST body), "Novo documento" there and on the patient page.
 
 ## Next, in priority order (agreed 2026-10-18)
 
@@ -155,7 +157,5 @@ the schema still carries every table, but only the features below have code.
 2. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
    first paying subscriber.
 
-Open verification: the note search `pageSize` tests (`develop` `e1a5553`) compiled but have not
-run; run `-class "*NoteListTests*"` with Aspire stopped. The F-05 delivery-2 database tests
-(`DocumentsTeamMigrationTests`, `DocumentJsonbRoundTripTests`, `ClinicalDocumentServiceTests`,
-`DocumentEndpointTests`, `DocumentExportTests`) compiled but await a run with Aspire stopped.
+Verified 2026-10-20: full suite 734 total, 0 failed, 3 skipped, including the note search
+`pageSize` tests and every F-05 database test.

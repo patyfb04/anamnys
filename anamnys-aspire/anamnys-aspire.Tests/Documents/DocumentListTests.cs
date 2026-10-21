@@ -12,18 +12,23 @@ public class DocumentListTests(SharedAppHostFixture fixture)
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     private static async Task<Guid> AddDocumentAsync(
-        PatientSearchSeed seed, Guid patientId, DateTimeOffset createdAt, bool signed = false, bool superseded = false,
+        PatientSearchSeed seed, Guid patientId, DateTimeOffset createdAt, bool signed = false, Guid? supersededBy = null,
         string kind = "declaracao", Guid? providerId = null)
     {
         await using var db = seed.CreateDbContext();
+        var isSigned = signed || supersededBy is not null;
         var document = new ClinicalDocument
         {
             Id = Guid.NewGuid(),
             PatientId = patientId,
             ProviderId = providerId ?? seed.ProviderId,
             Kind = kind,
-            SignedAt = signed || superseded ? createdAt.AddMinutes(1) : null,
-            SupersededBy = superseded ? Guid.NewGuid() : null,
+            SignedAt = isSigned ? createdAt.AddMinutes(1) : null,
+            SignedByCrp = isSigned ? "12345/06" : null,
+            SignedCity = isSigned ? "São Paulo" : null,
+            SignedByName = isSigned ? "Dra. Teste" : null,
+            SignedPatientName = isSigned ? "Paciente Teste" : null,
+            SupersededBy = supersededBy,
             CreatedAt = createdAt,
             UpdatedAt = createdAt,
         };
@@ -42,9 +47,9 @@ public class DocumentListTests(SharedAppHostFixture fixture)
         // Arrange
         await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
-        await AddDocumentAsync(seed, patient, Now);
+        var draft = await AddDocumentAsync(seed, patient, Now);
         await AddDocumentAsync(seed, patient, Now.AddMinutes(-1), signed: true);
-        await AddDocumentAsync(seed, patient, Now.AddMinutes(-2), superseded: true);
+        await AddDocumentAsync(seed, patient, Now.AddMinutes(-2), supersededBy: draft);
         await using var db = seed.CreateDbContext();
 
         // Act
