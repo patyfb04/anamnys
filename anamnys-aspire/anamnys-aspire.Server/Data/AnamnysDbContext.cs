@@ -39,6 +39,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ThemeTag> ThemeTags => Set<ThemeTag>();
     public DbSet<ThemeTermSuccession> ThemeTermSuccessions => Set<ThemeTermSuccession>();
     public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
+    public DbSet<AccountExport> AccountExports => Set<AccountExport>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -183,6 +184,13 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         {
             e.ToTable("Notifications");
             e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<AccountExport>(e =>
+        {
+            e.ToTable("AccountExports");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<BookingPolicy>(e =>

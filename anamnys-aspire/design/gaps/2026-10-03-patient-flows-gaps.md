@@ -341,6 +341,30 @@ Theme vocabulary (F-02; chapter `documentation/23-theme-vocabulary.md`).
   patient), the "Tema" filter and the admin `/vocabulary` page; so are the new `.http` requests
   against a live AppHost.
 
+## Exportação
+
+Full account export (F-60; chapter `documentation/24-account-export.md`).
+
+- **F-57 and F-56 own the 60-day window and the deletion.** D-08 promises the export for 60 days after
+  cancellation, and (Terms 10.3, FAQ) after a trial ends or an account is suspended, then deletion; only
+  active accounts can export today, and nothing deletes account
+  data.
+- **The downloaded ZIP leaves our control.** It holds patients' health data, is not encrypted and has no
+  password; the screen only warns the provider.
+- **Whole-account text in memory.** The text of the entire account is loaded before the ZIP is written
+  (PDFs are streamed); a very large account costs memory in proportion. Not measured.
+- **Single instance assumed.** The queue is in-process and the restart sweep fails every queued or
+  running export, like `OrphanNoteSweep`; with several instances it would fail another one's job. A
+  shutdown also leaves a running export until the next start.
+- **Retention is 7 days**, swept hourly; after that the provider generates a new export.
+- **Excluded on purpose:** voice transcripts, the original typed text and audit values. Pending AI theme
+  proposals are included and flagged. A signed document whose PDF is neither stored nor renderable shows
+  "PDF indisponível" (text kept in the JSON and HTML).
+- **Termos:** cláusula de preservação após suspensão ainda com [60] entre colchetes — decidir junto
+  com F-56.
+- **Manual browser check pending** for the "Exportar meus dados" section (request, polling, download,
+  retry, expired, bell link); so are the new `.http` requests against a live AppHost.
+
 ## Portal do paciente e convites
 
 - **Invitations:** no re-send rate limit; no reminder before expiry; the registration form

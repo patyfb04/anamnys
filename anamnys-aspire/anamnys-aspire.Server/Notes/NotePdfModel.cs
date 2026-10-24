@@ -20,6 +20,8 @@ public sealed record NotePdfModel(
 
     public string FileName => FileNameFor(Code);
 
+    public static string SectionTitle(string key) => Titles.GetValueOrDefault(key, key);
+
     public static string CodeFor(Guid noteId) => noteId.ToString("N")[..8].ToUpperInvariant();
 
     public static string FileNameFor(Guid noteId) => FileNameFor(CodeFor(noteId));
@@ -35,7 +37,7 @@ public sealed record NotePdfModel(
             session?.ScheduledStart ?? session?.ActualStart ?? note.CreatedAt,
             note.Format == "Biopsychosocial" ? "Biopsicossocial" : note.Format,
             sections.OrderBy(s => s.Position)
-                .Select(s => new NotePdfSection(Titles.GetValueOrDefault(s.Key, s.Key), s.Content.Trim()))
+                .Select(s => new NotePdfSection(SectionTitle(s.Key), s.Content.Trim()))
                 .ToList(),
             note.SignedAt!.Value,
             CodeFor(note.Id));

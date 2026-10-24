@@ -29,17 +29,41 @@ public sealed class S3NoteFileStore(StorageOptions options) : INoteFileStore, ID
     public async Task PutAsync(string key, byte[] content, string contentType, CancellationToken ct)
     {
         using var stream = new MemoryStream(content, writable: false);
+        await PutAsync(key, stream, contentType, ct);
+    }
+
+    // The stream must be seekable so the SDK knows the length.
+    public async Task PutAsync(string key, Stream content, string contentType, CancellationToken ct)
+    {
         await _service.PutObjectAsync(new PutObjectRequest
         {
             BucketName = options.Bucket,
             Key = key,
-            InputStream = stream,
+            InputStream = content,
             ContentType = contentType,
         }, ct);
     }
 
+    public async Task<byte[]?> GetAsync(string key, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await _service.GetObjectAsync(options.Bucket, key, ct);
+            using var buffer = new MemoryStream();
+            await response.ResponseStream.CopyToAsync(buffer, ct);
+            return buffer.ToArray();
+        }
+        catch (AmazonS3Exception e) when (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    public async Task DeleteAsync(string key, CancellationToken ct) =>
+        await _service.DeleteObjectAsync(options.Bucket, key, ct);
+
     // downloadFileName must not contain quotes (callers pass nota-{CODE}.pdf).
-    public Uri PresignGet(string key, string downloadFileName, TimeSpan validFor)
+    public Uri PresignGet(string key, string downloadFileName, TimeSpan validFor, string contentType = "application/pdf")
     {
         var request = new GetPreSignedUrlRequest
         {
@@ -50,7 +74,7 @@ public sealed class S3NoteFileStore(StorageOptions options) : INoteFileStore, ID
             Protocol = options.PublicUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase) ? Protocol.HTTPS : Protocol.HTTP,
         };
         request.ResponseHeaderOverrides.ContentDisposition = $"attachment; filename=\"{downloadFileName}\"";
-        request.ResponseHeaderOverrides.ContentType = "application/pdf";
+        request.ResponseHeaderOverrides.ContentType = contentType;
         return new Uri(_public.GetPreSignedURL(request));
     }
 

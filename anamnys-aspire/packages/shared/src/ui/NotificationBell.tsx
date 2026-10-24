@@ -53,11 +53,22 @@ export default function NotificationBell({ className }: { className?: string }) 
   const unread = data?.unreadCount ?? 0;
   const items = data?.items ?? [];
 
-  const label = (n: ProviderNotification) =>
-    t(n.kind === "appointment_confirmed" ? "notifications.confirmed" : "notifications.autoCancelled", {
-      patient: n.patientName,
-      when: whenFormat.format(new Date(n.startsAt)),
+  const label = (n: ProviderNotification) => {
+    if (n.kind === "account_export_ready") {
+      return t("notifications.exportReady", { when: whenFormat.format(new Date(n.createdAt)) });
+    }
+    return t(n.kind === "appointment_confirmed" ? "notifications.confirmed" : "notifications.autoCancelled", {
+      patient: n.patientName ?? "",
+      when: n.startsAt ? whenFormat.format(new Date(n.startsAt)) : "",
     });
+  };
+
+  const itemClass = (n: ProviderNotification) =>
+    `block px-4 py-3 text-body-md text-onSurface hover:bg-pastelLavender ${n.readAt ? "" : "font-bold"}`;
+  const onItemClick = (n: ProviderNotification) => () => {
+    if (!n.readAt) markRead.mutate(n.id);
+    setOpen(false);
+  };
 
   return (
     <div ref={root} className="md:relative">
@@ -87,19 +98,20 @@ export default function NotificationBell({ className }: { className?: string }) 
             <ul>
               {items.map((n) => (
                 <li key={n.id} className="border-b border-outlineVariant last:border-b-0">
-                  <Link
-                    to="/calendar"
-                    search={{ view: "day", date: dayFormat.format(new Date(n.startsAt)) }}
-                    className={`block px-4 py-3 text-body-md text-onSurface hover:bg-pastelLavender ${
-                      n.readAt ? "" : "font-bold"
-                    }`}
-                    onClick={() => {
-                      if (!n.readAt) markRead.mutate(n.id);
-                      setOpen(false);
-                    }}
-                  >
-                    {label(n)}
-                  </Link>
+                  {n.kind === "account_export_ready" ? (
+                    <Link to="/settings" hash="exportar-dados" className={itemClass(n)} onClick={onItemClick(n)}>
+                      {label(n)}
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/calendar"
+                      search={{ view: "day", date: dayFormat.format(new Date(n.startsAt ?? n.createdAt)) }}
+                      className={itemClass(n)}
+                      onClick={onItemClick(n)}
+                    >
+                      {label(n)}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

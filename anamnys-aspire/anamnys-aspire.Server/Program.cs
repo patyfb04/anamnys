@@ -4,6 +4,7 @@ using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Documents;
+using Anamnys.Server.Exports;
 using Anamnys.Server.Email;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.NoteStructuring;
@@ -31,6 +32,7 @@ QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddHostedService<DatabaseInitializer>();
 builder.AddLiveSession();
 builder.AddNoteStructuring();
+builder.AddAccountExport();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -142,6 +144,7 @@ phi.MapNoteEndpoints();
 phi.MapScaleEndpoints();
 phi.MapDocumentEndpoints();
 phi.MapThemeEndpoints();
+phi.MapExportEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

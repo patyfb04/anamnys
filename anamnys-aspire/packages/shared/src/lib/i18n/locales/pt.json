@@ -622,6 +622,7 @@
     "markAll": "Marcar todas como lidas",
     "confirmed": "{{patient}} confirmou a consulta de {{when}}",
     "autoCancelled": "Consulta de {{patient}} em {{when}} cancelada por falta de confirmação",
+    "exportReady": "Sua exportação está pronta ({{when}})",
     "open": "Abrir avisos"
   },
   "settings": {
@@ -639,6 +640,26 @@
       "save": "Salvar",
       "saved": "Regra salva.",
       "saveFailed": "Não foi possível salvar."
+    },
+    "accountExport": {
+      "title": "Exportar meus dados",
+      "description": "Gere um arquivo com todos os seus dados na plataforma.",
+      "included": "Incluído: cadastro e perfil, pacientes, consultas, notas e documentos (assinados e rascunhos), diagnósticos, medicações, plano terapêutico, escalas, temas e PDFs.",
+      "excluded": "Não incluído: transcrições e texto original das sessões.",
+      "warning": "O arquivo contém dados de saúde dos seus pacientes. Guarde-o em local seguro.",
+      "generate": "Gerar exportação",
+      "generateNew": "Gerar nova exportação",
+      "retry": "Tentar novamente",
+      "queued": "Exportação na fila...",
+      "running": "Gerando a exportação...",
+      "done": "Exportação pronta ({{size}}), disponível até {{date}}.",
+      "download": "Baixar",
+      "failed": "Não foi possível gerar a exportação.",
+      "expired": "A última exportação expirou.",
+      "requestFailed": "Não foi possível solicitar a exportação.",
+      "downloadFailed": "Não foi possível baixar a exportação.",
+      "loadFailed": "Não foi possível carregar o estado da exportação.",
+      "inProgress": "Já existe uma exportação em andamento."
     },
     "documentCheck": {
       "title": "Conferência de documentos",
@@ -986,7 +1007,7 @@
   },
   "pricing": {
     "title": "Você paga pelo que usa. Não por quantas sessões atende.",
-    "subtitle": "Assinatura individual, sem limite de notas, pacientes ou documentos. Sem fidelidade, sem multa, exportação dos seus dados disponível o tempo todo.",
+    "subtitle": "Assinatura individual, sem limite de notas, pacientes ou documentos. Sem fidelidade, sem multa, exporte todos os seus dados a qualquer momento enquanto sua conta estiver ativa e por 60 dias após o cancelamento.",
     "perMonth": "/mês",
     "cta": "Testar por 14 dias",
     "comingSoon": "Em breve",
@@ -1013,7 +1034,7 @@
       "<b>Sem limite de notas, pacientes ou documentos</b> em nenhum plano. Limitar o registro puniria justamente quem mais usa o produto.",
       "<b>Teste de 14 dias</b> com acesso às funcionalidades do plano escolhido.",
       "<b>Sem fidelidade e sem multa.</b> Cancelamento a qualquer momento, com efeito ao final do ciclo já pago.",
-      "<b>Exportação integral disponível o tempo todo</b> — não apenas na saída.",
+      "<b>Exporte todos os seus dados a qualquer momento</b> enquanto sua conta estiver ativa e por 60 dias após o cancelamento; depois disso, os dados são apagados.",
       "<b>Troca de plano a qualquer momento</b>, com efeito a partir do ciclo seguinte."
     ],
     "billingTitle": "Observação sobre a cobrança",
@@ -1368,7 +1389,7 @@
     },
     "finalCta": {
       "title": "14 dias para testar",
-      "body": "Sem cartão para começar. Sem fidelidade. Exportação dos seus dados disponível o tempo todo.",
+      "body": "Sem cartão para começar. Sem fidelidade. Exporte todos os seus dados a qualquer momento enquanto sua conta estiver ativa e por 60 dias após o cancelamento.",
       "ctaPrimary": "Começar o teste",
       "ctaSecondary": "Falar com quem construiu"
     }
@@ -1394,7 +1415,7 @@
       "p2": "Somos uma operação pequena e independente. Dizemos isso na primeira página em vez de esconder atrás de um \"nós\" corporativo, porque é a informação que você precisa para decidir — e porque você vai descobrir de qualquer maneira.",
       "p3": "O que uma operação pequena tem de bom: quem responde o suporte é quem escreveu o código; decisões de produto não passam por comitê; e não há investidor pressionando para monetizar dado de paciente, porque não há investidor.",
       "riskLead": "O que ela tem de arriscado, e como tratamos isso:",
-      "p4": "<b>Você pode sair a qualquer momento com tudo.</b> Exportação integral dos seus registros, em formato aberto, disponível o tempo todo — não só no cancelamento. Sem multa, sem fidelidade, sem período mínimo.",
+      "p4": "<b>Você pode sair a qualquer momento com tudo.</b> Exporte todos os seus dados, em formato aberto, a qualquer momento enquanto sua conta estiver ativa e por 60 dias após o cancelamento; depois disso, os dados são apagados. Sem multa, sem fidelidade, sem período mínimo.",
       "p5": "<b>Os dados clínicos ficam no Brasil</b>, em infraestrutura contratada para isso, sob jurisdição brasileira, independentemente de onde estejamos.",
       "p6": "<b>Nada é opaco.</b> Termos de Uso e Política de Privacidade estão publicados na íntegra, sem linguagem defensiva, incluindo a declaração de que a operação técnica é conduzida do exterior — informação que a maioria dos concorrentes omite."
     },

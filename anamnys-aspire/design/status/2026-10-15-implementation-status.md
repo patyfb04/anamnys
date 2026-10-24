@@ -112,7 +112,7 @@ the schema still carries every table, but only the features below have code.
 | ID | State | Notes |
 |---|---|---|
 | F-50 … F-59 | schema only | `Plans`, `PlanFeatures`, `Subscriptions`, `WebhookEvents`, `UsageCounters` |
-| F-60 Exportação integral | schema only | `AccountExports` |
+| F-60 Exportação integral | done | ZIP with offline HTML, PDFs of signed notes and documents, JSON + CSV and a LEIA-ME; no transcripts, no audit values; kept 7 days; Ajustes section + bell notification. Covers active accounts only: the 60-day window after cancellation and deletion belong to F-57. `Exports/`, `documentation/24-account-export.md` |
 
 ### I · Fase 3 and items from the regulatory review
 
@@ -138,7 +138,8 @@ the schema still carries every table, but only the features below have code.
 | 14 Lembrete | partial (e-mail, not WhatsApp) |
 | 15, 16 | not started |
 | 17 Sala própria | not started (D-06) |
-| 18 … 23 | not started |
+| 18 … 22 | not started |
+| 23 Exportar conta | done for active accounts (F-60); the 60-day window after cancellation and the deletion wait for F-57 |
 
 ## Built but not in the backlog
 
@@ -152,9 +153,16 @@ the schema still carries every table, but only the features below have code.
 
 ## Next, in priority order (agreed 2026-10-18)
 
-1. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
+1. **Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
+   (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
+   time while the account is active and for 60 days after cancellation, then the data is deleted;
+   site and Terms say exactly that). Only the active-account half exists: F-57 (cancellation) must add the
+   60-day window and the deletion. These must exist before the
    first paying subscriber.
 
 Verified 2026-10-23: full suite 884 total, 0 failed, 3 skipped (F-02 included, with the
 suggestion cache and warm-up). The F-02 migration and the theme dev seed are applied to the local
 dev database; any other persistent environment needs `2026-10-21-theme-vocabulary.sql`.
+Verified 2026-10-24: full suite 935 total, 0 failed, 3 skipped (F-60 included; export tests 53/53
+after the final fixes). `2026-10-23-account-export.sql` is applied to the dev database; any other
+persistent environment needs it.
