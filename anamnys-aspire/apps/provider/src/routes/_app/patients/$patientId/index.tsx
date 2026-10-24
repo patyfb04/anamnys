@@ -31,6 +31,7 @@ import DocumentsCard from "@/components/documents/DocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
 import PatientFormModal from "@/components/patients/PatientFormModal";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
+import ThemeFilter from "@/components/themes/ThemeFilter";
 import NoteStatusBadge from "@/components/patients/NoteStatusBadge";
 import PortalAccessBlock from "@/components/patients/detail/PortalAccessBlock";
 import { ageFrom, formatDate, formatDay, formatTime } from "@/components/patients/format";
@@ -283,22 +284,41 @@ const RECENT_NOTES_PAGE_SIZE = 3;
 function RecentNotes({ patientId }: { patientId: string }) {
   const { t, i18n } = useTranslation();
   const [page, setPage] = useState(1);
+  const [termId, setTermId] = useState("");
   const query = useQuery({
-    queryKey: ["notes", "patient", patientId, "recent", page],
-    queryFn: () => notesApi.search({ patientId, page, pageSize: RECENT_NOTES_PAGE_SIZE }),
+    queryKey: ["notes", "patient", patientId, "recent", page, termId],
+    queryFn: () => notesApi.search({ patientId, termId: termId || undefined, page, pageSize: RECENT_NOTES_PAGE_SIZE }),
     placeholderData: keepPreviousData,
   });
   if (!query.data) {
     return query.isError ? <p className="text-body-md text-error">{t("patients.notes.failedToLoad")}</p> : null;
   }
   const notes = query.data.items;
+  const themeFilter = (
+    <ThemeFilter
+      value={termId}
+      onChange={(id) => {
+        setTermId(id);
+        setPage(1);
+      }}
+    />
+  );
   if (notes.length === 0 && page === 1) {
+    if (termId) {
+      return (
+        <div className="flex flex-col gap-3">
+          {themeFilter}
+          <p className="text-body-md text-onSurfaceVariant">{t("themes.filter.noResults")}</p>
+        </div>
+      );
+    }
     return <p className="text-body-md text-onSurfaceVariant">{t("patients.detail.noNotes")}</p>;
   }
   const pagerButton =
     "p-1.5 rounded-radii-md text-onSurfaceVariant hover:bg-pastelLavender disabled:opacity-40 disabled:hover:bg-transparent transition-colors";
   return (
     <div className="flex flex-col gap-3">
+    {themeFilter}
     <ul className="flex flex-col gap-2">
       {notes.map((note) => {
         const signed = note.status === "Signed" || note.status === "Exported";

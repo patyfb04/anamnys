@@ -315,6 +315,32 @@ chapter `documentation/22-psychological-documents.md`).
   help, sign in both modes, correction, PDF export and download), the Ajustes section and the
   "Cidade de atendimento" profile field; so are the new `.http` requests against a live AppHost.
 
+## Temas
+
+Theme vocabulary (F-02; chapter `documentation/23-theme-vocabulary.md`).
+
+- **Tags point at the whole note.** Excerpt references wait for F-03 (`ExcerptRefId` stays null).
+- **No panels yet.** The tags are read only by the note search; the longitudinal panels
+  (F-10 onwards) are not built.
+- **Suggestion cuts long text.** A note that does not fit the model context is cut to a prefix;
+  themes mentioned only in the cut part are not found.
+- **One vocabulary for all providers.** Maintained by staff; providers cannot define their own
+  terms, and only mental health is seeded.
+- **Inference is only partly serialized.** Theme suggestions queue behind each other (one at a
+  time), but suggesting while a note is structured runs the structuring context and the cached
+  suggestion context (≈ 0.6 GB, held for the process) side by side.
+- **Suggestion latency (improved 2026-10-23).** With the prefix cache and a 4096-token context a
+  one-paragraph note takes ≈ 4–5 s on the dev CPU (was ≈ 40 s). The model and the prefix are now
+  warmed in the background after server start and after every vocabulary change
+  (`NoteStructuring:WarmSuggestionOnStart`), so the first suggestion normally takes the same ≈ 5 s;
+  one requested before the warm-up ends waits for it (the dialog says so after 8 s). Long notes cost prefill time in proportion to their
+  length (no measurement beyond one paragraph yet).
+- **The tests create Keycloak users `test.ops` and `test.owner`** in the dev owners realm; they
+  persist there.
+- **Manual browser check pending** for the "Temas" block (chips, picker, suggest dialog, archived
+  patient), the "Tema" filter and the admin `/vocabulary` page; so are the new `.http` requests
+  against a live AppHost.
+
 ## Portal do paciente e convites
 
 - **Invitations:** no re-send rate limit; no reminder before expiry; the registration form

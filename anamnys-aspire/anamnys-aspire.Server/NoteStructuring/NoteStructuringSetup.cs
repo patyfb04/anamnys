@@ -1,3 +1,4 @@
+using Anamnys.Server.Themes;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
@@ -16,5 +17,10 @@ public static class NoteStructuringSetup
         builder.Services.AddSingleton<LlmModelProvider>();
         builder.Services.AddSingleton<INoteStructurer>(sp => new LlamaNoteStructurer(
             sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>()));
+        // Same weights as the structurer: the provider loads the model once per process.
+        builder.Services.AddSingleton<IThemeSuggester>(sp => new LlamaThemeSuggester(
+            sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>()));
+        builder.Services.AddSingleton<ThemeWarmupSignal>();
+        builder.Services.AddHostedService<ThemeWarmupService>();
     }
 }

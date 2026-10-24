@@ -407,6 +407,24 @@ public class NoteEndpointTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task Search_UnknownTermId_Returns400OnTermId()
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/phi/providers/me/notes/search")
+        {
+            Content = JsonContent.Create(new { termId = Guid.NewGuid() }),
+        };
+
+        // Act
+        using var response = await session.SendAsync(request, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("termId").And.Contain("Tema inválido.");
+    }
+
+    [Fact]
     public async Task Create_ManualForOwnPatient_Returns201WithNoteId()
     {
         // Arrange

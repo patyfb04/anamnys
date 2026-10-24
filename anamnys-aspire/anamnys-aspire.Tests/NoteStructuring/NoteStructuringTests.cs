@@ -3,6 +3,7 @@ using Anamnys.Server.LiveSession;
 using Anamnys.Server.NoteStructuring;
 using Anamnys.Server.Notes;
 using Anamnys.Tests.Patients;
+using Anamnys.Tests.Themes;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -42,7 +43,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Done);
@@ -66,7 +67,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         var entries = await db.AuditEntries.AsNoTracking().Where(a => a.NoteId == noteId).OrderBy(a => a.FieldChanged).ToListAsync(Ct);
@@ -85,12 +86,12 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var noteId = await AddNoteAsync(seed, "DAP", "pending");
         await using var db = seed.CreateDbContext();
         var clock = new FakeTimeProvider(Now);
-        await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), noteId, seed.ProviderId, clock, NullLogger.Instance, Ct);
+        await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), new FakeThemeSuggester(), noteId, seed.ProviderId, clock, NullLogger.Instance, Ct);
         await seed.ExecuteSqlAsync(
             """UPDATE "Notes" SET "StructureStatus" = 'pending' WHERE "Id" = @id""", Ct, ("id", noteId));
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => SoapSections), noteId, seed.ProviderId, clock, NullLogger.Instance, Ct, "SOAP");
+        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => SoapSections), new FakeThemeSuggester(), noteId, seed.ProviderId, clock, NullLogger.Instance, Ct, "SOAP");
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Done);
@@ -109,7 +110,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var job = await RequestRestructureAsync(db, seed, noteId, "SOAP");
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => SoapSections), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct, job.Format);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => SoapSections), new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct, job.Format);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Done);
@@ -133,7 +134,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => throw new InvalidOperationException("boom"));
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct, job.Format);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct, job.Format);
         var signed = await NoteEditing.SignAsync(db, seed.ProviderId, noteId, Now, Ct);
 
         // Assert
@@ -151,7 +152,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
     {
         var noteId = await AddNoteAsync(seed, "DAP", "pending");
         await using var db = seed.CreateDbContext();
-        (await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct))
+        (await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct))
             .Should().Be(StructuringOutcome.Done);
         return noteId;
     }
@@ -176,7 +177,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, new FakeNoteStructurer((_, _) => DapSections), new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Discarded);
@@ -196,7 +197,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => throw new InvalidOperationException("boom"));
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Failed);
@@ -218,7 +219,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => throw new TranscriptTooLongException());
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Failed);
@@ -237,7 +238,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => [new("data", "x"), new("plan", "y")]);
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Failed);
@@ -257,7 +258,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Skipped);
@@ -275,7 +276,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, other, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, other, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Skipped);
@@ -295,7 +296,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        var outcome = await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         outcome.Should().Be(StructuringOutcome.Skipped);
@@ -314,7 +315,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         structurer.LastSource.Should().Be(NoteSource.Typed);
@@ -330,7 +331,7 @@ public class NoteStructuringTests(SharedAppHostFixture fixture)
         var structurer = new FakeNoteStructurer((_, _) => DapSections);
 
         // Act
-        await NoteStructuringJob.ProcessAsync(db, structurer, noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
+        await NoteStructuringJob.ProcessAsync(db, structurer, new FakeThemeSuggester(), noteId, seed.ProviderId, new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         // Assert
         structurer.LastSource.Should().Be(NoteSource.Dictation);

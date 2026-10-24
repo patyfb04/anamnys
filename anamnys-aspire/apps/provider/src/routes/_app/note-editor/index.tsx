@@ -6,6 +6,7 @@ import { Loader2, Plus, Search } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import type { NoteListFilter } from "@anamnys/shared/lib/types";
 import NoteCard from "@/components/NoteCard";
+import ThemeFilter from "@/components/themes/ThemeFilter";
 import { inputClass } from "@/components/patients/FormField";
 
 export const Route = createFileRoute("/_app/note-editor/")({
@@ -28,10 +29,22 @@ function NoteListPage() {
     return () => clearTimeout(timer);
   }, [text]);
 
+  const [termId, setTermId] = useState("");
+  // A theme matches signed notes only, so choosing one moves the list to "signed".
+  const changeTerm = (id: string) => {
+    setTermId(id);
+    if (id) setFilter("signed");
+  };
+
   const query = useInfiniteQuery({
-    queryKey: ["notes", "list", filter, name],
+    queryKey: ["notes", "list", filter, name, termId],
     queryFn: ({ pageParam }) =>
-      notesApi.search({ status: filter === "all" ? undefined : filter, name: name || undefined, page: pageParam }),
+      notesApi.search({
+        status: filter === "all" ? undefined : filter,
+        name: name || undefined,
+        termId: termId || undefined,
+        page: pageParam,
+      }),
     initialPageParam: 1,
     placeholderData: keepPreviousData,
     getNextPageParam: (last, pages) => (last.hasMore ? pages.length + 1 : undefined),
@@ -57,10 +70,11 @@ function NoteListPage() {
             key={f}
             type="button"
             aria-pressed={filter === f}
+            disabled={!!termId && (f === "pending" || f === "failed")}
             onClick={() => setFilter(f)}
             className={`px-3 py-1.5 rounded-full border text-label-lg ${
               filter === f ? "bg-surfaceContainerLowest border-primary text-primary shadow-sm" : "border-outlineVariant text-onSurface"
-            }`}
+            } disabled:opacity-50`}
           >
             {t(`notes.list.filters.${f}`)}
           </button>
@@ -78,6 +92,9 @@ function NoteListPage() {
           maxLength={100}
         />
       </label>
+
+      <ThemeFilter value={termId} onChange={changeTerm} />
+      {termId && <p className="text-body-sm text-onSurfaceVariant">{t("themes.filter.signedOnly")}</p>}
 
       {query.isLoading ? (
         <div className="flex justify-center py-12">

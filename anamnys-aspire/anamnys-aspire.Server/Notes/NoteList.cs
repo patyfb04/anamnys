@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Anamnys.Server.Notes;
 
 // A POST body, not a query string: the patient name must never land in a URL.
-public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? Name, int? Page, int? PageSize = null)
+public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? Name, int? Page, int? PageSize = null, Guid? TermId = null)
 {
     public const int MaxName = 100;
     public const int MaxPage = 10_000;
@@ -67,6 +67,14 @@ public static class NoteList
         if (PatientSearchQuery.ContainsPattern(request.Name) is { } name)
         {
             rows = rows.Where(r => EF.Functions.ILike(r.p.FirstName + " " + r.p.LastName, name, "\\"));
+        }
+
+        if (request.TermId is { } termId)
+        {
+            // Signed notes only; the term or any child of it; succession is not followed (separate series).
+            rows = rows.Where(r => Signed.Contains(r.n.Status)
+                && db.ThemeTags.Any(t => t.NoteId == r.n.Id && t.RemovedAt == null
+                    && (t.TermId == termId || db.ThemeTerms.Any(c => c.Id == t.TermId && c.ParentTermId == termId))));
         }
 
         var page = request.Page ?? 1;

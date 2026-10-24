@@ -36,7 +36,7 @@ production.
 | `Parameters:storage-secret-key` | same, `openssl rand -hex 32` | |
 | `Parameters:resend-api-key` | optional user secret | Only to receive real e-mail in your own inbox (Resend sandbox delivers only to the Resend account's address). Without it Mailpit is used. |
 | `Parameters:storage-public-url` | optional user secret | Only to test PDF downloads through a tunnel; default is the localhost endpoint. |
-| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf, 2026-10-18-scales. |
+| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf, 2026-10-18-scales, 2026-10-19-documents, 2026-10-20-documents-team, 2026-10-21-theme-vocabulary. |
 | AI models | nothing to set | Whisper and Qwen files download on first use into the default model directories (≈ 4.7 GB for Qwen). |
 
 If the AppHost ever ran before the client secrets were set, remove the Keycloak and Postgres
@@ -74,6 +74,7 @@ start without it.
 | `Email:Provider`, `Email:ResendApiKey`, `Email:From` | the production mail provider settings | Without them invitations and appointment e-mails answer 503. Needs a verified sending domain and a processor agreement under the LGPD. |
 | `PatientPortal:BaseUrl` | public URL of the patient app (e.g. `https://<host>/patient`) | Gate when an e-mail provider is set. Links in e-mails point here. |
 | `Notifications:WorkerEnabled` | `true` (default) | The appointment e-mail worker. |
+| `NoteStructuring:WarmSuggestionOnStart` | `true` (default) | Loads the Qwen weights and builds the theme-suggestion cache after startup (≈ 5 GB resident from the start). `false` defers it to the first suggestion (30-60 s wait). |
 | `LiveSession:ModelDirectory`, `NoteStructuring:ModelDirectory` | paths on a **persistent volume** | Otherwise every deploy re-downloads Whisper and the two Qwen files (≈ 4.7 GB). |
 | `LiveSession:ModelSha256` | verify the committed `medium` hash by computing it locally once | The committed value came from the Hugging Face LFS pointer. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` / `APPLICATIONINSIGHTS_CONNECTION_STRING` | optional | Telemetry export. Must stay self-hosted or covered by a processor agreement (spans may carry route values). |
@@ -106,7 +107,9 @@ start without it.
   database needs every file in `design/migrations/` it has not seen, in date order, **before**
   the new server version starts (e.g. `OrphanNoteSweep` fails startup without
   `2026-10-10-live-session.sql`).
-- Keep a record per environment of which migration files were applied.
+- Keep a record per environment of which migration files were applied. An existing database must
+  have `2026-10-20-documents-team.sql` and `2026-10-21-theme-vocabulary.sql` applied (the latter
+  seeds the vocabulary and adds the columns the server now reads).
 
 ### 2.6 Network, TLS and capacity
 
@@ -116,6 +119,10 @@ start without it.
   bucket.
 - Memory: Whisper `medium` + Qwen2.5 7B Q4_K_M (≈ 6 GB) + live-recording buffers (≈ 600 MB per
   concurrent 90-minute recording). Size the server container accordingly or cap concurrency.
+  Theme suggestion also holds its own small LLM context (≈ 0.6 GB with
+  `NoteStructuring:SuggestionContextSize` 4096: KV cache plus compute buffer) for the life of the
+  process (warmed in the background after start; `NoteStructuring:WarmSuggestionOnStart`, default
+  `true`, set `false` to load lazily on the first suggestion; chapter 23, section 4).
 - The server image needs **tzdata** (`America/Sao_Paulo` is used for PDFs and e-mails).
 
 ### 2.7 Backups and recovery (backlog F-46)
@@ -148,7 +155,7 @@ start without it.
 - [ ] Keycloak SMTP relay (not built yet)
 - [ ] Keycloak image without dev seed; TLS; redirect URIs
 - [ ] Model directories on a persistent volume; Whisper SHA-256 verified
-- [ ] Migrations applied in order
+- [ ] Migrations applied in order (through `2026-10-21-theme-vocabulary.sql`)
 - [ ] `ForwardedHeaders` configured
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore

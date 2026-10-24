@@ -15,11 +15,22 @@ public sealed class NoteStructuringOptions
     public int MaxOutputTokens { get; set; }
     public float Temperature { get; set; } = 0.1f;
 
+    // Theme suggestion keeps its own small context for the life of the process: the cached prompt
+    // prefix (rules + vocabulary), the note text cut to what remains, and the output.
+    public uint SuggestionContextSize { get; set; } = 4096;
+    // Threads for suggestion; 0 = Threads (ResolvedThreads).
+    public int SuggestionThreads { get; set; }
+    // Load the model and build the suggestion cache in the background after startup (and after
+    // vocabulary changes), so the first suggestion does not wait for it.
+    public bool WarmSuggestionOnStart { get; set; } = true;
+
     public string ResolvedDirectory => ModelDirectory is { Length: > 0 } dir
         ? dir
         : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "anamnys", "llm");
 
     public int ResolvedThreads => Threads > 0 ? Threads : Math.Max(1, Environment.ProcessorCount - 1);
+
+    public int ResolvedSuggestionThreads => SuggestionThreads > 0 ? SuggestionThreads : ResolvedThreads;
 
     public sealed class ModelFile
     {

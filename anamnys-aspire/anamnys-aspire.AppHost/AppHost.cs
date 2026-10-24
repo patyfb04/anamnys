@@ -101,6 +101,8 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     .WithEnvironment("ANAMNYS_OWNER_CLIENT_SECRET", ownerClientSecret)
     // The appointment e-mail worker; the test fixture turns it off (SharedAppHostFixture).
     .WithEnvironment("Notifications__WorkerEnabled", builder.Configuration["Notifications:WorkerEnabled"] ?? "true")
+    // Loads the LLM in the background after start; the test fixture turns it off.
+    .WithEnvironment("NoteStructuring__WarmSuggestionOnStart", builder.Configuration["NoteStructuring:WarmSuggestionOnStart"] ?? "true")
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
 

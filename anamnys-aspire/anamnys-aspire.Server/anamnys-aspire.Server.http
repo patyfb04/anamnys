@@ -120,7 +120,7 @@ GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000
 
 ###
 ### Search the provider's notes (requires the __Host-anamnys-provider cookie - send from a browser session, not this file)
-### Filters live in the body: patient names never go in a URL. status: pending | signed | failed (omit for all); 25 per page, newest first; 200 { items, hasMore }.
+### Filters live in the body: patient names never go in a URL. status: pending | signed | failed (omit for all); termId: theme term (signed notes tagged with it or a child; unknown -> 400); 25 per page, newest first; 200 { items, hasMore }.
 POST {{Server_HostAddress}}/api/phi/providers/me/notes/search
 Content-Type: application/json
 
@@ -128,7 +128,8 @@ Content-Type: application/json
   "status": "pending",
   "patientId": null,
   "name": null,
-  "page": 1
+  "page": 1,
+  "termId": null
 }
 
 ###
@@ -253,3 +254,81 @@ Content-Type: application/json
 }
 
 
+###
+### Theme vocabulary (all require the __Host-anamnys-provider cookie - send from a browser session, not this file)
+### All terms of the active vocabulary. 200 [{ id, code, label, parentId, status, successorIds }].
+GET {{Server_HostAddress}}/api/phi/providers/me/theme-vocabulary
+
+###
+### Active themes of a note. 200 [{ id, termId, code, label, parentLabel, termStatus, origin, proposed, addedAt }]; 404 unknown note.
+GET {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/themes
+
+###
+### Tag a note (drafts and signed notes). fromSuggestion marks an accepted AI suggestion. 201 { id }; 400 without termId; 404; 409 term_inactive | already_tagged | archived.
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/themes
+Content-Type: application/json
+
+{
+  "termId": "00000000-0000-0000-0000-000000000000",
+  "fromSuggestion": false
+}
+
+###
+### Suggest themes with the in-process model (writes nothing; terms already tagged are excluded). 200 { terms: [{ id, code, label }] } ({ terms: [] } for a note without text); 404; 503 suggest_failed.
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/themes/suggest
+
+###
+### Remove a theme from a note (soft removal). 204; 404 unknown or already removed; 409 archived.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/themes/00000000-0000-0000-0000-000000000000
+
+
+###
+### Theme vocabulary admin (owners cookie __Host-anamnys-owner; provider cookie = 401). Reads: any staff role. Mutations: owner or ops (support = 403). Conflicts 409 { code }, input errors 400.
+### Terms of the active vocabulary. 200 [{ id, code, label, parentId, status, introducedOn, successorIds, activeTagCount }].
+GET {{Server_HostAddress}}/api/admin/theme-vocabulary
+
+###
+### New term (code ^[a-z][a-z0-9_]{1,59}$, label 1-80, optional parentId = active top-level term). 201 { id }; 400; 409 code_taken.
+POST {{Server_HostAddress}}/api/admin/theme-vocabulary/terms
+Content-Type: application/json
+
+{
+  "code": "novo_tema",
+  "label": "Novo tema",
+  "parentId": null
+}
+
+###
+### Rename (label only; id and code never change). 204; 400; 404; 409 term_not_active.
+PUT {{Server_HostAddress}}/api/admin/theme-vocabulary/terms/00000000-0000-0000-0000-000000000000/label
+Content-Type: application/json
+
+{
+  "label": "Novo rótulo"
+}
+
+###
+### Retire an active term. 204; 404; 409 term_not_active | has_active_children. Tags stay.
+POST {{Server_HostAddress}}/api/admin/theme-vocabulary/terms/00000000-0000-0000-0000-000000000000/retire
+
+###
+### Split into 2-10 new terms under the same parent; the old term becomes superseded. 200 { ids }; 400; 404; 409 term_not_active | code_taken.
+POST {{Server_HostAddress}}/api/admin/theme-vocabulary/terms/00000000-0000-0000-0000-000000000000/split
+Content-Type: application/json
+
+{
+  "terms": [
+    { "code": "parte_um", "label": "Parte um" },
+    { "code": "parte_dois", "label": "Parte dois" }
+  ]
+}
+
+###
+### Merge 2-10 active terms of the same level into an existing term (target.existingId) or a new one (target.code + label). 200 { id } of the target; 400; 404; 409 term_not_active | level_mismatch | code_taken.
+POST {{Server_HostAddress}}/api/admin/theme-vocabulary/merge
+Content-Type: application/json
+
+{
+  "sourceIds": ["00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000001"],
+  "target": { "code": "tema_unificado", "label": "Tema unificado" }
+}

@@ -2,6 +2,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.Patients;
 using Anamnys.Server.Storage;
+using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Notes;
 
@@ -22,6 +23,10 @@ public static class NoteEndpoints
                 return Results.Unauthorized();
             }
             var errors = request.Validate();
+            if (errors.Count == 0 && request.TermId is { } termId && !await db.ThemeTerms.AnyAsync(t => t.Id == termId, ct))
+            {
+                errors["termId"] = ["Tema inválido."];
+            }
             return errors.Count > 0
                 ? Results.ValidationProblem(errors)
                 : Results.Ok(await NoteList.SearchAsync(db, providerId, request, ct));

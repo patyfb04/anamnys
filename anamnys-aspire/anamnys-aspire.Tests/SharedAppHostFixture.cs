@@ -48,7 +48,8 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
                 // route both Keycloak and the server to Mailpit.
                 // Tests drive the notification steps with a fake clock; a live worker would act
                 // on test rows with the real clock.
-                ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false"],
+                // The real model must never load in tests (the suggestion warm-up would).
+                ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false", "--NoteStructuring:WarmSuggestionOnStart=false"],
                 TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();

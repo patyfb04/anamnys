@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.NoteStructuring;
+using Anamnys.Server.Themes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
@@ -78,7 +79,8 @@ public sealed class TranscriptionWorker(
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
             var outcome = await NoteStructuringJob.ProcessAsync(
-                db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), noteId, providerId, clock, logger, ct, format);
+                db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), scope.ServiceProvider.GetRequiredService<IThemeSuggester>(),
+                noteId, providerId, clock, logger, ct, format);
             switch (outcome)
             {
                 case StructuringOutcome.Done or StructuringOutcome.Discarded:

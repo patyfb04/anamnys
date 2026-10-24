@@ -12,6 +12,7 @@ import DetailCard from "@/components/patients/detail/DetailCard";
 import NoteSections from "@/components/notes/NoteSections";
 import RestructureControl from "@/components/notes/RestructureControl";
 import SignCard from "@/components/notes/SignCard";
+import NoteThemes from "@/components/themes/NoteThemes";
 import SessionScalesCard from "@/components/scales/SessionScalesCard";
 
 export const Route = createFileRoute("/_app/notes/$noteId")({
@@ -80,6 +81,9 @@ function NotePage() {
               <NoteSections sections={note.sections} editable={editable} noteId={noteId} onSaved={() => void query.refetch()} />
             )}
             {!hasSections && editable && <WriteManually noteId={noteId} onCreated={() => void query.refetch()} />}
+            {(note.status === "ReadyForReview" || !!note.signedAt) && (
+              <NoteThemes noteId={noteId} patientId={note.patientId} structureStatus={note.structureStatus ?? undefined} />
+            )}
           </DetailCard>
           {note.rawTranscript && (
             <TranscriptCard

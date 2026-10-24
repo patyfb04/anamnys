@@ -75,6 +75,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 20. Environment Configuration
 21. Psychometric Scales (F-01)
 22. Psychological Documents (F-05)
+23. Theme Vocabulary (F-02)
 
 ## Building a single PDF from these files
 
