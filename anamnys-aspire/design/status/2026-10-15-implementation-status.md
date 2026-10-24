@@ -163,5 +163,6 @@ the schema still carries every table, but only the features below have code.
 Verified 2026-10-23: full suite 884 total, 0 failed, 3 skipped (F-02 included, with the
 suggestion cache and warm-up). The F-02 migration and the theme dev seed are applied to the local
 dev database; any other persistent environment needs `2026-10-21-theme-vocabulary.sql`.
-F-60 (`feature/account-export`): the full suite run is pending; its migration
-`2026-10-23-account-export.sql` is applied to the dev database, any other persistent environment needs it.
+Verified 2026-10-24: full suite 935 total, 0 failed, 3 skipped (F-60 included; export tests 53/53
+after the final fixes). `2026-10-23-account-export.sql` is applied to the dev database; any other
+persistent environment needs it.
