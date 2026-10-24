@@ -315,16 +315,34 @@ export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
 }
 
 // Provider notifications and booking policy (/api/phi/providers/me/...).
-export type NotificationKind = "appointment_confirmed" | "appointment_auto_cancelled";
+export type NotificationKind = "appointment_confirmed" | "appointment_auto_cancelled" | "account_export_ready";
 
 export interface ProviderNotification {
   id: string;
   kind: NotificationKind;
-  appointmentId: string;
-  patientName: string;
-  startsAt: string; // ISO instant
+  appointmentId: string | null;
+  patientName: string | null;
+  startsAt: string | null; // ISO instant
+  exportId: string | null;
   createdAt: string;
   readAt: string | null;
+}
+
+// Full account export (design/specs/2026-10-23-account-export-design.md).
+export type AccountExportStatus = "queued" | "running" | "done" | "failed" | "expired";
+
+export interface AccountExport {
+  id: string;
+  status: AccountExportStatus;
+  requestedAt: string;
+  completedAt: string | null;
+  sizeBytes: number | null;
+  expiresAt: string | null;
+}
+
+export interface AccountExportDownload {
+  url: string;
+  expiresAt: string;
 }
 
 export interface NotificationsPage {

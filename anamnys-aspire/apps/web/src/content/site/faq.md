@@ -216,7 +216,8 @@ Não há formulário a preencher nem campo obrigatório a caçar.
 ### E se eu não gostar?
 
 Cancela quando quiser, sem multa e sem fidelidade. E **exporta tudo** — a exportação
-integral está disponível o tempo todo, não só na saída.
+integral está disponível a qualquer momento enquanto sua conta estiver ativa e por 60 dias
+após o cancelamento; depois disso, os dados são apagados.
 
 ---
 
@@ -225,7 +226,7 @@ integral está disponível o tempo todo, não só na saída.
 ### Como funciona o teste?
 
 **14 dias** com acesso às funcionalidades do plano escolhido. Terminando o período sem
-contratação, o acesso é suspenso e seus dados ficam disponíveis para exportação.
+contratação, o acesso é suspenso e seus dados ficam disponíveis para exportação por 60 dias.
 
 ### Por que aparece "Paddle" na minha fatura?
 
@@ -262,8 +263,9 @@ Pode, a qualquer momento. A mudança vale a partir do ciclo seguinte.
 Essa é uma pergunta legítima para qualquer fornecedor, e mais ainda para uma operação
 pequena. A resposta honesta tem três partes.
 
-**Você já tem tudo, o tempo todo.** A exportação integral dos seus dados, em formato
-aberto, está disponível permanentemente — não é um favor concedido na saída. Não depende
+**Você já tem tudo, a qualquer momento.** Exporte todos os seus dados, em formato aberto,
+a qualquer momento enquanto sua conta estiver ativa e por 60 dias após o cancelamento;
+depois disso, os dados são apagados. Não é um favor concedido na saída. Não depende
 de a gente estar de bom humor, nem de a gente existir amanhã.
 
 **Os documentos oficiais são PDFs assinados eletronicamente por você no Anamnys** — com seu

@@ -136,7 +136,7 @@ todas as proteções aplicáveis.
 | Registros de acesso à aplicação        | 6 meses (art. 15 do Marco Civil da Internet)                                                                                    |
 | Dados fiscais e de cobrança            | Conforme legislação tributária                                                                                                  |
 
-Encerrado o contrato, os dados permanecem disponíveis para exportação por **[60] dias**. Após esse
+Encerrado o contrato, os dados permanecem disponíveis para exportação por **60 dias**. Após esse
 prazo, são eliminados de forma definitiva, salvo obrigação legal de retenção.
 
 ---

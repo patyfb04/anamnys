@@ -214,7 +214,7 @@ responsabilidade do emissor, e não do Anamnys nem da Paddle.
 
 **10.3.** O período de teste é de **14 (catorze) dias**, com acesso às funcionalidades do plano
 escolhido. Encerrado o período sem contratação, o acesso é suspenso e os dados permanecem
-disponíveis para exportação por **[30]** dias.
+disponíveis para exportação por **60** dias.
 
 **10.4.** Reajustes seguirão **[ÍNDICE]** e serão comunicados com antecedência mínima de 30 dias.
 
@@ -232,8 +232,8 @@ mediante aviso prévio.
 ressalvado o direito de arrependimento previsto no art. 49 do Código de Defesa do Consumidor quando
 aplicável.
 
-**11.3.** **Você pode exportar integralmente seus dados a qualquer momento**, inclusive após o
-cancelamento, durante o prazo de **[60]** dias.
+**11.3.** **Você pode exportar integralmente seus dados a qualquer momento** enquanto sua conta
+estiver ativa e por **60** dias após o cancelamento.
 
 **11.4.** Findo esse prazo, os dados são eliminados de forma definitiva, salvo obrigação legal de
 retenção.

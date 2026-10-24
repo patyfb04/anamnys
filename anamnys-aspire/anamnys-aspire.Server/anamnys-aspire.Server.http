@@ -332,3 +332,16 @@ Content-Type: application/json
   "sourceIds": ["00000000-0000-0000-0000-000000000000", "00000000-0000-0000-0000-000000000001"],
   "target": { "code": "tema_unificado", "label": "Tema unificado" }
 }
+
+###
+### Full account export (provider cookie __Host-anamnys-provider; send from a browser session, not this file). One export in progress per provider.
+### Request an export. 202 { id, status: "queued" }; 409 { code: "export_in_progress" }. The ZIP is built in the background; the bell notifies when ready.
+POST {{Server_HostAddress}}/api/phi/providers/me/exports
+
+###
+### Latest export. 200 { id, status: queued | running | done | failed | expired, requestedAt, completedAt, sizeBytes, expiresAt }; 204 when none.
+GET {{Server_HostAddress}}/api/phi/providers/me/exports
+
+###
+### One-hour download link (a new link on every call). 200 { url, expiresAt }; 404 unknown or another provider's export; 409 { code: "not_ready" | "expired" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/exports/00000000-0000-0000-0000-000000000000/download

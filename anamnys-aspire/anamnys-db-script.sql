@@ -17,7 +17,14 @@ CREATE TABLE "AccountExports" (
 	"CompletedAt" timestamp with time zone,
 	"ObjectKey" text,
 	"Format" text DEFAULT 'zip' NOT NULL,
-	"Scope" text DEFAULT 'full' NOT NULL
+	"Scope" text DEFAULT 'full' NOT NULL,
+	"Status" text DEFAULT 'queued' NOT NULL,
+	"FailureReason" text,
+	"SizeBytes" bigint,
+	"ExpiredAt" timestamp with time zone,
+	CONSTRAINT "AccountExports_Status_ck" CHECK (("Status" = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text, 'expired'::text]))),
+	CONSTRAINT "AccountExports_Completed_ck" CHECK ((("CompletedAt" IS NOT NULL) = ("Status" = ANY (ARRAY['done'::text, 'expired'::text])))),
+	CONSTRAINT "AccountExports_ObjectKey_ck" CHECK ((("ObjectKey" IS NULL) OR ("Status" = 'done')))
 );
 CREATE TABLE "AppointmentConfirmations" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -97,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL)))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -916,6 +923,7 @@ CREATE TABLE "WebhookEvents" (
 );
 CREATE INDEX "AccessLogs_ProviderId_At_idx" ON "AccessLogs" ("ProviderId","At");
 CREATE INDEX "AccountExports_ProviderId_idx" ON "AccountExports" ("ProviderId","RequestedAt");
+CREATE UNIQUE INDEX "AccountExports_Provider_active_key" ON "AccountExports" ("ProviderId") WHERE "Status" = ANY (ARRAY['queued'::text, 'running'::text]);
 CREATE INDEX "AppointmentConfirmations_AppointmentId_idx" ON "AppointmentConfirmations" ("AppointmentId");
 CREATE INDEX "AppointmentConfirmations_Deadline_idx" ON "AppointmentConfirmations" ("DeadlineAt") WHERE "ConfirmedAt" IS NULL AND "ClosedAt" IS NULL AND "DeadlineAt" IS NOT NULL;
 CREATE INDEX "AppointmentConfirmationTokens_ConfirmationId_idx" ON "AppointmentConfirmationTokens" ("ConfirmationId");

@@ -28,7 +28,7 @@ export default function DocumentSettingsSection() {
   });
 
   return (
-    <section className="bg-surfaceContainerLowest border border-outlineVariant rounded-radii-md p-6 flex flex-col gap-4 max-w-xl">
+    <section className="bg-surfaceContainerLowest border border-outlineVariant rounded-radii-md p-6 flex flex-col gap-4">
       <div>
         <h2 className="text-title-md text-onSurface">{t("settings.documentCheck.title")}</h2>
         <p className="text-body-md text-onSurfaceVariant">{t("settings.documentCheck.description")}</p>
