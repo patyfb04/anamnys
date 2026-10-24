@@ -155,5 +155,6 @@ the schema still carries every table, but only the features below have code.
 1. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
    first paying subscriber.
 
-Verified 2026-10-20: full suite 734 total, 0 failed, 3 skipped, including the note search
-`pageSize` tests and every F-05 database test.
+Verified 2026-10-23: full suite 884 total, 0 failed, 3 skipped (F-02 included, with the
+suggestion cache and warm-up). The F-02 migration and the theme dev seed are applied to the local
+dev database; any other persistent environment needs `2026-10-21-theme-vocabulary.sql`.
