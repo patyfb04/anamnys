@@ -151,9 +151,23 @@ the schema still carries every table, but only the features below have code.
 - Documents list (`/documents`, sidebar "Documentos") with status filters and patient-name search
   (POST body), "Novo documento" there and on the patient page.
 
-## Next, in priority order (agreed 2026-10-18)
+## Next, in priority order (agreed 2026-10-24)
 
-1. **Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
+Everything that does not depend on subscription and billing comes first; billing waits for D-07.
+
+1. **F-03 Referências de trecho** — prerequisite of every analysis and of OCR facts (origin note,
+   transcript or document, with offsets/page).
+2. **F-07 Upload de documentos externos** — private storage, signed links.
+3. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
+   page and issuer, confirmed by the provider.
+4. **F-09 Linha do tempo de medicação** from prescriptions.
+5. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+   detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
+6. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
+   (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
+   month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
+7. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
+8. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
    (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
    time while the account is active and for 60 days after cancellation, then the data is deleted;
    site and Terms say exactly that). Only the active-account half exists: F-57 (cancellation) must add the
