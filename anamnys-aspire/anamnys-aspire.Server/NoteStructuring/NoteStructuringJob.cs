@@ -1,6 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Notes;
+using Anamnys.Server.Themes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.NoteStructuring;
@@ -14,7 +15,7 @@ public enum StructuringOutcome { Done, Failed, Discarded, Skipped }
 public static class NoteStructuringJob
 {
     public static async Task<StructuringOutcome> ProcessAsync(
-        AnamnysDbContext db, INoteStructurer structurer, Guid noteId, Guid providerId,
+        AnamnysDbContext db, INoteStructurer structurer, IThemeSuggester themes, Guid noteId, Guid providerId,
         TimeProvider clock, ILogger logger, CancellationToken ct, string? format = null)
     {
         var note = await db.Notes.AsNoTracking()
@@ -95,6 +96,11 @@ public static class NoteStructuringJob
             await SetStatusAsync(db, noteId, providerId, "done", null, now, ct);
             await tx.CommitAsync(ct);
         });
+        // After the sections commit, in its own transaction; never changes the outcome.
+        if (outcome == StructuringOutcome.Done)
+        {
+            await ThemeProposals.ProposeAsync(db, themes, noteId, providerId, clock, logger, ct);
+        }
         return outcome;
     }
 

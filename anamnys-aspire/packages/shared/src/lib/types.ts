@@ -403,6 +403,7 @@ export interface NoteSearchRequest {
   status?: NoteListFilter;
   patientId?: string;
   name?: string;
+  termId?: string;
   page?: number;
   pageSize?: number;
 }
@@ -410,6 +411,35 @@ export interface NoteSearchRequest {
 export interface NoteSearchResponse {
   items: NoteListItem[];
   hasMore: boolean;
+}
+
+export type ThemeTermStatus = "active" | "retired" | "superseded";
+
+export interface ThemeTerm {
+  id: string;
+  code: string;
+  label: string;
+  parentId: string | null;
+  status: ThemeTermStatus;
+  successorIds: string[];
+}
+
+export interface NoteTheme {
+  id: string;
+  termId: string;
+  code: string;
+  label: string;
+  parentLabel: string | null;
+  termStatus: ThemeTermStatus;
+  origin: "ai" | "human";
+  proposed: boolean;
+  addedAt: string;
+}
+
+export interface ThemeSuggestion {
+  id: string;
+  code: string;
+  label: string;
 }
 
 export interface NoteCandidate {

@@ -14,6 +14,7 @@ using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
 using Anamnys.Server.Scales;
 using Anamnys.Server.Storage;
+using Anamnys.Server.Themes;
 using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -140,6 +141,7 @@ phi.MapAppointmentEndpoints();
 phi.MapNoteEndpoints();
 phi.MapScaleEndpoints();
 phi.MapDocumentEndpoints();
+phi.MapThemeEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 
@@ -153,6 +155,7 @@ var admin = app.MapGroup("/api/admin")
         .RequireClaim("roles", StaffRoles.All));
 
 admin.MapGet("probe", (ClaimsPrincipal principal) => Results.Ok(new { localId = principal.LocalIdOrNull() }));
+admin.MapThemeAdminEndpoints();
 
 app.MapAuthEndpoints();
 app.MapLiveSessionHubs();

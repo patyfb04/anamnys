@@ -1,3 +1,5 @@
+using Anamnys.Server.Data;
+using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
 namespace Anamnys.Tests.Data;
@@ -31,6 +33,12 @@ internal sealed class ScratchDatabase(string adminConnectionString, string name)
         await connection.OpenAsync(ct);
         return connection;
     }
+
+    public AnamnysDbContext CreateDbContext() =>
+        new(new DbContextOptionsBuilder<AnamnysDbContext>()
+            .UseNpgsql(new NpgsqlConnectionStringBuilder(adminConnectionString) { Database = name, Pooling = false }.ConnectionString,
+                npgsql => npgsql.EnableRetryOnFailure())
+            .Options);
 
     public async ValueTask DisposeAsync()
     {

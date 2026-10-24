@@ -1,8 +1,10 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.NoteStructuring;
+using Anamnys.Server.Themes;
 using Anamnys.Tests.NoteStructuring;
 using Anamnys.Tests.Patients;
+using Anamnys.Tests.Themes;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -173,6 +175,7 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
             .AddScoped(_ => seed.CreateDbContext())
             .AddSingleton<ITranscriber>(new FakeTranscriber(transcribe))
             .AddSingleton(structurer)
+            .AddSingleton<IThemeSuggester>(new FakeThemeSuggester())
             .BuildServiceProvider();
         return ((TranscriptionJob)job!, new RecordingProxy(), services);
     }

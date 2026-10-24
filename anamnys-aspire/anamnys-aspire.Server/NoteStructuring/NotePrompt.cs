@@ -9,7 +9,7 @@ public static class NotePrompt
     // close the user turn or open a new one.
     private static readonly string[] ControlStrings = ["<|im_start|>", "<|im_end|>", "<|endoftext|>"];
 
-    private static string StripControl(string transcript)
+    internal static string StripControl(string transcript)
     {
         // Repeat until stable: removing one string can join the halves of another.
         while (ControlStrings.Any(c => transcript.Contains(c, StringComparison.Ordinal)))

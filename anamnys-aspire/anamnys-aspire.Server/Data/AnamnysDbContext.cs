@@ -34,6 +34,11 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ClinicalDocument> ClinicalDocuments => Set<ClinicalDocument>();
     public DbSet<ConformityRuleset> ConformityRulesets => Set<ConformityRuleset>();
     public DbSet<ConformityCheck> ConformityChecks => Set<ConformityCheck>();
+    public DbSet<ThemeVocabulary> ThemeVocabularies => Set<ThemeVocabulary>();
+    public DbSet<ThemeTerm> ThemeTerms => Set<ThemeTerm>();
+    public DbSet<ThemeTag> ThemeTags => Set<ThemeTag>();
+    public DbSet<ThemeTermSuccession> ThemeTermSuccessions => Set<ThemeTermSuccession>();
+    public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -247,6 +252,46 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.Property(x => x.ForbiddenFound).HasColumnType("jsonb");
             e.HasOne<ClinicalDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<ConformityRuleset>().WithMany().HasForeignKey(x => x.RulesetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ThemeVocabulary>(e =>
+        {
+            e.ToTable("ThemeVocabularies");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<ThemeTerm>(e =>
+        {
+            e.ToTable("ThemeTerms");
+            e.HasKey(x => x.Id);
+            e.HasOne<ThemeVocabulary>().WithMany().HasForeignKey(x => x.VocabularyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.ParentTermId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.SupersededByTermId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ThemeTag>(e =>
+        {
+            e.ToTable("ThemeTags");
+            e.HasKey(x => x.Id);
+            e.HasOne<Note>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.TermId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ThemeTermSuccession>(e =>
+        {
+            e.ToTable("ThemeTermSuccessions");
+            e.HasKey(x => x.Id);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.FromTermId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.ToTermId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Staff>().WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ThemeTermChange>(e =>
+        {
+            e.ToTable("ThemeTermChanges");
+            e.HasKey(x => x.Id);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.TermId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Staff>().WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

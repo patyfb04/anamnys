@@ -41,7 +41,7 @@ the schema still carries every table, but only the features below have code.
 | ID | State | Notes |
 |---|---|---|
 | F-01 Escalas aplicadas | done | Score-only recording with three regimes, opt-in, soft removal, series chart; `Scales/`, `documentation/21-psychometric-scales.md` |
-| F-02 Vocabulário de temas | schema only | `ThemeVocabularies`, `ThemeTerms`, `ThemeTags`; the structuring prompt does not use them |
+| F-02 Vocabulário de temas | done | Closed vocabulary `mh-1` (28 terms + 12 children); local-model proposals after structuring and on demand ("Sugerir temas"; cached vocabulary prefix in a 4096-token context, ≈ 4–5 s per suggestion after the first), tags editable on drafts and signed notes with audit, search by theme (term or child, signed notes), admin page with add, rename, retire, split and merge under D-01. `Themes/`, `documentation/23-theme-vocabulary.md` |
 | F-03 Referências de trecho | schema only | `ExcerptRefs` |
 | F-04 Metadados da sessão | partial | `Sessions` (scheduled/actual times, modality, attendance) and appointment status/cancellation are stored; a `Sessions` row is created by a live recording or a typed note linked to an appointment, and no attendance statistics exist |
 
@@ -152,10 +152,9 @@ the schema still carries every table, but only the features below have code.
 
 ## Next, in priority order (agreed 2026-10-18)
 
-1. **F-02 Vocabulário de temas** — blocked by decision D-01 (how series behave when a term is
-   renamed, split or merged). The old seed has a reviewed mental-health vocabulary to copy.
-2. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
+1. **F-60 Exportação integral** — promised on the site and in the Terms; must exist before the
    first paying subscriber.
 
-Verified 2026-10-20: full suite 734 total, 0 failed, 3 skipped, including the note search
-`pageSize` tests and every F-05 database test.
+Verified 2026-10-23: full suite 884 total, 0 failed, 3 skipped (F-02 included, with the
+suggestion cache and warm-up). The F-02 migration and the theme dev seed are applied to the local
+dev database; any other persistent environment needs `2026-10-21-theme-vocabulary.sql`.

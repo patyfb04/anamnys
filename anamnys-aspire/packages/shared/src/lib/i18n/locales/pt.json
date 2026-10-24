@@ -244,6 +244,42 @@
       "finalize": "Não foi possível concluir a gravação."
     }
   },
+  "themes": {
+    "title": "Temas",
+    "empty": "Nenhum tema nesta nota.",
+    "retired": "(aposentado)",
+    "aiBadge": "IA",
+    "removeTheme": "Remover o tema {{label}}",
+    "add": "Adicionar tema",
+    "suggestAction": "Sugerir temas",
+    "archivedReadOnly": "Paciente arquivado: desarquive para alterar os temas.",
+    "help": "Temas são marcações sobre a nota; podem ser corrigidos depois de assinar e cada mudança fica registrada.",
+    "pickerSearch": "Buscar tema",
+    "pickerNone": "Nenhum tema disponível.",
+    "pickerGeneral": "{{label}} (geral)",
+    "suggest": {
+      "title": "Sugestões de temas",
+      "hint": "Marque os temas que combinam com a nota.",
+      "loading": "Analisando a nota…",
+      "loadingSlow": "Preparando o modelo; a primeira análise pode levar até um minuto.",
+      "none": "Nenhuma sugestão para esta nota.",
+      "accept": "Adicionar selecionados ({{count}})"
+    },
+    "filter": {
+      "label": "Tema",
+      "all": "Todos os temas",
+      "noResults": "Nenhuma nota assinada com este tema.",
+      "signedOnly": "O filtro de tema busca notas assinadas."
+    },
+    "errors": {
+      "generic": "Não foi possível alterar os temas. Tente novamente.",
+      "load": "Falha ao carregar os temas.",
+      "archived": "Desarquive o paciente para alterar os temas.",
+      "term_inactive": "Este tema foi aposentado e não pode mais ser adicionado.",
+      "already_tagged": "Este tema já está na nota.",
+      "suggest_failed": "Não foi possível sugerir temas agora. Tente novamente."
+    }
+  },
   "noteView": {
     "note": "Evolução",
     "backToPatient": "Voltar para o paciente",
@@ -1400,6 +1436,64 @@
     },
     "topBar": {
       "internal": "Interno"
+    },
+    "vocabulary": {
+      "link": "Vocabulário de temas",
+      "back": "Voltar",
+      "title": "Vocabulário de temas",
+      "help": "Termos usados para marcar notas. Códigos e identificadores não mudam; renomear, dividir, mesclar ou aposentar nunca move nem apaga marcações.",
+      "readOnly": "Você tem acesso somente de leitura.",
+      "loading": "Carregando…",
+      "select": "Selecionar {{label}}",
+      "introducedOn": "desde {{date}}",
+      "successors": "substituído por {{labels}}",
+      "tagCount_one": "{{count}} marcação ativa",
+      "tagCount_other": "{{count}} marcações ativas",
+      "stays_one": "{{count}} marcação fica no termo antigo; nada é movido.",
+      "stays_other": "{{count}} marcações ficam no termo antigo; nada é movido.",
+      "status": { "active": "Ativo", "retired": "Aposentado", "superseded": "Substituído" },
+      "actions": { "addChild": "Adicionar subtema", "rename": "Renomear", "split": "Dividir", "retire": "Aposentar" },
+      "fields": {
+        "code": "Código",
+        "codeHint": "Letras minúsculas, números e _, começando por letra. Não pode ser alterado depois.",
+        "label": "Rótulo",
+        "parent": "Tema pai",
+        "noParent": "Nenhum (primeiro nível)"
+      },
+      "add": { "open": "Novo tema", "title": "Novo tema", "submit": "Adicionar" },
+      "rename": { "title": "Renomear {{label}}" },
+      "retire": {
+        "title": "Aposentar {{label}}?",
+        "body": "O tema deixa de poder ser adicionado a novas notas. As marcações existentes continuam como estão.",
+        "submit": "Aposentar"
+      },
+      "split": {
+        "title": "Dividir {{label}}",
+        "body": "O tema antigo passa a substituído e os novos temas ficam no mesmo nível (de 2 a 10).",
+        "newTerm": "Novo tema {{n}}",
+        "addRow": "Adicionar outro tema",
+        "submit": "Dividir"
+      },
+      "merge": {
+        "open_one": "Mesclar selecionado ({{count}})",
+        "open_other": "Mesclar selecionados ({{count}})",
+        "title": "Mesclar temas",
+        "stays_one": "{{count}} marcação fica nos termos antigos; nada é movido.",
+        "stays_other": "{{count}} marcações ficam nos termos antigos; nada é movido.",
+        "existing": "Tema existente",
+        "new": "Novo tema",
+        "choose": "Escolha o tema de destino",
+        "submit": "Mesclar"
+      },
+      "errors": {
+        "generic": "Não foi possível concluir a alteração. Tente novamente.",
+        "load": "Falha ao carregar o vocabulário.",
+        "forbidden": "Seu perfil não pode alterar o vocabulário.",
+        "code_taken": "Já existe um tema com este código.",
+        "term_not_active": "Um dos temas não está mais ativo. Recarregue a página.",
+        "has_active_children": "O tema ainda tem subtemas ativos. Aposente-os antes.",
+        "level_mismatch": "Os temas devem estar no mesmo nível, com o mesmo tema pai."
+      }
     }
   },
   "calendar": {
