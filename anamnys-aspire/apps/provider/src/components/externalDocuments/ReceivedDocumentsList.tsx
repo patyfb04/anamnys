@@ -73,9 +73,9 @@ export default function ReceivedDocumentsList() {
       ) : items.length === 0 ? (
         <p className="text-body-md text-onSurfaceVariant text-center mt-8">{t("externalDocuments.listEmpty")}</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-outlineVariant rounded-radii-xl border border-outlineVariant bg-surfaceContainerLowest px-5">
+        <ul className="flex flex-col gap-2.5">
           {items.map((d) => (
-            <ExternalDocumentRow key={d.id} doc={d} readOnly={d.patientArchived === true} showPatient />
+            <ExternalDocumentRow key={d.id} doc={d} readOnly={d.patientArchived === true} showPatient variant="card" />
           ))}
         </ul>
       )}

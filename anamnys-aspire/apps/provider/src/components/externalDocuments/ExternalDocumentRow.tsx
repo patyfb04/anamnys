@@ -6,6 +6,7 @@ import { ApiError } from "@anamnys/shared/api/client";
 import { externalDocumentsApi } from "@anamnys/shared/api/externalDocuments";
 import type { ExternalDocumentItem, ExternalScanStatus } from "@anamnys/shared/lib/types";
 import Badge, { type BadgeTone } from "@anamnys/shared/ui/Badge";
+import Card from "@anamnys/shared/ui/Card";
 import { toast } from "@anamnys/shared/ui/Toaster";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import { formatDate } from "@/components/patients/format";
@@ -20,10 +21,12 @@ export default function ExternalDocumentRow({
   doc,
   readOnly,
   showPatient = false,
+  variant = "row",
 }: {
   doc: ExternalDocumentItem;
   readOnly: boolean;
   showPatient?: boolean;
+  variant?: "row" | "card";
 }) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
@@ -74,6 +77,58 @@ export default function ExternalDocumentRow({
     t("externalDocuments.uploadedOn", { date: formatDate(doc.uploadedAt, i18n.language) }),
     formatBytes(doc.byteSize),
   ].filter(Boolean);
+
+  if (variant === "card") {
+    return (
+      <li>
+        <Card onClick={available && !open.isPending ? () => open.mutate() : undefined}>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-label-md text-onSurfaceVariant normal-case">
+              {[t("externalDocuments.uploadedOn", { date: formatDate(doc.uploadedAt, i18n.language) }), doc.documentDate ? t("externalDocuments.documentDate", { date: formatDate(doc.documentDate, i18n.language) }) : null].filter(Boolean).join(" · ")}
+            </span>
+            <Badge label={t(`externalDocuments.status.${doc.scanStatus}`)} tone={TONE[doc.scanStatus]} />
+          </div>
+          <p className="text-headline-sm text-[16px] text-onSurface mb-1 truncate">{t(`externalDocuments.kinds.${doc.kind}`)}</p>
+          <p className="text-body-md text-onSurfaceVariant truncate">{doc.fileName} · {formatBytes(doc.byteSize)}</p>
+          {doc.description && <p className="text-body-sm text-onSurface break-words mt-1">{doc.description}</p>}
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+            {showPatient && doc.patientName ? (
+              <Link
+                to="/patients/$patientId"
+                params={{ patientId: doc.patientId }}
+                onClick={(e) => e.stopPropagation()}
+                className="text-body-md text-onSurfaceVariant hover:underline truncate"
+              >
+                {doc.patientName}
+              </Link>
+            ) : <span />}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirming(true);
+                }}
+                className="text-label-lg text-primary hover:underline"
+              >
+                {t("externalDocuments.delete")}
+              </button>
+            )}
+          </div>
+        </Card>
+        <ConfirmDialog
+          open={confirming}
+          onOpenChange={setConfirming}
+          title={t("externalDocuments.deleteTitle")}
+          description={t("externalDocuments.deleteConfirm", { name: doc.fileName })}
+          confirmLabel={t("externalDocuments.delete")}
+          destructive
+          pending={remove.isPending}
+          onConfirm={() => remove.mutate()}
+        />
+      </li>
+    );
+  }
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 py-3">
