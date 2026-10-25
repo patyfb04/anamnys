@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Excerpts;
 using Anamnys.Server.Notes;
 using Anamnys.Server.Themes;
 using Microsoft.EntityFrameworkCore;
@@ -16,7 +17,7 @@ public static class NoteStructuringJob
 {
     public static async Task<StructuringOutcome> ProcessAsync(
         AnamnysDbContext db, INoteStructurer structurer, IThemeSuggester themes, Guid noteId, Guid providerId,
-        TimeProvider clock, ILogger logger, CancellationToken ct, string? format = null)
+        TimeProvider clock, ILogger logger, CancellationToken ct, string? format = null, ThemeLocateQueue? locates = null)
     {
         var note = await db.Notes.AsNoTracking()
             .Where(n => n.Id == noteId && n.ProviderId == providerId)
@@ -60,10 +61,12 @@ public static class NoteStructuringJob
 
         var now = clock.GetUtcNow();
         var outcome = StructuringOutcome.Done;
+        var excerptRefs = 0;
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
             outcome = StructuringOutcome.Done;
+            excerptRefs = 0;
             db.ChangeTracker.Clear();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await NoteLocks.LockAsync(db, noteId, ct);
@@ -84,6 +87,7 @@ public static class NoteStructuringJob
                     GeneratedAt = now,
                 }).ToList();
                 db.NoteSections.AddRange(rows);
+                excerptRefs = await ExcerptService.RelocateNoteAsync(db, noteId, rows, ct);
                 foreach (var row in rows)
                 {
                     NoteAudit.Add(db, noteId, null, "ai_generated", row.Key, null, row.Content, now);
@@ -97,6 +101,10 @@ public static class NoteStructuringJob
             await tx.CommitAsync(ct);
         });
         // After the sections commit, in its own transaction; never changes the outcome.
+        if (outcome == StructuringOutcome.Done && excerptRefs > 0)
+        {
+            locates?.Enqueue(new ThemeLocateJob(providerId, noteId));
+        }
         if (outcome == StructuringOutcome.Done)
         {
             await ThemeProposals.ProposeAsync(db, themes, noteId, providerId, clock, logger, ct);

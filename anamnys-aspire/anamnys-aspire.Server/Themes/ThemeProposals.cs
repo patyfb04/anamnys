@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Excerpts;
 using Anamnys.Server.Notes;
 using Microsoft.EntityFrameworkCore;
 
@@ -60,10 +61,11 @@ public static class ThemeProposals
                 .Select(t => t.TermId)
                 .ToListAsync(ct);
             var excluded = options.Where(o => removed.Contains(o.Id)).Select(o => o.Code).ToHashSet(StringComparer.Ordinal);
-            var codes = await suggester.SuggestAsync(note.Text, options, excluded, ct);
+            // Nobody waits on proposals: they come with quotes, so their references are exact when located.
+            var items = await suggester.SuggestAsync(note.Text, options, excluded, withQuotes: true, ct);
             var byCode = options.Where(o => !excluded.Contains(o.Code)).ToDictionary(o => o.Code, StringComparer.Ordinal);
-            var chosen = codes.Where(byCode.ContainsKey).Distinct(StringComparer.Ordinal)
-                .Take(ThemeGrammar.MaxItems).Select(c => byCode[c].Id).ToList();
+            var chosen = items.Where(i => byCode.ContainsKey(i.Code)).DistinctBy(i => i.Code)
+                .Take(ThemeGrammar.MaxItems).Select(i => (byCode[i.Code].Id, i.Quote)).ToList();
             await ReplaceAsync(db, noteId, providerId, chosen, clock.GetUtcNow(), ct);
         }
         catch (Exception e) when (e is not OperationCanceledException || !ct.IsCancellationRequested)
@@ -73,8 +75,10 @@ public static class ThemeProposals
     }
 
     private static async Task ReplaceAsync(
-        AnamnysDbContext db, Guid noteId, Guid providerId, IReadOnlyList<Guid> chosen, DateTimeOffset now, CancellationToken ct)
+        AnamnysDbContext db, Guid noteId, Guid providerId, IReadOnlyList<(Guid TermId, string? Quote)> proposed,
+        DateTimeOffset now, CancellationToken ct)
     {
+        var chosen = proposed.Select(p => p.TermId).ToList();
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
@@ -120,6 +124,12 @@ public static class ThemeProposals
 
             // An untouched proposal was never the provider's: it is withdrawn, not removed by anyone
             // (RemovedAt requires RemovedById), and the withdrawal is audited.
+            // The reference of a withdrawn proposal goes with it.
+            var withdrawnRefs = withdrawn.Where(t => t.ExcerptRefId != null).Select(t => t.ExcerptRefId!.Value).ToList();
+            if (withdrawnRefs.Count > 0)
+            {
+                db.ExcerptRefs.RemoveRange(await db.ExcerptRefs.Where(r => withdrawnRefs.Contains(r.Id)).ToListAsync(ct));
+            }
             foreach (var tag in withdrawn)
             {
                 db.ThemeTags.Remove(tag);
@@ -127,11 +137,15 @@ public static class ThemeProposals
             }
             foreach (var termId in added)
             {
+                // Exact when the model's quote is found in a section, else the first non-empty section.
+                var reference = await ExcerptService.AddAsync(
+                    db, providerId, noteId, null, proposed.First(p => p.TermId == termId).Quote, null, null, ct);
                 db.ThemeTags.Add(new ThemeTag
                 {
                     Id = Guid.NewGuid(),
                     NoteId = noteId,
                     TermId = termId,
+                    ExcerptRefId = reference.Ref?.Id,
                     CreatedBy = "ai",
                     CreatedAt = now,
                 });

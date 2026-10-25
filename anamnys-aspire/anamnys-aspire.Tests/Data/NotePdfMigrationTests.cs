@@ -33,6 +33,7 @@ public class NotePdfMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-10-20-documents-team.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-10-21-theme-vocabulary.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-10-23-account-export.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-10-24-excerpt-refs.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

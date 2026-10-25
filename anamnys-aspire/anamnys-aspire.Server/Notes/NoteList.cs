@@ -36,7 +36,8 @@ public sealed record NoteSearchRequest(string? Status, Guid? PatientId, string? 
 
 public sealed record NoteListItem(
     Guid Id, Guid PatientId, string PatientName, string Status, string? StructureStatus, string InputMode, string Format,
-    DateTimeOffset CreatedAt, DateTimeOffset? SignedAt, DateTimeOffset? AppointmentStartsAt);
+    DateTimeOffset CreatedAt, DateTimeOffset? SignedAt, DateTimeOffset? AppointmentStartsAt,
+    Guid? ExcerptId = null, string? ExcerptKind = null, string? Snippet = null);
 
 public sealed record NoteSearchResponse(IReadOnlyList<NoteListItem> Items, bool HasMore);
 
@@ -92,6 +93,52 @@ public static class NoteList
                     .FirstOrDefault()))
             .ToListAsync(ct);
         var hasMore = items.Count > size;
-        return new NoteSearchResponse(hasMore ? items[..size] : items, hasMore);
+        var pageItems = hasMore ? items[..size] : items;
+        if (request.TermId is { } term && pageItems.Count > 0)
+        {
+            pageItems = await WithExcerptsAsync(db, providerId, term, pageItems, ct);
+        }
+        return new NoteSearchResponse(pageItems, hasMore);
+    }
+
+    // Theme search (F-03): each result points at the passage of its matching tag (the term itself before
+    // a child, then the oldest) with a short snippet around it. Tags without a reference get neither.
+    private static async Task<List<NoteListItem>> WithExcerptsAsync(
+        AnamnysDbContext db, Guid providerId, Guid termId, List<NoteListItem> items, CancellationToken ct)
+    {
+        var noteIds = items.Select(i => i.Id).ToList();
+        var refs = await (
+            from t in db.ThemeTags.AsNoTracking()
+            join term in db.ThemeTerms.AsNoTracking() on t.TermId equals term.Id
+            join r in db.ExcerptRefs.AsNoTracking() on t.ExcerptRefId equals r.Id
+            where noteIds.Contains(t.NoteId) && t.RemovedAt == null && r.ProviderId == providerId
+                  && r.SourceType == "note" && r.SourceId == t.NoteId
+                  && (t.TermId == termId || term.ParentTermId == termId)
+            select new { t.NoteId, Direct = t.TermId == termId, t.CreatedAt, r.Id, r.Kind, r.SectionKey, r.OffsetStart, r.OffsetEnd })
+            .ToListAsync(ct);
+        var chosen = refs
+            .GroupBy(r => r.NoteId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Direct).ThenBy(r => r.CreatedAt).First());
+        var sectionKeys = chosen.Values.Select(r => r.SectionKey).Distinct().ToList();
+        var chosenNotes = chosen.Keys.ToList();
+        var sections = await db.NoteSections.AsNoTracking()
+            .Where(s => chosenNotes.Contains(s.NoteId) && sectionKeys.Contains(s.Key))
+            .Select(s => new { s.NoteId, s.Key, s.Content })
+            .ToListAsync(ct);
+        return items.Select(item =>
+        {
+            if (!chosen.TryGetValue(item.Id, out var r)
+                || sections.FirstOrDefault(s => s.NoteId == item.Id && s.Key == r.SectionKey) is not { } section)
+            {
+                return item;
+            }
+            var exact = r.Kind == "exact";
+            return item with
+            {
+                ExcerptId = r.Id,
+                ExcerptKind = r.Kind,
+                Snippet = Excerpts.ExcerptService.Snippet(section.Content, exact ? r.OffsetStart : null, exact ? r.OffsetEnd : null),
+            };
+        }).ToList();
     }
 }

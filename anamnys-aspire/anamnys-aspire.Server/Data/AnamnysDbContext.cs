@@ -40,6 +40,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ThemeTermSuccession> ThemeTermSuccessions => Set<ThemeTermSuccession>();
     public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
     public DbSet<AccountExport> AccountExports => Set<AccountExport>();
+    public DbSet<ExcerptRef> ExcerptRefs => Set<ExcerptRef>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -277,12 +278,20 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.SupersededByTermId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<ExcerptRef>(e =>
+        {
+            e.ToTable("ExcerptRefs");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<ThemeTag>(e =>
         {
             e.ToTable("ThemeTags");
             e.HasKey(x => x.Id);
             e.HasOne<Note>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.TermId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ExcerptRef>().WithMany().HasForeignKey(x => x.ExcerptRefId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ThemeTermSuccession>(e =>

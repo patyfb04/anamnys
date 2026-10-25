@@ -336,6 +336,9 @@ function RecentNotes({ patientId }: { patientId: string }) {
               <div className="min-w-0">
                 <p className="truncate text-label-lg text-onSurface">{note.format}</p>
                 <p className="text-body-sm text-onSurfaceVariant">{formatDate(note.createdAt, i18n.language)}</p>
+                {note.snippet && (
+                  <p className="mt-1 text-body-sm italic text-onSurfaceVariant">{note.snippet}</p>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -343,6 +346,7 @@ function RecentNotes({ patientId }: { patientId: string }) {
               <Link
                 to="/notes/$noteId"
                 params={{ noteId: note.id }}
+                search={{ excerpt: termId ? (note.excerptId ?? undefined) : undefined }}
                 className={`rounded-radii-md px-3 py-1.5 text-label-md ${
                   signed ? "text-onSurfaceVariant hover:text-primary" : "border border-primary text-primary hover:bg-primaryFixed"
                 }`}

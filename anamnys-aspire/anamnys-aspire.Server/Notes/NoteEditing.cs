@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Excerpts;
 using Anamnys.Server.NoteStructuring;
 using Microsoft.EntityFrameworkCore;
 
@@ -69,6 +70,7 @@ public static class NoteEditing
             section.Revision++;
             note.UpdatedAt = now;
             NoteAudit.Add(db, noteId, providerId, "section_edited", key, previous, next, now);
+            await ExcerptService.RelocateSectionAsync(db, noteId, key, next, ct);
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
             result = new EditResult(EditOutcome.Saved, section.Revision);

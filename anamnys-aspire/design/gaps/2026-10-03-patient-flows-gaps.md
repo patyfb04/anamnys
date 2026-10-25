@@ -319,7 +319,6 @@ chapter `documentation/22-psychological-documents.md`).
 
 Theme vocabulary (F-02; chapter `documentation/23-theme-vocabulary.md`).
 
-- **Tags point at the whole note.** Excerpt references wait for F-03 (`ExcerptRefId` stays null).
 - **No panels yet.** The tags are read only by the note search; the longitudinal panels
   (F-10 onwards) are not built.
 - **Suggestion cuts long text.** A note that does not fit the model context is cut to a prefix;
@@ -340,6 +339,34 @@ Theme vocabulary (F-02; chapter `documentation/23-theme-vocabulary.md`).
 - **Manual browser check pending** for the "Temas" block (chips, picker, suggest dialog, archived
   patient), the "Tema" filter and the admin `/vocabulary` page; so are the new `.http` requests
   against a live AppHost.
+
+## Trechos de origem
+
+Excerpt references for theme tags (F-03; chapter `documentation/25-excerpt-references.md`).
+
+- **Locating is slow and runs in the background.** Measured warm on the dev CPU: suggest (codes only)
+  4 to 4.5 s; background locate about 6 s for one tag and 8.5 to 9.6 s for 2 to 3 tags; structuring
+  proposals with quotes 9.5 to 11.5 s. Output caps are per mode: 160 tokens for codes, 720 for quotes.
+- **A locate holds the suggester's shared gate.** Suggestions and other locates wait behind it.
+- **Queued locates are lost on restart.** The queue is in memory; the tags stay `section` until the
+  provider uses "Localizar trechos".
+- **Proposals whose quote is not found stay `section`** until "Localizar trechos" is used; nothing
+  retries them by itself.
+- **A section chosen by the provider restricts the locate to that section.** An explicit choice wins,
+  so a passage the model finds elsewhere is not used (fewer exact upgrades).
+- **Quotes must be literal.** A paraphrase by the model is not accepted; the reference stays `section`.
+- **The migration deleted the old `ExcerptRefs` rows once** (they were unusable and nothing created them)
+  and gave the 114 active tags of the dev database a `section` reference. Existing tags are not located
+  by the model in bulk.
+- **Only note sections are sources.** Transcripts, documents (F-08) and patient quotes (F-15) have no
+  `SourceType` yet.
+- **The architecture test is file-level.** It checks that a class in `Analyses/` calls `RequireExcerpt`,
+  not that every query in it does; `GetPassageAsync` shows an exact range only when the text at the offsets still equals the quote.
+- **A restructure (draft) relocates the references and queues a note-wide locate.** `NoteStructuringJob` calls `RelocateNoteAsync` after replacing the sections: a quote not found again, or a section key that is gone, leaves a `section` reference on the first non-empty section (the quote is kept) until the locate finds it.
+- **The F-60 export writes theme tags without section or quote** (to add later).
+- **No frontend automated tests for highlight/selection.** The highlight, scroll, `?excerpt=`, the
+  "Marcar tema neste trecho" selection and the polling are verified in the browser only; the manual
+  check is pending.
 
 ## Exportação
 
