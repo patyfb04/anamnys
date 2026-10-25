@@ -12,4 +12,7 @@ public interface INoteFileStore
     Task DeleteAsync(string key, CancellationToken ct);
 
     Uri PresignGet(string key, string downloadFileName, TimeSpan validFor, string contentType = "application/pdf");
+
+    // A link the browser shows in place (inline disposition) instead of downloading.
+    Uri PresignGetInline(string key, string contentType, TimeSpan validFor);
 }

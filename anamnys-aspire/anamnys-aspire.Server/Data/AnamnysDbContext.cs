@@ -41,6 +41,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
     public DbSet<AccountExport> AccountExports => Set<AccountExport>();
     public DbSet<ExcerptRef> ExcerptRefs => Set<ExcerptRef>();
+    public DbSet<ExternalDocument> ExternalDocuments => Set<ExternalDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -184,6 +185,12 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         modelBuilder.Entity<Notification>(e =>
         {
             e.ToTable("Notifications");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<ExternalDocument>(e =>
+        {
+            e.ToTable("ExternalDocuments");
             e.HasKey(x => x.Id);
         });
 

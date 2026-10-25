@@ -5,6 +5,7 @@ using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
 using Anamnys.Server.Documents;
 using Anamnys.Server.Exports;
+using Anamnys.Server.ExternalDocuments;
 using Anamnys.Server.Excerpts;
 using Anamnys.Server.Email;
 using Anamnys.Server.LiveSession;
@@ -34,6 +35,7 @@ builder.Services.AddHostedService<DatabaseInitializer>();
 builder.AddLiveSession();
 builder.AddNoteStructuring();
 builder.AddAccountExport();
+builder.AddExternalDocuments();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -147,6 +149,7 @@ phi.MapDocumentEndpoints();
 phi.MapThemeEndpoints();
 phi.MapExcerptEndpoints();
 phi.MapExportEndpoints();
+phi.MapExternalDocumentEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

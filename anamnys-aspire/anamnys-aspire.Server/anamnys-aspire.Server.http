@@ -349,3 +349,39 @@ GET {{Server_HostAddress}}/api/phi/providers/me/exports
 ###
 ### One-hour download link (a new link on every call). 200 { url, expiresAt }; 404 unknown or another provider's export; 409 { code: "not_ready" | "expired" }.
 POST {{Server_HostAddress}}/api/phi/providers/me/exports/00000000-0000-0000-0000-000000000000/download
+
+###
+### External documents (F-07; provider cookie __Host-anamnys-provider; send from a browser session, not this file). PDF/JPG/PNG up to 20 MB, scanned by ClamAV before it can be opened.
+### Upload (multipart: file, kind = laudo | receita | exame | encaminhamento | relatorio_externo | outro, documentDate? yyyy-MM-dd, description? <= 200). 201 { id, scanStatus: "pending" }; 400 { code: unsupported_type | too_large | type_mismatch | empty | invalid_form } or validation problem; 404; 409 { code: "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/external-documents
+Content-Type: multipart/form-data; boundary=----b
+
+------b
+Content-Disposition: form-data; name="kind"
+
+laudo
+------b
+Content-Disposition: form-data; name="file"; filename="laudo.pdf"
+Content-Type: application/pdf
+
+%PDF-1.4
+------b--
+
+###
+### A patient's documents, newest first. 200 [{ id, patientId, patientName: null, fileName, kind, documentDate, description, scanStatus: pending | clean | infected | failed, byteSize, uploadedAt, scannedAt }]; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/external-documents
+
+###
+### Provider-wide search (patient name in the body, 25 per page). 200 { items (with patientName), hasMore }; 400 validation problem.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/search
+Content-Type: application/json
+
+{ "kind": "exame", "patientId": null, "name": "maria", "page": 1 }
+
+###
+### One-hour inline link, audited. 200 { url, expiresAt }; 404; 409 { code: "not_available" } unless the scan is clean.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/open
+
+###
+### Soft delete (the object is removed). 204; 404; 409 { code: "archived" }.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000

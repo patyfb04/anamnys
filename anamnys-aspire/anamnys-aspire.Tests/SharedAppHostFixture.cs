@@ -49,7 +49,9 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
                 // Tests drive the notification steps with a fake clock; a live worker would act
                 // on test rows with the real clock.
                 // The real model must never load in tests (the suggestion warm-up would).
-                ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false", "--NoteStructuring:WarmSuggestionOnStart=false"],
+                ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false", "--NoteStructuring:WarmSuggestionOnStart=false",
+                // The fake scanner needs no ClamAV container (the AppHost skips it for this value).
+                "--ExternalDocuments:Scanner=fake"],
                 TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();

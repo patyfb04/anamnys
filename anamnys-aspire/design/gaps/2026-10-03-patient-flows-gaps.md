@@ -368,6 +368,16 @@ Excerpt references for theme tags (F-03; chapter `documentation/25-excerpt-refer
   "Marcar tema neste trecho" selection and the polling are verified in the browser only; the manual
   check is pending.
 
+## Documentos recebidos
+
+External documents (F-07; chapter `documentation/26-external-documents.md`).
+
+- **The F-60 export does not include external documents** (files and metadata).
+- **The memory peak while ClamAV reloads signatures was not measured**; expect up to about 2x the idle 969 MiB.
+- **Signature updates need outbound internet** from the ClamAV container (`database.clamav.net`, HTTPS).
+- **Uploads are held in server memory** (up to about 21 MB each) so the file never reaches a temp file.
+- **Not exercised in a browser:** the upload (multipart header handling) and the open-in-new-tab flow.
+
 ## Exportação
 
 Full account export (F-60; chapter `documentation/24-account-export.md`).

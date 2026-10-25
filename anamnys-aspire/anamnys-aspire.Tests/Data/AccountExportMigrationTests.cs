@@ -157,6 +157,21 @@ public class AccountExportMigrationTests(SharedAppHostFixture fixture)
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be("23503");
     }
 
+    [Fact]
+    public async Task AccountExportMigration_RunAfterTheExternalDocumentsMigration_KeepsTheWiderActionList()
+    {
+        // Arrange
+        await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
+        await using var db = await fresh.OpenAsync(Ct);
+        await RunMigrationAsync(db, MigrationFile);
+
+        // Act
+        var act = () => ExecuteAsync(db, """INSERT INTO "AuditEntries" ("ActorId","Action") VALUES (gen_random_uuid(), 'external_document_opened')""");
+
+        // Assert
+        await act.Should().NotThrowAsync();
+    }
+
     [Theory]
     [InlineData("account_export_requested", true)]
     [InlineData("account_export_downloaded", true)]
@@ -234,7 +249,12 @@ public class AccountExportMigrationTests(SharedAppHostFixture fixture)
         var shape = new List<string>();
         while (await reader.ReadAsync(Ct))
         {
-            shape.Add(reader.GetString(0));
+            var line = reader.GetString(0);
+            // Later migrations own the full action list of this constraint (see MigrationFile).
+            if (!line.Contains("AuditEntries_subject_ck"))
+            {
+                shape.Add(line);
+            }
         }
         return shape;
     }

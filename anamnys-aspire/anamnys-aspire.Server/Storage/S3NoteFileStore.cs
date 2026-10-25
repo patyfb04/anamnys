@@ -63,7 +63,13 @@ public sealed class S3NoteFileStore(StorageOptions options) : INoteFileStore, ID
         await _service.DeleteObjectAsync(options.Bucket, key, ct);
 
     // downloadFileName must not contain quotes (callers pass nota-{CODE}.pdf).
-    public Uri PresignGet(string key, string downloadFileName, TimeSpan validFor, string contentType = "application/pdf")
+    public Uri PresignGet(string key, string downloadFileName, TimeSpan validFor, string contentType = "application/pdf") =>
+        Presign(key, $"attachment; filename=\"{downloadFileName}\"", contentType, validFor);
+
+    public Uri PresignGetInline(string key, string contentType, TimeSpan validFor) =>
+        Presign(key, "inline", contentType, validFor);
+
+    private Uri Presign(string key, string contentDisposition, string contentType, TimeSpan validFor)
     {
         var request = new GetPreSignedUrlRequest
         {
@@ -73,7 +79,7 @@ public sealed class S3NoteFileStore(StorageOptions options) : INoteFileStore, ID
             Expires = DateTime.UtcNow.Add(validFor),
             Protocol = options.PublicUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase) ? Protocol.HTTPS : Protocol.HTTP,
         };
-        request.ResponseHeaderOverrides.ContentDisposition = $"attachment; filename=\"{downloadFileName}\"";
+        request.ResponseHeaderOverrides.ContentDisposition = contentDisposition;
         request.ResponseHeaderOverrides.ContentType = contentType;
         return new Uri(_public.GetPreSignedURL(request));
     }

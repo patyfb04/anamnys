@@ -641,3 +641,41 @@ export interface RecordScaleRequest {
   appliedAt: string;
   sessionId: string | null;
 }
+
+export type ExternalDocumentKind = "laudo" | "receita" | "exame" | "encaminhamento" | "relatorio_externo" | "outro";
+export type ExternalScanStatus = "pending" | "clean" | "infected" | "failed";
+
+export interface ExternalDocumentItem {
+  id: string;
+  patientId: string;
+  patientName: string | null;
+  /** Only in the provider-wide search; null in a patient's own list. */
+  patientArchived?: boolean | null;
+  fileName: string;
+  kind: ExternalDocumentKind;
+  documentDate: string | null;
+  description: string | null;
+  scanStatus: ExternalScanStatus;
+  byteSize: number;
+  uploadedAt: string;
+  scannedAt: string | null;
+}
+
+export interface ExternalDocumentSearchRequest {
+  kind?: ExternalDocumentKind;
+  patientId?: string;
+  name?: string;
+  page?: number;
+}
+
+export interface ExternalDocumentSearchResponse {
+  items: ExternalDocumentItem[];
+  hasMore: boolean;
+}
+
+export interface ExternalDocumentUploadInput {
+  file: File;
+  kind: ExternalDocumentKind;
+  documentDate?: string;
+  description?: string;
+}

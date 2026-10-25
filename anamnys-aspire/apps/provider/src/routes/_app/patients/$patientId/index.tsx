@@ -14,6 +14,7 @@ import {
   FileText,
   FilePlus,
   FileSignature,
+  FileUp,
   Mic,
   MoreHorizontal,
   Pencil,
@@ -28,7 +29,9 @@ import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
+import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
+import UploadExternalDocumentModal from "@/components/externalDocuments/UploadExternalDocumentModal";
 import PatientFormModal from "@/components/patients/PatientFormModal";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import ThemeFilter from "@/components/themes/ThemeFilter";
@@ -56,6 +59,7 @@ function PatientDetailPage() {
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [creatingDocument, setCreatingDocument] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const query = useQuery({ queryKey: ["patient", patientId], queryFn: () => patientsApi.get(patientId) });
   const patient = query.data;
@@ -157,6 +161,12 @@ function PatientDetailPage() {
               {t("patients.detail.newDocument")}
             </button>
           )}
+          {!archived && (
+            <button type="button" onClick={() => setUploading(true)} className={actionButton}>
+              <FileUp size={18} />
+              {t("externalDocuments.upload")}
+            </button>
+          )}
           <MoreActions label={t("patients.detail.moreActions")}>
             <MenuItem icon={<Pencil size={18} />} label={t("common.edit")} onSelect={() => setEditing(true)} />
             {archived ? (
@@ -183,6 +193,7 @@ function PatientDetailPage() {
 
       {actionError && <p className="text-body-md text-error">{actionError}</p>}
       {creatingDocument && <NewDocumentModal patientId={patientId} onClose={() => setCreatingDocument(false)} />}
+      {uploading && <UploadExternalDocumentModal patientId={patientId} onClose={() => setUploading(false)} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <DetailCard title={t("patients.detail.contact")} icon={<UserRound size={20} />}>
@@ -231,6 +242,8 @@ function PatientDetailPage() {
       <ScalesCard patientId={patientId} readOnly={archived} />
 
       <DocumentsCard patientId={patientId} readOnly={archived} />
+
+      <ExternalDocumentsCard patientId={patientId} readOnly={archived} />
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />

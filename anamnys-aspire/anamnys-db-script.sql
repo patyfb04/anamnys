@@ -104,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -349,11 +349,20 @@ CREATE TABLE "ExternalDocuments" (
 	"ProviderId" uuid NOT NULL,
 	"Filename" text NOT NULL,
 	"MimeType" text NOT NULL,
-	"ObjectKey" text NOT NULL CONSTRAINT "ExternalDocuments_ObjectKey_key" UNIQUE,
+	"ObjectKey" text CONSTRAINT "ExternalDocuments_ObjectKey_key" UNIQUE,
 	"ByteSize" bigint NOT NULL,
 	"ScanStatus" text DEFAULT 'pending' NOT NULL,
 	"UploadedAt" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "ExternalDocuments_ScanStatus_ck" CHECK (("ScanStatus" = ANY (ARRAY['pending'::text, 'clean'::text, 'infected'::text, 'failed'::text])))
+	"Kind" text NOT NULL,
+	"DocumentDate" date,
+	"Description" text,
+	"ScannedAt" timestamp with time zone,
+	"ScanAttempts" integer DEFAULT 0 NOT NULL,
+	"DeletedAt" timestamp with time zone,
+	CONSTRAINT "ExternalDocuments_ScanStatus_ck" CHECK (("ScanStatus" = ANY (ARRAY['pending'::text, 'clean'::text, 'infected'::text, 'failed'::text]))),
+	CONSTRAINT "ExternalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['laudo'::text, 'receita'::text, 'exame'::text, 'encaminhamento'::text, 'relatorio_externo'::text, 'outro'::text]))),
+	CONSTRAINT "ExternalDocuments_Description_ck" CHECK ((("Description" IS NULL) OR (char_length("Description") <= 200))),
+	CONSTRAINT "ExternalDocuments_ObjectKey_ck" CHECK ((("ObjectKey" IS NOT NULL) OR ("ScanStatus" = 'infected') OR ("DeletedAt" IS NOT NULL)))
 );
 CREATE TABLE "ExtractedFacts" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -965,6 +974,7 @@ CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
 CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
 CREATE INDEX "ExcerptRefs_Provider_Source_idx" ON "ExcerptRefs" ("ProviderId","SourceType","SourceId");
 CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientId");
+CREATE INDEX "ExternalDocuments_Provider_Uploaded_idx" ON "ExternalDocuments" ("ProviderId","UploadedAt" DESC);
 CREATE INDEX "ExtractedFacts_DocumentId_idx" ON "ExtractedFacts" ("ExternalDocumentId");
 CREATE INDEX "FollowUpItems_PatientId_idx" ON "FollowUpItems" ("PatientId");
 CREATE INDEX "InsurerAuthorizations_ValidUntil_idx" ON "InsurerAuthorizations" ("ValidUntil");

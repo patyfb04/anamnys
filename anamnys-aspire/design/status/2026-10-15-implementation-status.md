@@ -56,7 +56,7 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-07 Upload | schema only | `ExternalDocuments`; no object storage wired |
+| F-07 Upload | done | PDF/JPG/PNG up to 20 MB checked by magic bytes, with kind, date and description; stored in the private bucket (`external/{providerId}/{documentId}`); scanned by a self-hosted ClamAV container before opening (infected: object deleted, row kept as blocked; scanner unreachable: stays pending and retries); open only when clean with a one-hour inline link; soft delete; read-only for archived patients; audited. Patient record card and Documentos > Recebidos tab. `ExternalDocuments/`, `documentation/26-external-documents.md`, ClamAV cost in `documentation/20-environment-configuration.md` 2.4b. Not in the F-60 export yet. |
 | F-08 OCR + fatos declarados | schema only | `ExtractedFacts` |
 | F-09 Linha do tempo de medicação | partial | medications are entered by hand on the record (`MedicationEntries`); nothing comes from prescriptions |
 
@@ -155,17 +155,16 @@ the schema still carries every table, but only the features below have code.
 
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
-1. **F-07 Upload de documentos externos** — private storage, signed links.
-2. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
+1. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
    page and issuer, confirmed by the provider.
-3. **F-09 Linha do tempo de medicação** from prescriptions.
-4. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+2. **F-09 Linha do tempo de medicação** from prescriptions.
+3. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
-5. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
+4. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
    (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
    month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
-6. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
-7. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
+5. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
+6. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
    (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
    time while the account is active and for 60 days after cancellation, then the data is deleted;
    site and Terms say exactly that). Only the active-account half exists: F-57 (cancellation) must add the
@@ -178,3 +177,4 @@ dev database; any other persistent environment needs `2026-10-21-theme-vocabular
 Verified 2026-10-24: full suite 935 total, 0 failed, 3 skipped (F-60 included; export tests 53/53
 after the final fixes). `2026-10-23-account-export.sql` is applied to the dev database; any other
 persistent environment needs it.
+Verified 2026-10-25 (F-07): full suite 1180 passed, 0 failed, 3 skipped before the final review fixes; external-document suites 108 passed after them. `2026-10-25-external-documents.sql` must be applied to any persistent environment.
