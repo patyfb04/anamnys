@@ -8,10 +8,11 @@ import Modal from "@/components/patients/Modal";
 interface Props {
   noteId: string;
   onClose: () => void;
+  onAccepted?: () => void;
 }
 
 // Lists the model's suggestions; nothing is saved until the provider ticks terms and confirms.
-export default function SuggestThemesDialog({ noteId, onClose }: Props) {
+export default function SuggestThemesDialog({ noteId, onClose, onAccepted }: Props) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -47,7 +48,10 @@ export default function SuggestThemesDialog({ noteId, onClose }: Props) {
       void queryClient.invalidateQueries({ queryKey: ["note-themes", noteId], exact: true });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
-    onSuccess: onClose,
+    onSuccess: () => {
+      onAccepted?.();
+      onClose();
+    },
   });
 
   const toggle = (id: string) =>

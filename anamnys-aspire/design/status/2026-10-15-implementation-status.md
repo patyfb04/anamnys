@@ -42,7 +42,7 @@ the schema still carries every table, but only the features below have code.
 |---|---|---|
 | F-01 Escalas aplicadas | done | Score-only recording with three regimes, opt-in, soft removal, series chart; `Scales/`, `documentation/21-psychometric-scales.md` |
 | F-02 Vocabulário de temas | done | Closed vocabulary `mh-1` (28 terms + 12 children); local-model proposals after structuring and on demand ("Sugerir temas"; cached vocabulary prefix in a 4096-token context, ≈ 4–5 s per suggestion after the first), tags editable on drafts and signed notes with audit, search by theme (term or child, signed notes), admin page with add, rename, retire, split and merge under D-01. `Themes/`, `documentation/23-theme-vocabulary.md` |
-| F-03 Referências de trecho | schema only | `ExcerptRefs` |
+| F-03 Referências de trecho | done | Every theme tag points at an exact passage or a section of its note; the chip opens the note, highlights it and scrolls to it, from the note or from a theme search result (`?excerpt=`). Selection in a section tags it; the model quotes the passage (proposals, background locate after accepting a suggestion, "Localizar trechos"); drafts relocate references on every save; `Excerpts.RequireExcerpt` plus an architecture test for analyses. The migration deleted the old unusable `ExcerptRefs` rows once and backfilled `section` references for the existing tags. `Excerpts/`, `Themes/`, `documentation/25-excerpt-references.md`. Verified 2026-10-25: full suite 1067 passed before the final fixes; targeted suites 355 passed after. |
 | F-04 Metadados da sessão | partial | `Sessions` (scheduled/actual times, modality, attendance) and appointment status/cancellation are stored; a `Sessions` row is created by a live recording or a typed note linked to an appointment, and no attendance statistics exist |
 
 ### B · Conformidade documental
@@ -155,19 +155,17 @@ the schema still carries every table, but only the features below have code.
 
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
-1. **F-03 Referências de trecho** — prerequisite of every analysis and of OCR facts (origin note,
-   transcript or document, with offsets/page).
-2. **F-07 Upload de documentos externos** — private storage, signed links.
-3. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
+1. **F-07 Upload de documentos externos** — private storage, signed links.
+2. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
    page and issuer, confirmed by the provider.
-4. **F-09 Linha do tempo de medicação** from prescriptions.
-5. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+3. **F-09 Linha do tempo de medicação** from prescriptions.
+4. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
-6. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
+5. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
    (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
    month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
-7. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
-8. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
+6. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
+7. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
    (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
    time while the account is active and for 60 days after cancellation, then the data is deleted;
    site and Terms say exactly that). Only the active-account half exists: F-57 (cancellation) must add the

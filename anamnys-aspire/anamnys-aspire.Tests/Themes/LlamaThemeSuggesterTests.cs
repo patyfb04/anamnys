@@ -24,7 +24,7 @@ public class LlamaThemeSuggesterTests
         using var suggester = Unloadable();
 
         // Act
-        var codes = await suggester.SuggestAsync("Relata insônia.", Terms, ["sono", "trabalho", "trabalho_burnout"], TestContext.Current.CancellationToken);
+        var codes = await suggester.SuggestAsync("Relata insônia.", Terms, ["sono", "trabalho", "trabalho_burnout"], false, TestContext.Current.CancellationToken);
 
         // Assert
         codes.Should().BeEmpty();
@@ -38,8 +38,8 @@ public class LlamaThemeSuggesterTests
         var ct = TestContext.Current.CancellationToken;
 
         // Act
-        var blank = await suggester.SuggestAsync("  ", Terms, [], ct);
-        var noTerms = await suggester.SuggestAsync("Relata insônia.", [], [], ct);
+        var blank = await suggester.SuggestAsync("  ", Terms, [], false, ct);
+        var noTerms = await suggester.SuggestAsync("Relata insônia.", [], [], false, ct);
 
         // Assert
         blank.Should().BeEmpty();
@@ -60,12 +60,26 @@ public class LlamaThemeSuggesterTests
     public void TextBudget_SmallContext_IsWhatRemainsAfterPrefixSuffixOutputAndMargin()
     {
         // Act
-        var budget = LlamaThemeSuggester.TextBudget(4096, 600, 5);
-        var none = LlamaThemeSuggester.TextBudget(700, 600, 5);
+        var codes = LlamaThemeSuggester.TextBudget(4096, 600, 5, withQuotes: false);
+        var quotes = LlamaThemeSuggester.TextBudget(4096, 600, 5, withQuotes: true);
+        var none = LlamaThemeSuggester.TextBudget(700, 600, 5, withQuotes: false);
+
+        // Assert: the fast codes-only suggest keeps the pre-F-03 budget (160 output tokens).
+        codes.Should().Be(4096 - 600 - 5 - 160 - LlamaThemeSuggester.Margin);
+        quotes.Should().Be(4096 - 600 - 5 - 720 - LlamaThemeSuggester.Margin);
+        LlamaThemeSuggester.OutputTokensFor(false).Should().Be(LlamaThemeSuggester.CodesOutputTokens);
+        LlamaThemeSuggester.OutputTokensFor(true).Should().Be(LlamaThemeSuggester.QuotesOutputTokens);
+        none.Should().BeLessThanOrEqualTo(0);
+    }
+
+    [Fact]
+    public void TextBudget_WithItems_ReservesTheForcedJsonOfEachItem()
+    {
+        // Act
+        var budget = LlamaThemeSuggester.TextBudget(4096, 600, 5, withQuotes: true, items: 10);
 
         // Assert
-        budget.Should().Be(4096 - 600 - 5 - LlamaThemeSuggester.OutputTokens - LlamaThemeSuggester.Margin);
-        none.Should().BeLessThanOrEqualTo(0);
+        budget.Should().Be(4096 - 600 - 5 - 720 - 10 * LlamaThemeSuggester.ForcedTokensPerItem - LlamaThemeSuggester.Margin);
     }
 
     [Fact]

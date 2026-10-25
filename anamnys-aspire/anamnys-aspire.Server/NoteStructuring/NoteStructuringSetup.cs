@@ -22,5 +22,7 @@ public static class NoteStructuringSetup
             sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>()));
         builder.Services.AddSingleton<ThemeWarmupSignal>();
         builder.Services.AddHostedService<ThemeWarmupService>();
+        builder.Services.AddSingleton<ThemeLocateQueue>();
+        builder.Services.AddHostedService<ThemeLocateWorker>();
     }
 }

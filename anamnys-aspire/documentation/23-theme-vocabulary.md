@@ -2,7 +2,7 @@
 
 How notes are tagged with themes from a closed vocabulary, how the local model proposes them,
 how notes are found by theme, and how staff evolve the vocabulary. Last checked against the code
-on 2026-10-21 (branch `feature/theme-vocabulary`). Design:
+on 2026-10-25 (branch `feature/excerpt-refs`). Design:
 `design/specs/2026-10-21-theme-vocabulary-design.md`.
 
 The code is short; the reasoning behind what the vocabulary leaves out, and why a theme is
@@ -77,7 +77,7 @@ The migration carries the full reasoning in comments. It must not be reverted.
 A tag is a row in `ThemeTags` (note, term). `CreatedBy` is `ai` when the term came from the model
 (a proposal or an accepted suggestion) and `human` when the provider picked it. `AddedById` is the
 provider who added or accepted it, and is null for a proposal written by structuring.
-`ExcerptRefId` stays null (section 9) and `Confidence` is not recorded: the model gives no
+`ExcerptRefId` points at the passage the tag came from (chapter 25); `Confidence` is not recorded: the model gives no
 calibrated probability.
 
 ### 3.1 Proposals from structuring
@@ -146,8 +146,9 @@ The vocabulary has its own trail in `ThemeTermChanges` (section 7).
 
 ## 4. Suggestion (local model only)
 
-`IThemeSuggester.SuggestAsync(text, terms, excludedCodes, ct)` returns 0 to 5 distinct term codes,
-each one of `terms` and none of `excludedCodes`. `terms` is always the **full active list**;
+`IThemeSuggester.SuggestAsync(text, terms, excludedCodes, withQuotes, ct)` returns 0 to 5 distinct term
+codes, each one of `terms` and none of `excludedCodes`, as `ThemeCodeQuote(Code, Quote?)`. It has two
+modes (section 4.2). `terms` is always the **full active list**;
 `excludedCodes` are the terms already actively tagged (on demand) or removed by the provider on
 this note (proposals). `LlamaThemeSuggester` uses the same in-process Qwen model as structuring
 (`LlmModelProvider`, one set of weights), a ChatML prompt (`ThemePrompt`) and a GBNF grammar
@@ -227,7 +228,48 @@ and the cached context. The context holds ≈ 0.6 GB (measured private bytes del
 for 4096 tokens ≈ 224 MiB at f16, compute buffer ≈ 311 MiB, plus the logits and batch buffers) for
 the life of the process. It is freed when the server stops.
 
-### 4.2 Endpoints and failures
+### 4.2 Two modes: codes only and with quotes (F-03)
+
+Both modes use the same cached prefix and the same context; the instruction of the mode goes **after
+the note text**, so the prefix key does not change.
+
+| Mode | Output | Grammar | Used by |
+|---|---|---|---|
+| Codes only (`withQuotes: false`) | `["sono","trabalho"]` | array of the vocabulary's codes | `POST …/themes/suggest` (the dialog) |
+| With quotes (`withQuotes: true`) | `[{"code":"sono","quote":"não dorme há 3 dias"}]` | array of `{"code", "quote"}`, code from the list, quote a string of at most 200 characters | structuring proposals |
+| Quote only (`QuoteAsync`) | the same objects, for codes already chosen | same, restricted to those codes | the background locate (chapter 25) |
+
+- The with-quotes grammar has fixed spacing, and the fixed JSON text is fed to the model without
+  sampling; only the code and the quote are sampled. Parse and recovery keep the semantics of the codes
+  mode (a prefix cut short keeps the complete known objects; unknown, duplicate and excluded codes are
+  dropped).
+- **Output caps per mode:** 160 tokens for codes (`CodesOutputTokens`), 720 for quotes
+  (`QuotesOutputTokens`). The text limit of section 4.1 is computed with the cap of the mode, so the
+  with-quotes mode leaves less room for the note.
+- **Why the dialog stays codes-only (decided 2026-10-25):** quotes cost about 3 s more per call and the
+  first version of the dialog took about 8 s warm. The suggest endpoint returns no quote; accepting a
+  suggestion creates a `section` reference and queues a background locate for that tag.
+- The quote is a literal sentence of the note, checked by the server against the section text
+  (`ExcerptLocator`). A quote that is not found gives a `section` reference.
+
+**Measured** (same machine and note as section 4.1, warm):
+
+| Run | Time |
+|---|---|
+| Suggest, codes only | 4 to 4.5 s |
+| Quote only, one tag (background locate) | about 6 s |
+| Quote only, 2 to 3 tags | 8.5 to 9.6 s |
+| Proposals with quotes (structuring) | 9.5 to 11.5 s |
+
+### 4.3 Locate queue
+
+`ThemeLocateQueue` and `ThemeLocateWorker` run the quote-only mode in the background (an in-memory
+channel, one job at a time, like `TranscriptionQueue`). A job holds ids only. The model run holds the
+suggester's gate, so it queues with suggestions and other locates and takes about 6 s or more. Duplicate
+pending jobs are dropped, and **queued jobs are lost when the server restarts** (the tags keep their
+`section` reference). The rules, the upgrade to `exact` and the audit are in chapter 25, section 5.2.
+
+### 4.4 Endpoints and failures
 
 - **On demand:** `POST providers/me/notes/{noteId}/themes/suggest` works on any note, writes
   nothing, and returns terms not already actively tagged. A note without text, or with every term
@@ -327,8 +369,7 @@ the two endpoint classes, `LlamaThemeSuggester`, `ThemePrompt`, `ThemeGrammar`).
 
 ## 9. What stays out
 
-- **Excerpt references (F-03).** `ThemeTags."ExcerptRefId"` stays null; a tag points at the whole
-  note, not at a passage.
+- **Excerpt references are chapter 25 (F-03).** A tag now points at a passage or a section (`ExcerptRefId`).
 - **Longitudinal panels (F-10 onwards).** Nothing reads the tags except the note search.
 - **Provider-defined terms.** The vocabulary is closed on purpose and maintained by staff; there is
   no per-provider or per-specialty vocabulary, and only mental health is seeded.

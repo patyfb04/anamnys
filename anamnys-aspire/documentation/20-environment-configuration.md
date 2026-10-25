@@ -36,7 +36,7 @@ production.
 | `Parameters:storage-secret-key` | same, `openssl rand -hex 32` | |
 | `Parameters:resend-api-key` | optional user secret | Only to receive real e-mail in your own inbox (Resend sandbox delivers only to the Resend account's address). Without it Mailpit is used. |
 | `Parameters:storage-public-url` | optional user secret | Only to test PDF downloads through a tunnel; default is the localhost endpoint. |
-| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf, 2026-10-18-scales, 2026-10-19-documents, 2026-10-20-documents-team, 2026-10-21-theme-vocabulary, 2026-10-23-account-export. |
+| Database migrations | apply each new file in `design/migrations/` to the dev Postgres (command in each file's header) | The server bootstraps the schema only on an empty database; existing dev databases need every new migration, in date order. Current list: 2026-10-01 … 2026-10-17-note-pdf, 2026-10-18-scales, 2026-10-19-documents, 2026-10-20-documents-team, 2026-10-21-theme-vocabulary, 2026-10-23-account-export, 2026-10-24-excerpt-refs. |
 | AI models | nothing to set | Whisper and Qwen files download on first use into the default model directories (≈ 4.7 GB for Qwen). |
 
 If the AppHost ever ran before the client secrets were set, remove the Keycloak and Postgres
@@ -111,7 +111,9 @@ start without it.
   have `2026-10-20-documents-team.sql`, `2026-10-21-theme-vocabulary.sql` and
   `2026-10-23-account-export.sql` applied (the second
   seeds the vocabulary and adds the columns the server now reads; the third adds the export status
-  columns and the one-export-in-progress index).
+  columns and the one-export-in-progress index). `2026-10-24-excerpt-refs.sql` gives `ExcerptRefs` its
+  provider, section, quote and kind columns, links existing theme tags to a section reference and
+  deletes the old unusable `ExcerptRefs` rows once.
 
 ### 2.6 Network, TLS and capacity
 
@@ -157,7 +159,7 @@ start without it.
 - [ ] Keycloak SMTP relay (not built yet)
 - [ ] Keycloak image without dev seed; TLS; redirect URIs
 - [ ] Model directories on a persistent volume; Whisper SHA-256 verified
-- [ ] Migrations applied in order (through `2026-10-23-account-export.sql`)
+- [ ] Migrations applied in order (through `2026-10-24-excerpt-refs.sql`)
 - [ ] `ForwardedHeaders` configured
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore

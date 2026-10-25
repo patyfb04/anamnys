@@ -41,6 +41,7 @@ export default function NoteCard({ note, showPatient, onClick }: Props) {
         {note.appointmentStartsAt &&
           ` · ${t("notes.list.appointment", { date: new Date(note.appointmentStartsAt).toLocaleDateString("pt-BR") })}`}
       </p>
+      {note.snippet && <p className="mt-1 text-body-sm italic text-onSurfaceVariant">{note.snippet}</p>}
     </Card>
   );
 }

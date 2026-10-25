@@ -415,6 +415,9 @@ export interface NoteListItem {
   createdAt: string;
   signedAt: string | null;
   appointmentStartsAt: string | null;
+  excerptId?: string | null;
+  excerptKind?: ExcerptKind | null;
+  snippet?: string | null;
 }
 
 export interface NoteSearchRequest {
@@ -452,6 +455,30 @@ export interface NoteTheme {
   origin: "ai" | "human";
   proposed: boolean;
   addedAt: string;
+  excerptId: string | null;
+  excerptKind: ExcerptKind | null;
+}
+
+export type ExcerptKind = "exact" | "section";
+
+export interface ThemeSelection {
+  sectionKey: string;
+  start?: number;
+  end?: number;
+}
+
+export interface ExcerptPassage {
+  id: string;
+  kind: ExcerptKind;
+  noteId: string;
+  patientId: string;
+  sessionStartsAt: string | null;
+  datedAt: string;
+  sectionKey: string;
+  sectionTitle: string;
+  sectionText: string;
+  start?: number;
+  end?: number;
 }
 
 export interface ThemeSuggestion {

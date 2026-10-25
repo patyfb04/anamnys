@@ -80,7 +80,7 @@ public sealed class TranscriptionWorker(
             var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
             var outcome = await NoteStructuringJob.ProcessAsync(
                 db, scope.ServiceProvider.GetRequiredService<INoteStructurer>(), scope.ServiceProvider.GetRequiredService<IThemeSuggester>(),
-                noteId, providerId, clock, logger, ct, format);
+                noteId, providerId, clock, logger, ct, format, scope.ServiceProvider.GetService<ThemeLocateQueue>());
             switch (outcome)
             {
                 case StructuringOutcome.Done or StructuringOutcome.Discarded:

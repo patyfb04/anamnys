@@ -332,8 +332,16 @@ CREATE TABLE "ExcerptRefs" (
 	"OffsetStart" integer,
 	"OffsetEnd" integer,
 	"DatedAt" timestamp with time zone NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"SectionKey" text,
+	"Quote" text,
+	"Kind" text NOT NULL,
 	CONSTRAINT "ExcerptRefs_Offsets_ck" CHECK ((("OffsetEnd" IS NULL) OR ("OffsetStart" IS NULL) OR ("OffsetEnd" >= "OffsetStart"))),
-	CONSTRAINT "ExcerptRefs_SourceType_ck" CHECK (("SourceType" = ANY (ARRAY['note'::text, 'transcript'::text, 'document'::text])))
+	CONSTRAINT "ExcerptRefs_SourceType_ck" CHECK (("SourceType" = ANY (ARRAY['note'::text, 'transcript'::text, 'document'::text]))),
+	CONSTRAINT "ExcerptRefs_Kind_ck" CHECK (("Kind" = ANY (ARRAY['exact'::text, 'section'::text]))),
+	CONSTRAINT "ExcerptRefs_Exact_ck" CHECK (((("Kind" = 'exact') AND ("OffsetStart" IS NOT NULL) AND ("OffsetEnd" IS NOT NULL) AND ("Quote" IS NOT NULL)) OR (("Kind" = 'section') AND ("OffsetStart" IS NULL) AND ("OffsetEnd" IS NULL)))),
+	CONSTRAINT "ExcerptRefs_Quote_ck" CHECK ((("Quote" IS NULL) OR (char_length("Quote") <= 200))),
+	CONSTRAINT "ExcerptRefs_NoteSection_ck" CHECK ((("SourceType" <> 'note') OR ("SectionKey" IS NOT NULL)))
 );
 CREATE TABLE "ExternalDocuments" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -955,7 +963,7 @@ CREATE INDEX "Denials_ReasonCode_idx" ON "Denials" ("ReasonCode");
 CREATE INDEX "DisclosureAuthorizations_DocumentId_idx" ON "DisclosureAuthorizations" ("DocumentId");
 CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
 CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
-CREATE INDEX "ExcerptRefs_Source_idx" ON "ExcerptRefs" ("SourceType","SourceId");
+CREATE INDEX "ExcerptRefs_Provider_Source_idx" ON "ExcerptRefs" ("ProviderId","SourceType","SourceId");
 CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientId");
 CREATE INDEX "ExtractedFacts_DocumentId_idx" ON "ExtractedFacts" ("ExternalDocumentId");
 CREATE INDEX "FollowUpItems_PatientId_idx" ON "FollowUpItems" ("PatientId");
@@ -1041,6 +1049,7 @@ ALTER TABLE "DisposalRecords" ADD CONSTRAINT "DisposalRecords_PatientId_fkey" FO
 ALTER TABLE "DocumentHashes" ADD CONSTRAINT "DocumentHashes_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE RESTRICT;
 ALTER TABLE "Dossiers" ADD CONSTRAINT "Dossiers_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
 ALTER TABLE "ExternalDocuments" ADD CONSTRAINT "ExternalDocuments_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
+ALTER TABLE "ExcerptRefs" ADD CONSTRAINT "ExcerptRefs_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ExternalDocumentId_fkey" FOREIGN KEY ("ExternalDocumentId") REFERENCES "ExternalDocuments"("Id") ON DELETE CASCADE;
 ALTER TABLE "FocusAreas" ADD CONSTRAINT "FocusAreas_ParentId_fkey" FOREIGN KEY ("ParentId") REFERENCES "FocusAreas"("Id") ON DELETE SET NULL;

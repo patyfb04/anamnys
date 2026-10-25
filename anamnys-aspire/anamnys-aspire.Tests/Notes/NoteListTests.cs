@@ -229,6 +229,74 @@ public class NoteListTests(SharedAppHostFixture fixture)
         }
     }
 
+    [Fact]
+    public async Task SearchAsync_TermFilter_ReturnsExcerptAndSnippet()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        await using var db = seed.CreateDbContext();
+        var vocabulary = Guid.NewGuid();
+        var term = Guid.NewGuid();
+        await seed.ExecuteSqlAsync(
+            """
+            INSERT INTO "ThemeVocabularies" ("Id","Version") VALUES (@v, 'test-' || @v);
+            INSERT INTO "ThemeTerms" ("Id","VocabularyId","Code","Label") VALUES (@t, @v, 'tema', 'Tema');
+            """,
+            Ct, ("v", vocabulary), ("t", term));
+        try
+        {
+            var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+            var exact = await AddTaggedNoteAsync(seed, patient, "Signed", term, null, Now);
+            var section = await AddTaggedNoteAsync(seed, patient, "Signed", term, null, Now.AddMinutes(-1));
+            var bare = await AddTaggedNoteAsync(seed, patient, "Signed", term, null, Now.AddMinutes(-2));
+            var text = new string('a', 150) + " O paciente não dorme há 3 dias. " + new string('b', 150);
+            var start = text.IndexOf("não dorme", StringComparison.Ordinal);
+            var (exactRef, sectionRef) = (Guid.NewGuid(), Guid.NewGuid());
+            await seed.ExecuteSqlAsync(
+                """
+                INSERT INTO "NoteSections" ("NoteId","Key","Content","Position") VALUES (@e, 'data', @text, 0), (@s, 'data', 'Linha um.' || chr(10) || 'Linha dois.', 0);
+                INSERT INTO "ExcerptRefs" ("Id","ProviderId","SourceType","SourceId","SectionKey","Kind","OffsetStart","OffsetEnd","Quote","DatedAt")
+                VALUES (@er, @p, 'note', @e, 'data', 'exact', @a, @b, 'não dorme', now());
+                INSERT INTO "ExcerptRefs" ("Id","ProviderId","SourceType","SourceId","SectionKey","Kind","DatedAt")
+                VALUES (@sr, @p, 'note', @s, 'data', 'section', now());
+                UPDATE "ThemeTags" SET "ExcerptRefId" = @er WHERE "NoteId" = @e;
+                UPDATE "ThemeTags" SET "ExcerptRefId" = @sr WHERE "NoteId" = @s;
+                """,
+                Ct, ("e", exact), ("s", section), ("text", text), ("er", exactRef), ("sr", sectionRef), ("p", seed.ProviderId),
+                ("a", start), ("b", start + "não dorme".Length));
+
+            // Act
+            var response = await NoteList.SearchAsync(db, seed.ProviderId, new NoteSearchRequest(null, null, null, null, null, term), Ct);
+            var plain = await NoteList.SearchAsync(db, seed.ProviderId, new NoteSearchRequest(null, patient, null, null), Ct);
+
+            // Assert
+            var e = response.Items.Single(i => i.Id == exact);
+            e.ExcerptId.Should().Be(exactRef);
+            e.ExcerptKind.Should().Be("exact");
+            e.Snippet!.Length.Should().BeLessThanOrEqualTo(160);
+            e.Snippet.Should().Contain("O paciente não dorme há 3 dias.").And.StartWith("…").And.EndWith("…");
+            var s = response.Items.Single(i => i.Id == section);
+            s.ExcerptId.Should().Be(sectionRef);
+            s.ExcerptKind.Should().Be("section");
+            s.Snippet.Should().Be("Linha um. Linha dois.");
+            var b = response.Items.Single(i => i.Id == bare);
+            b.ExcerptId.Should().BeNull();
+            b.Snippet.Should().BeNull();
+            plain.Items.Should().OnlyContain(i => i.ExcerptId == null && i.Snippet == null);
+        }
+        finally
+        {
+            await seed.ExecuteSqlAsync(
+                """
+                DELETE FROM "ExcerptRefs" WHERE "Id" IN (SELECT "ExcerptRefId" FROM "ThemeTags" WHERE "TermId" IN (SELECT "Id" FROM "ThemeTerms" WHERE "VocabularyId" = @v));
+                DELETE FROM "ThemeTags" WHERE "TermId" IN (SELECT "Id" FROM "ThemeTerms" WHERE "VocabularyId" = @v);
+                DELETE FROM "ThemeTerms" WHERE "VocabularyId" = @v;
+                DELETE FROM "ThemeVocabularies" WHERE "Id" = @v;
+                """,
+                CancellationToken.None, ("v", vocabulary));
+        }
+    }
+
     private async Task<Guid> AddTaggedNoteAsync(
         PatientSearchSeed seed, Guid patient, string status, Guid termId, DateTimeOffset? removedAt, DateTimeOffset createdAt, Guid? providerId = null)
     {

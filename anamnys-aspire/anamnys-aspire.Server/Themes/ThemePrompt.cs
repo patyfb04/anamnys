@@ -11,6 +11,9 @@ namespace Anamnys.Server.Themes;
 // and reused; the note text and the assistant turn come last. Exclusions (terms already tagged,
 // terms the provider removed) never enter the prompt: they are dropped from the parsed output
 // (ThemeGrammar.Pick), so neither the prefix nor the grammar's code list depends on the note.
+// Two output modes share that prefix (F-03): codes only (the on-demand suggest dialog, fast) and
+// {code, quote} items (structuring proposals and the background locate, which uses a grammar that
+// fixes the codes, ThemeGrammar.ForQuotes). The mode's instruction follows the note text.
 public static class ThemePrompt
 {
     // Closes the user turn and opens the assistant turn; evaluated per request after the text.
@@ -35,7 +38,8 @@ public static class ThemePrompt
     }
 
     // The whole prompt: Prefix(terms) + Body(text).
-    public static string Build(string text, IReadOnlyList<ThemeTermOption> terms) => Prefix(terms) + Body(text);
+    public static string Build(string text, IReadOnlyList<ThemeTermOption> terms, bool withQuotes = false) =>
+        Prefix(terms) + Body(text, withQuotes);
 
     // The constant part: system rules, the full term list, and the opening of the user turn. Depends
     // only on the terms (codes, labels, parents), never on the note.
@@ -45,7 +49,7 @@ public static class ThemePrompt
             .Append("Marque a evolução clínica de psicologia com temas da lista.\n")
             .Append("Regras: só temas de que o texto fala explicitamente; nunca deduza estado, risco ou diagnóstico; ")
             .Append($"prefira o subtema (pai > filho) mais específico; no máximo {ThemeGrammar.MaxItems}; nenhum: []. ")
-            .Append("Responda só com o array JSON dos códigos.\n")
+            .Append("Responda só com o array JSON pedido no fim da mensagem.\n")
             .Append("Temas (código: nome):");
         foreach (var term in Ordered(terms))
         {
@@ -55,8 +59,17 @@ public static class ThemePrompt
         return $"<|im_start|>system\n{system}<|im_end|>\n<|im_start|>user\nEvolução:\n";
     }
 
-    // The per-request part: the note text (control strings stripped) and the assistant turn.
-    public static string Body(string text) => NotePrompt.StripControl(text) + Suffix;
+    // What to answer, per mode. After the note, not in the prefix, so both modes share the cached prefix.
+    public const string CodesInstruction = "\n\nResponda com o array JSON dos códigos.";
+    public const string QuotesInstruction =
+        "\n\nResponda com o array JSON de objetos {\"code\": código, \"quote\": trecho}, em que trecho copia do texto, " +
+        "sem mudar nenhuma palavra, as poucas palavras (até 6) que falam do tema.";
+
+    public static string Instruction(bool withQuotes) => withQuotes ? QuotesInstruction : CodesInstruction;
+
+    // The per-request part: the note text (control strings stripped), the mode's instruction and the
+    // assistant turn.
+    public static string Body(string text, bool withQuotes = false) => NotePrompt.StripControl(text) + Instruction(withQuotes) + Suffix;
 
     // Cache key of a prefix: changes whenever a code, label, parent or the rules change.
     public static string PrefixKey(string prefix) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(prefix)));

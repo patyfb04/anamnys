@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
 import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
-import type { LiveNoteFormat, NoteDetail } from "@anamnys/shared/lib/types";
+import { excerptsApi } from "@anamnys/shared/api/excerpts";
+import { patientsApi } from "@anamnys/shared/api/patients";
+import type { LiveNoteFormat, NoteDetail, ThemeSelection } from "@anamnys/shared/lib/types";
 import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
@@ -15,7 +17,13 @@ import SignCard from "@/components/notes/SignCard";
 import NoteThemes from "@/components/themes/NoteThemes";
 import SessionScalesCard from "@/components/scales/SessionScalesCard";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const Route = createFileRoute("/_app/notes/$noteId")({
+  // Only an opaque excerpt id in the URL; the passage itself is loaded, never passed.
+  validateSearch: (search: Record<string, unknown>): { excerpt?: string } => ({
+    excerpt: typeof search.excerpt === "string" && UUID.test(search.excerpt) ? search.excerpt : undefined,
+  }),
   component: NotePage,
 });
 
@@ -24,11 +32,30 @@ export const Route = createFileRoute("/_app/notes/$noteId")({
 function NotePage() {
   const { t } = useTranslation();
   const { noteId } = Route.useParams();
+  const { excerpt } = Route.useSearch();
+  const [activeExcerptId, setActiveExcerptId] = useState<string | null>(excerpt ?? null);
+  useEffect(() => {
+    setActiveExcerptId(excerpt ?? null);
+  }, [excerpt]);
+  const [selection, setSelection] = useState<ThemeSelection | null>(null);
+  const passage = useQuery({
+    queryKey: ["excerpt", activeExcerptId],
+    queryFn: () => excerptsApi.get(activeExcerptId!),
+    enabled: !!activeExcerptId,
+    staleTime: 30_000,
+  });
   const query = useQuery({
     queryKey: ["note", noteId],
     queryFn: () => notesApi.getDetail(noteId),
     refetchInterval: (q) =>
       q.state.data?.status === "Processing" || q.state.data?.structureStatus === "pending" ? 5000 : false,
+  });
+
+  const patientId = query.data?.patientId;
+  const patient = useQuery({
+    queryKey: ["patient", patientId],
+    queryFn: () => patientsApi.get(patientId!),
+    enabled: !!patientId,
   });
 
   if (!query.data) {
@@ -78,11 +105,27 @@ function NotePage() {
           <DetailCard title={t("noteView.note")} icon={<FileText size={20} />}>
             <NoteBody note={note} onRetried={() => void query.refetch()} />
             {hasSections && (
-              <NoteSections sections={note.sections} editable={editable} noteId={noteId} onSaved={() => void query.refetch()} />
+              <NoteSections
+                sections={note.sections}
+                editable={editable}
+                noteId={noteId}
+                onSaved={() => void query.refetch()}
+                highlight={passage.data && passage.data.id === activeExcerptId && passage.data.noteId === noteId ? passage.data : null}
+                onMark={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setSelection : undefined}
+              />
             )}
             {!hasSections && editable && <WriteManually noteId={noteId} onCreated={() => void query.refetch()} />}
             {(note.status === "ReadyForReview" || !!note.signedAt) && (
-              <NoteThemes noteId={noteId} patientId={note.patientId} structureStatus={note.structureStatus ?? undefined} />
+              <NoteThemes
+                noteId={noteId}
+                patientId={note.patientId}
+                structureStatus={note.structureStatus ?? undefined}
+                sections={note.sections}
+                activeExcerptId={activeExcerptId}
+                onActivate={setActiveExcerptId}
+                selection={selection}
+                onSelectionDone={() => setSelection(null)}
+              />
             )}
           </DetailCard>
           {note.rawTranscript && (

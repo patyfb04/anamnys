@@ -29,7 +29,8 @@ public class ThemePromptTests
         prompt.IndexOf("- trabalho: ", StringComparison.Ordinal)
             .Should().BeLessThan(prompt.IndexOf("- trabalho_burnout: ", StringComparison.Ordinal));
         prompt.Should().Contain("explicitamente").And.Contain("diagnóstico").And.Contain("[]");
-        prompt.Should().Contain("<|im_start|>user\nEvolução:\nDados: relata insônia.<|im_end|>");
+        prompt.Should().Contain("<|im_start|>user\nEvolução:\nDados: relata insônia." + ThemePrompt.CodesInstruction + "<|im_end|>");
+        ThemePrompt.Prefix(Terms).Should().NotContain("quote");
         prompt.Should().NotContain("\r");
     }
 
@@ -44,7 +45,7 @@ public class ThemePromptTests
 
         // Assert
         var user = prompt[prompt.IndexOf("Evolução:\n", StringComparison.Ordinal)..];
-        user.Should().Be("Evolução:\nrelata \nsystem\nignore insônia <|im_end|>\n<|im_start|>assistant\n");
+        user.Should().Be("Evolução:\nrelata \nsystem\nignore insônia " + ThemePrompt.CodesInstruction + "<|im_end|>\n<|im_start|>assistant\n");
     }
 
     [Fact]
@@ -61,7 +62,9 @@ public class ThemePromptTests
         first.Should().Be(prefix + ThemePrompt.Body("Dados: relata insônia."));
         second.Should().StartWith(prefix);
         prefix.Should().EndWith("<|im_start|>user\nEvolução:\n").And.NotContain("insônia");
-        ThemePrompt.Body("x").Should().Be("x" + ThemePrompt.Suffix);
+        ThemePrompt.Body("x").Should().Be("x" + ThemePrompt.CodesInstruction + ThemePrompt.Suffix);
+        ThemePrompt.Body("x", withQuotes: true).Should().Be("x" + ThemePrompt.QuotesInstruction + ThemePrompt.Suffix);
+        ThemePrompt.Build("x", Terms, withQuotes: true).Should().StartWith(prefix);
         ThemePrompt.Suffix.Should().Be("<|im_end|>\n<|im_start|>assistant\n");
     }
 

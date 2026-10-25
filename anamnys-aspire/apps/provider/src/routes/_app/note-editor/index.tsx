@@ -107,7 +107,18 @@ function NoteListPage() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {items.map((note) => (
-            <NoteCard key={note.id} note={note} showPatient onClick={() => navigate({ to: "/notes/$noteId", params: { noteId: note.id } })} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              showPatient
+              onClick={() =>
+                navigate({
+                  to: "/notes/$noteId",
+                  params: { noteId: note.id },
+                  search: { excerpt: termId ? (note.excerptId ?? undefined) : undefined },
+                })
+              }
+            />
           ))}
           {query.hasNextPage && (
             <button

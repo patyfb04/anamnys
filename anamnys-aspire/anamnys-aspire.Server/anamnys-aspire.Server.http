@@ -283,6 +283,10 @@ DELETE {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000
 
 
 ###
+### Passage behind a reference (theme excerpt). 200 { id, kind: exact|section, noteId, patientId, sessionStartsAt, datedAt, sectionKey, sectionTitle, sectionText, start?, end? } (start/end only for exact); 401; 404 unknown or other provider's.
+GET {{Server_HostAddress}}/api/phi/providers/me/excerpts/00000000-0000-0000-0000-000000000000
+
+###
 ### Theme vocabulary admin (owners cookie __Host-anamnys-owner; provider cookie = 401). Reads: any staff role. Mutations: owner or ops (support = 403). Conflicts 409 { code }, input errors 400.
 ### Terms of the active vocabulary. 200 [{ id, code, label, parentId, status, introducedOn, successorIds, activeTagCount }].
 GET {{Server_HostAddress}}/api/admin/theme-vocabulary

@@ -1,5 +1,5 @@
 import api from "@anamnys/shared/api/client";
-import type { NoteTheme, ThemeSuggestion, ThemeTerm } from "@anamnys/shared/lib/types";
+import type { NoteTheme, ThemeSelection, ThemeSuggestion, ThemeTerm } from "@anamnys/shared/lib/types";
 
 export const themesApi = {
   vocabulary: async (): Promise<ThemeTerm[]> => {
@@ -10,12 +10,22 @@ export const themesApi = {
     const { data } = await api.get<NoteTheme[]>(`/phi/providers/me/notes/${noteId}/themes`);
     return data;
   },
-  add: async (noteId: string, termId: string, fromSuggestion = false): Promise<string> => {
+  add: async (
+    noteId: string,
+    termId: string,
+    fromSuggestion = false,
+    selection?: ThemeSelection,
+  ): Promise<string> => {
     const { data } = await api.post<{ id: string }>(`/phi/providers/me/notes/${noteId}/themes`, {
       termId,
       fromSuggestion,
+      ...selection,
     });
     return data.id;
+  },
+  // Queues the background search for the passages; the caller polls the list.
+  locate: async (noteId: string): Promise<void> => {
+    await api.post(`/phi/providers/me/notes/${noteId}/themes/locate`);
   },
   remove: async (noteId: string, tagId: string): Promise<void> => {
     await api.delete(`/phi/providers/me/notes/${noteId}/themes/${tagId}`);

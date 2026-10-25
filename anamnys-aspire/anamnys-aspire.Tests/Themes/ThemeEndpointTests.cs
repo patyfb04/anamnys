@@ -17,6 +17,7 @@ public class ThemeEndpointTests
     [InlineData("POST", "/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000001/themes")]
     [InlineData("DELETE", "/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000001/themes/00000000-0000-0000-0000-000000000002")]
     [InlineData("POST", "/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000001/themes/suggest")]
+    [InlineData("POST", "/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000001/themes/locate")]
     public async Task Route_WithoutSession_Returns401(string method, string path)
     {
         // Arrange
@@ -56,15 +57,17 @@ public class ThemeEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
-    [Fact]
-    public async Task Suggest_UnknownNote_Returns404()
+    [Theory]
+    [InlineData("suggest")]
+    [InlineData("locate")]
+    public async Task SuggestOrLocate_UnknownNote_Returns404(string action)
     {
         // Arrange
         using var session = await LoginAsProviderAsync();
 
         // Act
         using var response = await session.SendAsync(
-            new HttpRequestMessage(HttpMethod.Post, $"/api/phi/providers/me/notes/{Guid.NewGuid()}/themes/suggest"), Ct);
+            new HttpRequestMessage(HttpMethod.Post, $"/api/phi/providers/me/notes/{Guid.NewGuid()}/themes/{action}"), Ct);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -81,6 +84,25 @@ public class ThemeEndpointTests
             new HttpRequestMessage(HttpMethod.Post, $"/api/phi/providers/me/notes/{Guid.NewGuid()}/themes")
             {
                 Content = JsonContent.Create(new { }),
+            }, Ct);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData(4, null, "data")]
+    [InlineData(4, 8, null)]
+    public async Task Themes_PostWithHalfASelection_Returns400(int? start, int? end, string? sectionKey)
+    {
+        // Arrange
+        using var session = await LoginAsProviderAsync();
+
+        // Act
+        using var response = await session.SendAsync(
+            new HttpRequestMessage(HttpMethod.Post, $"/api/phi/providers/me/notes/{Guid.NewGuid()}/themes")
+            {
+                Content = JsonContent.Create(new { termId = Guid.NewGuid(), sectionKey, start, end }),
             }, Ct);
 
         // Assert
