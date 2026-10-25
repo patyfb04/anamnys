@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Search, Sparkles, X } from "lucide-react";
+import { Loader2, Plus, Search, Sparkles, X } from "lucide-react";
 import { themesApi } from "@anamnys/shared/api/themes";
 import { patientsApi } from "@anamnys/shared/api/patients";
 import { ApiError } from "@anamnys/shared/api/client";
@@ -50,6 +50,8 @@ export default function NoteThemes({
   const blockRef = useRef<HTMLElement>(null);
   const [locatingUntil, setLocatingUntil] = useState(0);
   const startLocating = () => setLocatingUntil(Date.now() + LOCATE_WINDOW_MS);
+  // Feedback for "Localizar trechos": the request only queues the work, which takes several seconds.
+  const [locateState, setLocateState] = useState<"idle" | "running" | "done" | "partial">("idle");
   const filled = useMemo(() => sections.filter((s) => s.content.trim()), [sections]);
   const [chosenSection, setChosenSection] = useState("");
   const sectionKey = filled.some((s) => s.key === chosenSection) ? chosenSection : (filled[0]?.key ?? "");
@@ -102,12 +104,16 @@ export default function NoteThemes({
   });
   const locate = useMutation({
     mutationFn: () => themesApi.locate(noteId),
+    onMutate: () => setLocateState("running"),
     onSuccess: () => {
       setError(null);
       startLocating();
       refresh();
     },
-    onError: fail,
+    onError: (e) => {
+      setLocateState("idle");
+      fail(e);
+    },
   });
   const remove = useMutation({
     mutationFn: (tagId: string) => themesApi.remove(noteId, tagId),
@@ -130,6 +136,20 @@ export default function NoteThemes({
 
   const items = tags.data ?? [];
   const hasSectionRefs = items.some((tag) => tag.excerptKind === "section");
+  useEffect(() => {
+    if (locateState !== "running") return;
+    if (tags.isSuccess && !hasSectionRefs) {
+      setLocateState("done");
+      return;
+    }
+    const id = setTimeout(() => setLocateState("partial"), Math.max(0, locatingUntil - Date.now()));
+    return () => clearTimeout(id);
+  }, [locateState, hasSectionRefs, tags.isSuccess, locatingUntil]);
+  useEffect(() => {
+    if (locateState !== "done" && locateState !== "partial") return;
+    const id = setTimeout(() => setLocateState("idle"), 8000);
+    return () => clearTimeout(id);
+  }, [locateState]);
   const showPicker = (picking || !!selection) && !readOnly;
   const actionClass = "inline-flex items-center gap-1 rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline disabled:opacity-60";
 
@@ -201,12 +221,19 @@ export default function NoteThemes({
             <Sparkles size={16} aria-hidden />
             {t("themes.suggestAction")}
           </button>
-          {hasSectionRefs && (
+          {locateState === "running" ? (
+            <span role="status" className="inline-flex items-center gap-1 px-2 py-1 text-label-md text-onSurfaceVariant">
+              <Loader2 size={16} className="animate-spin" aria-hidden />
+              {t("themes.locating")}
+            </span>
+          ) : hasSectionRefs && (
             <button type="button" disabled={locate.isPending} onClick={() => locate.mutate()} className={actionClass}>
               <Search size={16} aria-hidden />
               {t("themes.locate")}
             </button>
           )}
+          {locateState === "done" && <span role="status" className="px-2 py-1 text-label-md text-onSurfaceVariant">{t("themes.located")}</span>}
+          {locateState === "partial" && <span role="status" className="px-2 py-1 text-label-md text-onSurfaceVariant">{t("themes.locatedPartial")}</span>}
         </div>
       )}
       {showPicker && (
