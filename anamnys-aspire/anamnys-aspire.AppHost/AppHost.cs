@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
@@ -84,6 +86,23 @@ var mailpit = isDevRun && !useResend
         .WithEndpoint(port: 1025, targetPort: 1025, name: "smtp")
     : null;
 
+// Antivirus for external documents (design/specs/2026-10-25-external-documents-design.md §3): ClamAV's
+// clamd, reached over TCP by the server only. Signatures live in the data volume and are refreshed by the
+// image's freshclam, which needs outbound access to the signature mirror. The first start downloads them
+// and clamd listens only once they load, so the server does not wait for it: scans retry meanwhile.
+// ExternalDocuments:Scanner=fake (the test fixture) skips the container and uses the server's fake scanner.
+var externalScanner = builder.Configuration["ExternalDocuments:Scanner"] ?? "clamav";
+IResourceBuilder<ContainerResource>? clamav = null;
+if (externalScanner == "clamav")
+{
+    clamav = builder.AddContainer("clamav", "clamav/clamav", "1.4.3")
+        .WithVolume("anamnys-clamav-data", "/var/lib/clamav")
+        .WithEndpoint(targetPort: 3310, name: "clamd", scheme: "tcp");
+    var clamd = clamav.GetEndpoint("clamd");
+    builder.Services.AddHealthChecks().Add(new HealthCheckRegistration("clamd_ping", _ => new ClamdHealthCheck(clamd), null, null));
+    clamav.WithHealthCheck("clamd_ping");
+}
+
 // Declared before `keycloak` so ANAMNYS_APP_ORIGIN can reference this project's
 // endpoint without creating a WaitFor cycle: keycloak depends on server's endpoint,
 // so server cannot also WaitFor(keycloak) until keycloak exists (see below).
@@ -103,8 +122,17 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     .WithEnvironment("Notifications__WorkerEnabled", builder.Configuration["Notifications:WorkerEnabled"] ?? "true")
     // Loads the LLM in the background after start; the test fixture turns it off.
     .WithEnvironment("NoteStructuring__WarmSuggestionOnStart", builder.Configuration["NoteStructuring:WarmSuggestionOnStart"] ?? "true")
+    .WithEnvironment("ExternalDocuments__Scanner", externalScanner)
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
+
+if (clamav is not null)
+{
+    var clamdEndpoint = clamav.GetEndpoint("clamd");
+    server
+        .WithEnvironment("ExternalDocuments__ClamAvHost", clamdEndpoint.Property(EndpointProperty.Host))
+        .WithEnvironment("ExternalDocuments__ClamAvPort", clamdEndpoint.Property(EndpointProperty.Port));
+}
 
 // Fixed port, not a dynamic one: cookies and redirect URIs are bound to the
 // origin, so a port that moves between AppHost restarts invalidates every

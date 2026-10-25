@@ -75,6 +75,7 @@ start without it.
 | `PatientPortal:BaseUrl` | public URL of the patient app (e.g. `https://<host>/patient`) | Gate when an e-mail provider is set. Links in e-mails point here. |
 | `Notifications:WorkerEnabled` | `true` (default) | The appointment e-mail worker. |
 | `NoteStructuring:WarmSuggestionOnStart` | `true` (default) | Loads the Qwen weights and builds the theme-suggestion cache after startup (≈ 5 GB resident from the start). `false` defers it to the first suggestion (30-60 s wait). |
+| `ExternalDocuments:Scanner`, `ExternalDocuments:ClamAvHost`, `ExternalDocuments:ClamAvPort` | `clamav` (default), the clamd host and port (3310) | The antivirus for external documents (2.4b). `fake` is accepted only in Development (the test fixture). The AppHost passes all three (host and port from the `clamav` container; `fake` when the fixture sets it). |
 | `LiveSession:ModelDirectory`, `NoteStructuring:ModelDirectory` | paths on a **persistent volume** | Otherwise every deploy re-downloads Whisper and the two Qwen files (≈ 4.7 GB). |
 | `LiveSession:ModelSha256` | verify the committed `medium` hash by computing it locally once | The committed value came from the Hugging Face LFS pointer. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` / `APPLICATIONINSIGHTS_CONNECTION_STRING` | optional | Telemetry export. Must stay self-hosted or covered by a processor agreement (spans may carry route values). |
@@ -99,6 +100,13 @@ start without it.
 - The `anamnys-storage-data` volume on durable storage, **with backups** (2.7).
 - Optional: restrict the S3 gRPC port (18333) at the network level — SeaweedFS 4.48 binds it to
   all interfaces and has no flag to move it.
+
+### 2.4b Antivirus for external documents (ClamAV)
+
+- Container `clamav/clamav:1.4.3` (pinned; never `latest`), AppHost resource `clamav`, data volume `anamnys-clamav-data` (`/var/lib/clamav`, signatures), clamd on TCP 3310 reachable only from the server (no public endpoint). Health check: clamd `PING` answers `PONG`. The same container is declared in publish mode.
+- **Outbound access** to the ClamAV signature mirror (`database.clamav.net`, HTTPS) for the image's freshclam; the first start downloads the databases and clamd listens only afterwards, so uploads stay `pending` (the scan retries) until it is ready.
+- Measured cost (`clamav/clamav:1.4.3`, local run): idle RAM 969 MiB; signatures about 113 MB (108 MiB) on the volume (`main.cvd` 89,072,577 bytes, `daily.cvd` 23,443,876 bytes, plus 0.28 MB of bytecode); image 342 MB (144 MB compressed); INSTREAM scan of a 5 MB PDF 0.47 s, of a 20 MB PDF 1.77 s; the EICAR test file is detected. The first start downloads those signatures (about 113 MB) and takes a few minutes. Reload peak not measured: expect up to about 2x the idle RAM while the daily database reloads. While clamd is unreachable (first start, reload) uploads stay `pending` and the worker keeps retrying with a backoff capped at 5 minutes; those connection failures do not count as scan attempts. A scan that times out does count as an attempt. A file whose scan keeps losing the connection after clamd accepted it is marked `failed` once that has lasted 30 minutes (the worker does the same for no other kind of unavailability).
+- Migration `design/migrations/2026-10-25-external-documents.sql` (idempotent) before the new server version.
 
 ### 2.5 Database
 

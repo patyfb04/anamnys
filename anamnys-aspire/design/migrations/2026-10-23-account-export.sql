@@ -44,8 +44,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS "AccountExports_Provider_active_key"
     ON "AccountExports" ("ProviderId") WHERE "Status" = ANY (ARRAY['queued'::text, 'running'::text]);
 
 -- Export requests and downloads are audited with the provider as actor and no note or document.
-ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
-ALTER TABLE "AuditEntries"
-  ADD CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text]))));
+-- Later migrations widen this list (2026-10-25-external-documents.sql owns the full, current one): when the
+-- constraint already allows the external document actions, a re-run of this file leaves it alone.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'AuditEntries_subject_ck' AND pg_get_constraintdef(oid) LIKE '%external_document_blocked%') THEN
+    ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
+    ALTER TABLE "AuditEntries"
+      ADD CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text]))));
+  END IF;
+END $$;
 
 COMMIT;

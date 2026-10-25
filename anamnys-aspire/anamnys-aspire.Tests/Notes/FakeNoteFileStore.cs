@@ -49,4 +49,7 @@ internal sealed class FakeNoteFileStore : INoteFileStore
 
     public Uri PresignGet(string key, string downloadFileName, TimeSpan validFor, string contentType = "application/pdf") =>
         new($"http://store.test/{key}?name={downloadFileName}&ttl={(int)validFor.TotalSeconds}");
+
+    public Uri PresignGetInline(string key, string contentType, TimeSpan validFor) =>
+        new($"http://store.test/{key}?inline=1&type={contentType}&ttl={(int)validFor.TotalSeconds}");
 }

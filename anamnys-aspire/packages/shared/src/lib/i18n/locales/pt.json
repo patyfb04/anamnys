@@ -21,6 +21,58 @@
       "symbol": "Um símbolo"
     }
   },
+  "externalDocuments": {
+    "title": "Documentos recebidos",
+    "upload": "Enviar documento",
+    "uploadTitle": "Enviar documento recebido",
+    "tabs": { "issued": "Emitidos", "received": "Recebidos" },
+    "empty": "Nenhum documento recebido.",
+    "listEmpty": "Nenhum documento recebido neste filtro.",
+    "loadFailed": "Não foi possível carregar os documentos recebidos.",
+    "allKinds": "Todos",
+    "kind": "Tipo de documento",
+    "kindPlaceholder": "Selecione o tipo",
+    "kinds": {
+      "laudo": "Laudo",
+      "receita": "Receita",
+      "exame": "Exame",
+      "encaminhamento": "Encaminhamento",
+      "relatorio_externo": "Relatório externo",
+      "outro": "Outro"
+    },
+    "date": "Data do documento (opcional)",
+    "description": "Descrição (opcional)",
+    "dropHint": "Arraste o arquivo aqui ou",
+    "chooseFile": "Escolher arquivo",
+    "limits": "PDF, JPG ou PNG, até 20 MB.",
+    "send": "Enviar",
+    "uploading": "Enviando…",
+    "uploaded": "Documento enviado. Verificando o arquivo.",
+    "uploadFailed": "Não foi possível enviar o documento.",
+    "openFailed": "Não foi possível abrir o documento.",
+    "popupBlocked": "O navegador bloqueou a nova aba. Permita pop-ups para este site e tente de novo.",
+    "deleted": "Documento excluído.",
+    "deleteFailed": "Não foi possível excluir o documento.",
+    "delete": "Excluir",
+    "deleteTitle": "Excluir documento?",
+    "deleteConfirm": "O arquivo {{name}} será removido do armazenamento e deixará de aparecer na lista.",
+    "documentDate": "documento de {{date}}",
+    "uploadedOn": "enviado em {{date}}",
+    "status": {
+      "pending": "Verificando",
+      "clean": "Disponível",
+      "infected": "Bloqueado",
+      "failed": "Falhou"
+    },
+    "errors": {
+      "unsupported_type": "Formato não aceito. Envie um arquivo PDF, JPG ou PNG.",
+      "too_large": "O arquivo é maior que 20 MB.",
+      "type_mismatch": "O conteúdo do arquivo não corresponde à extensão.",
+      "empty": "O arquivo está vazio.",
+      "archived": "Paciente arquivado: não é possível alterar os documentos.",
+      "not_available": "O documento ainda não está disponível para abrir."
+    }
+  },
   "documents": {
     "title": "Documentos",
     "new": "Novo documento",
