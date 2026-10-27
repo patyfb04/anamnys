@@ -30,6 +30,7 @@ export default function ScalesCard({ patientId, readOnly }: { patientId: string;
     onSuccess: async () => {
       setRemoving(null);
       await queryClient.invalidateQueries({ queryKey: ["scales", patientId] });
+      await queryClient.invalidateQueries({ queryKey: ["timeline", patientId] });
       toast.success(t("scales.removed"));
     },
     onError: (e) => {
@@ -41,7 +42,7 @@ export default function ScalesCard({ patientId, readOnly }: { patientId: string;
   const data = series.data ?? [];
 
   return (
-    <DetailCard
+    <DetailCard collapsibleId="scales"
       title={t("scales.title")}
       icon={<Activity size={20} />}
       action={

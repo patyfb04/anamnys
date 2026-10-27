@@ -413,6 +413,25 @@ Document reading and declared facts (F-08; chapter `documentation/27-document-fa
 - **Not exercised in a browser:** the facts modal, passage modal and declared-facts card are type-checked
   and built only; tests use a fake extractor.
 
+## Linha do tempo de medicação
+
+Medication timeline (F-09; chapter `documentation/28-medication-timeline.md`).
+
+- **A stop never shows "no prontuário".** A suspension closes the target record and creates none, so its
+  fact has no link to show; the fact stays confirmed and can be applied again to another target.
+- **The prefill is text rules only**, no model. Unusual wording leaves fields blank, and a quote naming
+  two drugs is not split into two records.
+- **The timeline is not in the Análises page yet.** It lives on the patient record only; F-10 adds the
+  other layers (events, themes, notes) and may move it.
+- **A record from a deleted document keeps only the label** "documento excluído"; the link to the
+  document and the passage are gone.
+- **One record per fact:** a second `new` or `dose_change` from the same fact answers 409
+  `already_recorded`; fixing a wrong record goes through the existing edit flow on the medications card.
+- **Not exercised in a browser:** the medication form, the timeline card and its details panel are
+  type-checked and built only.
+- **The F-60 export does not include external documents,** so the origin of a document-based medication
+  is not exported either.
+
 ## Exportação
 
 Full account export (F-60; chapter `documentation/24-account-export.md`).

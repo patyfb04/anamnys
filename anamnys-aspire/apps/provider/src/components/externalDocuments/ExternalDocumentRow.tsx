@@ -68,6 +68,8 @@ export default function ExternalDocumentRow({
         queryClient.invalidateQueries({ queryKey: ["external-documents"] }),
         // The document's facts go with it.
         queryClient.invalidateQueries({ queryKey: ["declared-facts", doc.patientId] }),
+        // Medication segments from this document now read "documento excluído".
+        queryClient.invalidateQueries({ queryKey: ["timeline", doc.patientId] }),
       ]);
     },
     onError: (e) => {

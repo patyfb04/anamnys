@@ -23,7 +23,7 @@ export default function ExternalDocumentsCard({ patientId, readOnly }: { patient
   const items = list.data ?? [];
 
   return (
-    <DetailCard
+    <DetailCard collapsibleId="externalDocuments"
       title={t("externalDocuments.title")}
       icon={<Paperclip size={20} />}
       action={

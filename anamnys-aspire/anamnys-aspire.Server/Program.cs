@@ -17,6 +17,7 @@ using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
+using Anamnys.Server.Medications;
 using Anamnys.Server.Scales;
 using Anamnys.Server.Storage;
 using Anamnys.Server.Themes;
@@ -155,6 +156,7 @@ phi.MapExcerptEndpoints();
 phi.MapExportEndpoints();
 phi.MapExternalDocumentEndpoints();
 phi.MapFactEndpoints();
+phi.MapMedicationEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

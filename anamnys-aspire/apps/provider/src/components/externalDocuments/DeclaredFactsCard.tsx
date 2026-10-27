@@ -22,7 +22,7 @@ export default function DeclaredFactsCard({ patientId }: { patientId: string }) 
     [t(`externalDocuments.kinds.${f.documentKind}`), formatDate(f.documentDate ?? f.uploadedAt, i18n.language)].join(" · ");
 
   return (
-    <DetailCard title={t("documentFacts.recordTitle")} icon={<ClipboardCheck size={20} />}>
+    <DetailCard collapsibleId="declaredFacts" title={t("documentFacts.recordTitle")} icon={<ClipboardCheck size={20} />}>
       {query.isPending ? null : query.isError ? (
         <p className="text-body-md text-error">{t("documentFacts.recordLoadFailed")}</p>
       ) : groups.length === 0 ? (

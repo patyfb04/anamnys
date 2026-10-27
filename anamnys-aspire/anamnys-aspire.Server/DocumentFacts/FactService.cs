@@ -11,7 +11,7 @@ public enum FactOutcome { Ok, NotFound, Archived, NotPending, InvalidValue, NotA
 
 public sealed record FactItem(
     Guid Id, string Kind, string Value, string? CorrectedValue, int? Page, string? Quote, string Status,
-    Guid? ExcerptRefId, DateTimeOffset CreatedAt, DateTimeOffset? ConfirmedAt);
+    Guid? ExcerptRefId, DateTimeOffset CreatedAt, DateTimeOffset? ConfirmedAt, bool Recorded = false);
 
 public sealed record DocumentFactsView(
     Guid DocumentId, string? ReadStatus, int? PageCount, bool PagesTruncated, bool Extracting, IReadOnlyList<FactItem> Facts);
@@ -92,7 +92,7 @@ public static class FactService
                 && !db.AuditEntries.Any(a => a.Action == ExtractedAction && a.ActorId == d.ProviderId
                     && a.At >= d.ReadAt && a.NewValue!.StartsWith(d.Id.ToString())));
 
-    private static Task LockDocumentAsync(AnamnysDbContext db, Guid documentId, CancellationToken ct) =>
+    internal static Task LockDocumentAsync(AnamnysDbContext db, Guid documentId, CancellationToken ct) =>
         db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"ExternalDocuments\" WHERE \"Id\" = {documentId} FOR UPDATE", ct);
 
     // The pages of a document whose read is done, for the extractor; null when the document is not there.
@@ -219,7 +219,8 @@ public static class FactService
         }
         var facts = await db.ExtractedFacts.AsNoTracking()
             .Where(f => f.ExternalDocumentId == documentId && f.ProviderId == providerId && f.Status != FactStatus.Discarded)
-            .Select(f => new FactItem(f.Id, f.Kind, f.Value, f.CorrectedValue, f.PageRef, f.Quote, f.Status, f.ExcerptRefId, f.CreatedAt, f.ConfirmedAt))
+            .Select(f => new FactItem(f.Id, f.Kind, f.Value, f.CorrectedValue, f.PageRef, f.Quote, f.Status, f.ExcerptRefId, f.CreatedAt, f.ConfirmedAt,
+                db.MedicationEntries.Any(m => m.SourceFactId == f.Id)))
             .ToListAsync(ct);
         return new DocumentFactsView(
             documentId, document.ReadStatus, document.PageCount, document.PagesTruncated, extracting,
