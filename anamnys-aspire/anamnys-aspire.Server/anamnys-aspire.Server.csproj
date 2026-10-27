@@ -33,7 +33,10 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+    <PackageReference Include="PDFtoImage" Version="5.4.0" />
     <PackageReference Include="QuestPDF" Version="2026.9.1" />
+    <PackageReference Include="Tesseract.CrossPlatform" Version="5.5.2.200" />
     <PackageReference Include="Whisper.net" Version="1.9.1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
   </ItemGroup>

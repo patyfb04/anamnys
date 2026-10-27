@@ -213,7 +213,7 @@ excluded it returns `[]`.
 
 **Warm-up.** Loading the weights and building the prefix take 30-60 s, which a provider would
 otherwise wait out in the suggest dialog. `IThemeSuggester.WarmAsync(terms, ct)` does exactly that
-work under the same gate and nothing else (no inference past the prefix); it is a no-op when the
+work under the same gate (`LlmGate`, with interactive and background priorities; fact extraction of chapter 27 shares it) and nothing else (no inference past the prefix); it is a no-op when the
 cache is current. `ThemeWarmupService` (a `BackgroundService`, registered with the suggester) calls
 it once after `ApplicationStarted`, so startup is never delayed, reading the active term options
 with its own scope. After every successful vocabulary mutation (add, rename, retire, split, merge)

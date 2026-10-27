@@ -31,7 +31,8 @@ namespace Anamnys.Server.Themes;
 // samples. A change in any code, label or parent changes the prefix key and rebuilds the context
 // on the next call; WarmAsync builds it ahead of the first call (the hosted ThemeWarmupService does, at start and
 // after vocabulary changes); without it the first call builds it lazily.
-public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeights Weights, ModelParams Params)>> load, NoteStructuringOptions options)
+public sealed class LlamaThemeSuggester(
+    Func<CancellationToken, Task<(LLamaWeights Weights, ModelParams Params)>> load, NoteStructuringOptions options, LlmGate? sharedGate = null)
     : IThemeSuggester, IDisposable
 {
     // Output cap per mode, used for the generation loop and for the note-text budget. Codes only: ten
@@ -47,14 +48,16 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
     internal const int ForcedTokensPerItem = 16;
 
     // One model run at a time: concurrent suggest requests queue instead of piling up inference,
-    // and the cached context is only ever touched under this gate.
-    private readonly SemaphoreSlim gate = new(1, 1);
+    // and the cached context is only ever touched under this gate. The gate is shared with document
+    // fact extraction (LlmGate, F-08); built without one (tests), the suggester has its own.
+    private readonly bool ownsGate = sharedGate is null;
+    private readonly LlmGate gate = sharedGate ?? new LlmGate();
     private LLamaContext? context;
     private string? prefixKey;
     private int prefixTokens;
 
-    public LlamaThemeSuggester(LlmModelProvider models, IOptions<NoteStructuringOptions> options)
-        : this(models.GetAsync, options.Value) { }
+    public LlamaThemeSuggester(LlmModelProvider models, IOptions<NoteStructuringOptions> options, LlmGate gate)
+        : this(models.GetAsync, options.Value, gate) { }
 
     public async Task<IReadOnlyList<ThemeCodeQuote>> SuggestAsync(
         string text, IReadOnlyList<ThemeTermOption> terms, IReadOnlyCollection<string> excludedCodes, bool withQuotes,
@@ -68,7 +71,9 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
         var codes = terms.Select(t => t.Code).ToHashSet(StringComparer.Ordinal);
         var excluded = excludedCodes.Where(codes.Contains).ToHashSet(StringComparer.Ordinal);
         var items = ThemeGrammar.ItemsWithExcluded(excluded.Count);
-        await gate.WaitAsync(ct);
+        // Codes only is the suggest dialog, where the provider waits: it goes before background runs
+        // (document fact extraction yields to it between steps). With quotes is structuring's proposals.
+        await gate.WaitAsync(withQuotes ? LlmPriority.Background : LlmPriority.Interactive, ct);
         try
         {
             if (!withQuotes)
@@ -95,7 +100,7 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
             return [];
         }
         var result = new List<ThemeCodeQuote>();
-        await gate.WaitAsync(ct);
+        await gate.WaitAsync(LlmPriority.Background, ct);
         try
         {
             foreach (var batch in wanted.Chunk(QuoteBatch))
@@ -117,7 +122,7 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
         {
             return;
         }
-        await gate.WaitAsync(ct);
+        await gate.WaitAsync(LlmPriority.Background, ct);
         try
         {
             var (weights, parameters) = await load(ct);
@@ -253,7 +258,7 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
 
     // Evaluates tokens from position start in BatchSize chunks; only the last token gets logits, and
     // it is the last entry of batch on return. Returns the next free position.
-    private static async Task<int> DecodeAsync(LLamaContext ctx, LLamaBatch batch, LLamaToken[] tokens, int start, CancellationToken ct)
+    internal static async Task<int> DecodeAsync(LLamaContext ctx, LLamaBatch batch, LLamaToken[] tokens, int start, CancellationToken ct)
     {
         var chunk = (int)ctx.BatchSize;
         for (var offset = 0; offset < tokens.Length; offset += chunk)
@@ -277,6 +282,9 @@ public sealed class LlamaThemeSuggester(Func<CancellationToken, Task<(LLamaWeigh
     {
         context?.Dispose();
         context = null;
-        gate.Dispose();
+        if (ownsGate)
+        {
+            gate.Dispose();
+        }
     }
 }

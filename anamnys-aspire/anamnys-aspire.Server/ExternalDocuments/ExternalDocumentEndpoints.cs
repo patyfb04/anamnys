@@ -1,4 +1,5 @@
 using Anamnys.Server.Data;
+using Anamnys.Server.DocumentFacts;
 using Anamnys.Server.Patients;
 using Anamnys.Server.Storage;
 using Microsoft.AspNetCore.Http.Features;
@@ -128,18 +129,20 @@ public static class ExternalDocumentEndpoints
                 : Refusal(result.Outcome);
         });
 
-        group.MapGet("patients/{patientId:guid}/external-documents", async (Guid patientId, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        group.MapGet("patients/{patientId:guid}/external-documents", async (
+            Guid patientId, HttpContext http, AnamnysDbContext db, FactQueue facts, CancellationToken ct) =>
         {
             if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
             {
                 return Results.Unauthorized();
             }
             return await ExternalDocumentService.ListAsync(db, providerId, patientId, ct) is { } items
-                ? Results.Ok(items)
+                ? Results.Ok(items.Select(i => i with { Extracting = facts.IsBusy(i.Id) }))
                 : Results.NotFound();
         });
 
-        group.MapPost("external-documents/search", async (ExternalDocumentSearchRequest? request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        group.MapPost("external-documents/search", async (
+            ExternalDocumentSearchRequest? request, HttpContext http, AnamnysDbContext db, FactQueue facts, CancellationToken ct) =>
         {
             if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
             {
@@ -151,7 +154,8 @@ public static class ExternalDocumentEndpoints
             {
                 return Results.ValidationProblem(errors);
             }
-            return Results.Ok(await ExternalDocumentService.SearchAsync(db, providerId, request, ct));
+            var found = await ExternalDocumentService.SearchAsync(db, providerId, request, ct);
+            return Results.Ok(found with { Items = found.Items.Select(i => i with { Extracting = facts.IsBusy(i.Id) }).ToList() });
         });
 
         group.MapPost("external-documents/{id:guid}/open", async (Guid id, HttpContext http, AnamnysDbContext db, INoteFileStore store, CancellationToken ct) =>

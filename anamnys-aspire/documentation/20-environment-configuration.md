@@ -76,6 +76,7 @@ start without it.
 | `Notifications:WorkerEnabled` | `true` (default) | The appointment e-mail worker. |
 | `NoteStructuring:WarmSuggestionOnStart` | `true` (default) | Loads the Qwen weights and builds the theme-suggestion cache after startup (≈ 5 GB resident from the start). `false` defers it to the first suggestion (30-60 s wait). |
 | `ExternalDocuments:Scanner`, `ExternalDocuments:ClamAvHost`, `ExternalDocuments:ClamAvPort` | `clamav` (default), the clamd host and port (3310) | The antivirus for external documents (2.4b). `fake` is accepted only in Development (the test fixture). The AppHost passes all three (host and port from the `clamav` container; `fake` when the fixture sets it). |
+| `DocumentFacts:Extractor`, `DocumentReading:*` | `llama` (default) or `none`; reading limits and Tesseract data (2.4c) | Reading and fact extraction for external documents (chapter 27). |
 | `LiveSession:ModelDirectory`, `NoteStructuring:ModelDirectory` | paths on a **persistent volume** | Otherwise every deploy re-downloads Whisper and the two Qwen files (≈ 4.7 GB). |
 | `LiveSession:ModelSha256` | verify the committed `medium` hash by computing it locally once | The committed value came from the Hugging Face LFS pointer. |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` / `APPLICATIONINSIGHTS_CONNECTION_STRING` | optional | Telemetry export. Must stay self-hosted or covered by a processor agreement (spans may carry route values). |
@@ -107,6 +108,16 @@ start without it.
 - **Outbound access** to the ClamAV signature mirror (`database.clamav.net`, HTTPS) for the image's freshclam; the first start downloads the databases and clamd listens only afterwards, so uploads stay `pending` (the scan retries) until it is ready.
 - Measured cost (`clamav/clamav:1.4.3`, local run): idle RAM 969 MiB; signatures about 113 MB (108 MiB) on the volume (`main.cvd` 89,072,577 bytes, `daily.cvd` 23,443,876 bytes, plus 0.28 MB of bytecode); image 342 MB (144 MB compressed); INSTREAM scan of a 5 MB PDF 0.47 s, of a 20 MB PDF 1.77 s; the EICAR test file is detected. The first start downloads those signatures (about 113 MB) and takes a few minutes. Reload peak not measured: expect up to about 2x the idle RAM while the daily database reloads. While clamd is unreachable (first start, reload) uploads stay `pending` and the worker keeps retrying with a backoff capped at 5 minutes; those connection failures do not count as scan attempts. A scan that times out does count as an attempt. A file whose scan keeps losing the connection after clamd accepted it is marked `failed` once that has lasted 30 minutes (the worker does the same for no other kind of unavailability).
 - Migration `design/migrations/2026-10-25-external-documents.sql` (idempotent) before the new server version.
+
+### 2.4c Document reading (PDFium, Tesseract OCR)
+
+- Clean external documents are read in process: embedded PDF text (PdfPig), and scanned pages rendered with PDFium (PDFtoImage, bblanchon PDFium natives) and OCR'd with Tesseract 5 (Tesseract.CrossPlatform + Tesseract.Native 5.5.2.200). The native libraries come from NuGet (`runtimes/win-x64` and `runtimes/linux-x64`); nothing is installed on the host.
+- **Linux loading of Tesseract.CrossPlatform is untested.** It has only been run on Windows. The Linux build may still need system libraries the package does not bundle (for example `libgomp1` for OpenMP). Before the first deploy, run a smoke test in the Linux container: upload a scanned PDF and check that its pages are read with OCR.
+- Tesseract Portuguese data: `DocumentReading:TessdataUrl` (tessdata_fast `por.traineddata`, tag 4.1.0) is downloaded on first use to `DocumentReading:TessdataDirectory` (default `%LOCALAPPDATA%/anamnys/tessdata`, use a persistent volume in a container) and verified against `DocumentReading:TessdataSha256`; no hash, no download. This needs **outbound access to raw.githubusercontent.com** on the first OCR. Offline, every read that needs OCR fails its attempts and ends `failed`. These documents do not retry on their own: once the data is reachable, read them again with "Ler de novo". Alternatively, place the verified file in the directory beforehand.
+- Limits: `DocumentReading:MaxPages` (20; pages beyond it are flagged), `MinTextCharacters` (20; below it a page is a scan), `RenderDpi` (300), `MaxRenderPixels` (4200; longest side of a rendered page or of an uploaded image before OCR).
+- Native libraries on Linux: PDFium, SkiaSharp, Tesseract and Leptonica come from the NuGet packages (`runtimes/linux-x64/native`). Loading has not been tried on Linux; see the smoke-test note above.
+- Fact extraction (F-08) uses the Qwen weights already configured under `NoteStructuring:ModelDirectory` and the shared model gate; there is no extra model download. `DocumentFacts:Extractor` is `llama` (default) or `none` (no extraction; read documents get no facts). The AppHost forwards it; the test fixture sets `none`. Extraction takes 47 to 90 s per one- or two-page document on CPU (chapter 27).
+- Migration `design/migrations/2026-10-26-document-facts.sql` (idempotent) before the new server version. It adds the read columns, `ExternalDocumentPages`, the fact columns and checks, `ExcerptRefs.PageNumber`, and the audit actions `fact_confirmed`, `fact_corrected`, `fact_discarded`, `facts_extracted` and `facts_deleted`. **Re-run note:** a database that got an earlier version of this file must run it again (every step is guarded). The final version fixes `ExcerptRefs_DocumentPage_ck` (it let a null page through) and adds `facts_deleted` to `AuditEntries_subject_ck`. It also deletes once the legacy ownerless `ExtractedFacts` rows and the pageless `document` excerpt references, and sets existing clean documents to `ReadStatus='pending'` the first time the column is added, so the startup sweep reads them.
 
 ### 2.5 Database
 
@@ -167,7 +178,8 @@ start without it.
 - [ ] Keycloak SMTP relay (not built yet)
 - [ ] Keycloak image without dev seed; TLS; redirect URIs
 - [ ] Model directories on a persistent volume; Whisper SHA-256 verified
-- [ ] Migrations applied in order (through `2026-10-24-excerpt-refs.sql`)
+- [ ] Migrations applied in order (through `2026-10-26-document-facts.sql`)
+- [ ] Tesseract data reachable (or pre-placed) and a Linux container OCR smoke test
 - [ ] `ForwardedHeaders` configured
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore

@@ -123,6 +123,8 @@ var server = builder.AddProject<Projects.anamnys_aspire_Server>("server")
     // Loads the LLM in the background after start; the test fixture turns it off.
     .WithEnvironment("NoteStructuring__WarmSuggestionOnStart", builder.Configuration["NoteStructuring:WarmSuggestionOnStart"] ?? "true")
     .WithEnvironment("ExternalDocuments__Scanner", externalScanner)
+    // Document fact extraction with the LLM (F-08); the test fixture sets "none" so the model never loads.
+    .WithEnvironment("DocumentFacts__Extractor", builder.Configuration["DocumentFacts:Extractor"] ?? "llama")
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints();
 

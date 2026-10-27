@@ -42,6 +42,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<AccountExport> AccountExports => Set<AccountExport>();
     public DbSet<ExcerptRef> ExcerptRefs => Set<ExcerptRef>();
     public DbSet<ExternalDocument> ExternalDocuments => Set<ExternalDocument>();
+    public DbSet<ExternalDocumentPage> ExternalDocumentPages => Set<ExternalDocumentPage>();
+    public DbSet<ExtractedFact> ExtractedFacts => Set<ExtractedFact>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +194,22 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         {
             e.ToTable("ExternalDocuments");
             e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<ExternalDocumentPage>(e =>
+        {
+            e.ToTable("ExternalDocumentPages");
+            e.HasKey(x => x.Id);
+            e.HasOne<ExternalDocument>().WithMany().HasForeignKey(x => x.ExternalDocumentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ExternalDocumentId, x.PageNumber }).IsUnique();
+        });
+
+        modelBuilder.Entity<ExtractedFact>(e =>
+        {
+            e.ToTable("ExtractedFacts");
+            e.HasKey(x => x.Id);
+            e.HasOne<ExternalDocument>().WithMany().HasForeignKey(x => x.ExternalDocumentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<ExcerptRef>().WithMany().HasForeignKey(x => x.ExcerptRefId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<AccountExport>(e =>

@@ -1,6 +1,6 @@
 # Known gaps
 
-**Started:** 2026-10-03 · **Last updated:** 2026-10-18
+**Started:** 2026-10-03 · **Last updated:** 2026-10-26
 **Status:** Open. The official backlog is the Notion page "Plano de Implementação"; move
 these items there when the workspace has free blocks, then delete this file.
 
@@ -358,8 +358,9 @@ Excerpt references for theme tags (F-03; chapter `documentation/25-excerpt-refer
 - **The migration deleted the old `ExcerptRefs` rows once** (they were unusable and nothing created them)
   and gave the 114 active tags of the dev database a `section` reference. Existing tags are not located
   by the model in bulk.
-- **Only note sections are sources.** Transcripts, documents (F-08) and patient quotes (F-15) have no
-  `SourceType` yet.
+- **Note sections and document pages are the only sources.** Documents (F-08) are sources through
+  `SourceType` `document` with a `PageNumber`; transcripts and patient quotes (F-15) have no `SourceType`
+  yet.
 - **The architecture test is file-level.** It checks that a class in `Analyses/` calls `RequireExcerpt`,
   not that every query in it does; `GetPassageAsync` shows an exact range only when the text at the offsets still equals the quote.
 - **A restructure (draft) relocates the references and queues a note-wide locate.** `NoteStructuringJob` calls `RelocateNoteAsync` after replacing the sections: a quote not found again, or a section key that is gone, leaves a `section` reference on the first non-empty section (the quote is kept) until the locate finds it.
@@ -377,6 +378,40 @@ External documents (F-07; chapter `documentation/26-external-documents.md`).
 - **Signature updates need outbound internet** from the ClamAV container (`database.clamav.net`, HTTPS).
 - **Uploads are held in server memory** (up to about 21 MB each) so the file never reaches a temp file.
 - **Not exercised in a browser:** the upload (multipart header handling) and the open-in-new-tab flow.
+
+## Fatos declarados
+
+Document reading and declared facts (F-08; chapter `documentation/27-document-facts.md`).
+
+- **Recall is uneven.** In the probe on the six sample PDFs, issuer, registration and date were often
+  missed when they sit at the end of a short document. Some kinds were wrong (a therapy filed as
+  `medication`) and exam results came out as paraphrased `conclusion` values. Every kept quote was
+  literal and located; the provider's review is the safeguard. Prompt and model tuning is open.
+- **Extraction is slow on CPU:** 47 to 90 s per one- or two-page document, one at a time, so a batch queues
+  for minutes. A suggestion meanwhile takes 5.8 to 7.0 s instead of 4.0 to 4.3 s (priority gate).
+- **Linux is untested** for Tesseract.CrossPlatform (young, single-maintainer package; may need
+  `libgomp1`). A Linux container OCR smoke test is required before deploy. The first OCR needs outbound
+  access to raw.githubusercontent.com, or the verified data file placed beforehand.
+- **One re-read case is not recovered by the restart sweep:** a "Ler de novo" extraction interrupted after
+  an earlier successful one. Pressing the button again recovers it.
+- **"Confirmar todos" is sequential:** one request per fact; a fact answering `not_pending` is skipped,
+  any other error stops it; there is no bulk endpoint.
+- **Extraction attempt guard:** each extraction counts an attempt (`ExtractAttempts`) before the model
+  runs; the startup sweep skips a document with 2 or more since its read, leaving its pending facts as they
+  are, so an extraction that crashes the process is not retried forever. A new read and "Ler de novo"
+  reset the count.
+- **Decompression cap:** a JPG/PNG whose header declares more than 50 MP is refused (read `failed`) before
+  any decode; large JPEGs are decoded at a reduced scale.
+- **Deferred: no hang watchdog on the read path.** An OCR, PDF render or extraction call that never
+  returns (without crashing) holds its worker until the process restarts.
+- **Facts of a deleted document are removed by design** (every status, confirmed included, and their
+  references), audited as `facts_deleted`. A confirmed fact cannot outlive its document.
+- **The extraction queue is in memory** and is rebuilt at startup by the sweep (documents never extracted
+  or re-read after their extraction).
+- **Pages beyond the 20th are not read;** the document is flagged `PagesTruncated`.
+- **The F-60 export does not include external documents or declared facts.**
+- **Not exercised in a browser:** the facts modal, passage modal and declared-facts card are type-checked
+  and built only; tests use a fake extractor.
 
 ## Exportação
 

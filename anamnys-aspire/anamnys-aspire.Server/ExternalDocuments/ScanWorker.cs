@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.DocumentReading;
 using Anamnys.Server.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -171,12 +172,21 @@ public sealed class ScanWorker(
 
             if (verdict.Clean)
             {
-                await db.ExternalDocuments
+                // A clean document is queued for reading (F-08); the read worker's sweep picks up the row
+                // if the process stops before the job is taken.
+                var cleaned = await db.ExternalDocuments
                     .Where(d => d.Id == job.DocumentId && d.ProviderId == job.ProviderId
                         && d.ScanStatus == ExternalDocumentService.Pending && d.DeletedAt == null)
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(d => d.ScanStatus, ExternalDocumentService.Clean)
-                        .SetProperty(d => d.ScannedAt, clock.GetUtcNow()), ct);
+                        .SetProperty(d => d.ScannedAt, clock.GetUtcNow())
+                        .SetProperty(d => d.ReadStatus, DocumentReadStatus.Pending)
+                        .SetProperty(d => d.ReadAttempts, 0)
+                        .SetProperty(d => d.ExtractAttempts, 0), ct);
+                if (cleaned > 0)
+                {
+                    scope.ServiceProvider.GetService<ReadQueue>()?.Enqueue(new ReadJob(job.DocumentId, job.ProviderId));
+                }
             }
             else if (await BlockAsync(db, document, clock.GetUtcNow(), ct))
             {

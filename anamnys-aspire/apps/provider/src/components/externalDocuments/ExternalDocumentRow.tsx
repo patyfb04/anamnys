@@ -10,6 +10,7 @@ import Card from "@anamnys/shared/ui/Card";
 import { toast } from "@anamnys/shared/ui/Toaster";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import { formatDate } from "@/components/patients/format";
+import DocumentReadStatus from "./DocumentReadStatus";
 import { formatBytes } from "./fileCheck";
 
 const TONE: Record<ExternalScanStatus, BadgeTone> = { pending: "blue", clean: "mint", infected: "pink", failed: "neutral" };
@@ -63,7 +64,11 @@ export default function ExternalDocumentRow({
     onSuccess: async () => {
       setConfirming(false);
       toast.success(t("externalDocuments.deleted"));
-      await queryClient.invalidateQueries({ queryKey: ["external-documents"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["external-documents"] }),
+        // The document's facts go with it.
+        queryClient.invalidateQueries({ queryKey: ["declared-facts", doc.patientId] }),
+      ]);
     },
     onError: (e) => {
       setConfirming(false);
@@ -91,6 +96,9 @@ export default function ExternalDocumentRow({
           <p className="text-headline-sm text-[16px] text-onSurface mb-1 truncate">{t(`externalDocuments.kinds.${doc.kind}`)}</p>
           <p className="text-body-md text-onSurfaceVariant truncate">{doc.fileName} · {formatBytes(doc.byteSize)}</p>
           {doc.description && <p className="text-body-sm text-onSurface break-words mt-1">{doc.description}</p>}
+          <div className="mt-1">
+            <DocumentReadStatus doc={doc} readOnly={readOnly} onOpenOriginal={() => open.mutate()} />
+          </div>
           <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
             {showPatient && doc.patientName ? (
               <Link
@@ -154,6 +162,9 @@ export default function ExternalDocumentRow({
           </p>
         )}
         {doc.description && <p className="text-body-sm text-onSurface break-words">{doc.description}</p>}
+        <div className="mt-1">
+          <DocumentReadStatus doc={doc} readOnly={readOnly} onOpenOriginal={() => open.mutate()} />
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <Badge label={t(`externalDocuments.status.${doc.scanStatus}`)} tone={TONE[doc.scanStatus]} />

@@ -21,4 +21,15 @@ public class ExternalDocument
     public DateTimeOffset? ScannedAt { get; set; }
     public int ScanAttempts { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
+
+    // design/specs/2026-10-26-document-facts-design.md §2. ReadStatus: null until scanned clean, then
+    // pending | reading | done | failed. PagesTruncated: the document had more pages than were read.
+    public string? ReadStatus { get; set; }
+    public int ReadAttempts { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+    public int? PageCount { get; set; }
+    public bool PagesTruncated { get; set; }
+    // Fact extractions started since the last read (counted before the model runs, reset by a new read
+    // and by "Ler de novo"): the startup sweep does not re-queue a document that used them up.
+    public int ExtractAttempts { get; set; }
 }

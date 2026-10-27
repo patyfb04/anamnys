@@ -3,6 +3,8 @@ using System.Threading.RateLimiting;
 using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Data;
+using Anamnys.Server.DocumentFacts;
+using Anamnys.Server.DocumentReading;
 using Anamnys.Server.Documents;
 using Anamnys.Server.Exports;
 using Anamnys.Server.ExternalDocuments;
@@ -36,6 +38,8 @@ builder.AddLiveSession();
 builder.AddNoteStructuring();
 builder.AddAccountExport();
 builder.AddExternalDocuments();
+builder.AddDocumentReading();
+builder.AddDocumentFacts();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -150,6 +154,7 @@ phi.MapThemeEndpoints();
 phi.MapExcerptEndpoints();
 phi.MapExportEndpoints();
 phi.MapExternalDocumentEndpoints();
+phi.MapFactEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

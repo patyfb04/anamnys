@@ -104,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -336,12 +336,14 @@ CREATE TABLE "ExcerptRefs" (
 	"SectionKey" text,
 	"Quote" text,
 	"Kind" text NOT NULL,
+	"PageNumber" integer,
 	CONSTRAINT "ExcerptRefs_Offsets_ck" CHECK ((("OffsetEnd" IS NULL) OR ("OffsetStart" IS NULL) OR ("OffsetEnd" >= "OffsetStart"))),
 	CONSTRAINT "ExcerptRefs_SourceType_ck" CHECK (("SourceType" = ANY (ARRAY['note'::text, 'transcript'::text, 'document'::text]))),
 	CONSTRAINT "ExcerptRefs_Kind_ck" CHECK (("Kind" = ANY (ARRAY['exact'::text, 'section'::text]))),
 	CONSTRAINT "ExcerptRefs_Exact_ck" CHECK (((("Kind" = 'exact') AND ("OffsetStart" IS NOT NULL) AND ("OffsetEnd" IS NOT NULL) AND ("Quote" IS NOT NULL)) OR (("Kind" = 'section') AND ("OffsetStart" IS NULL) AND ("OffsetEnd" IS NULL)))),
 	CONSTRAINT "ExcerptRefs_Quote_ck" CHECK ((("Quote" IS NULL) OR (char_length("Quote") <= 200))),
-	CONSTRAINT "ExcerptRefs_NoteSection_ck" CHECK ((("SourceType" <> 'note') OR ("SectionKey" IS NOT NULL)))
+	CONSTRAINT "ExcerptRefs_NoteSection_ck" CHECK ((("SourceType" <> 'note') OR ("SectionKey" IS NOT NULL))),
+	CONSTRAINT "ExcerptRefs_DocumentPage_ck" CHECK (((("SourceType" <> 'document') AND ("PageNumber" IS NULL)) OR (("SourceType" = 'document') AND ("PageNumber" IS NOT NULL) AND ("PageNumber" >= 1))))
 );
 CREATE TABLE "ExternalDocuments" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -359,10 +361,30 @@ CREATE TABLE "ExternalDocuments" (
 	"ScannedAt" timestamp with time zone,
 	"ScanAttempts" integer DEFAULT 0 NOT NULL,
 	"DeletedAt" timestamp with time zone,
+	"ReadStatus" text,
+	"ReadAttempts" integer DEFAULT 0 NOT NULL,
+	"ReadAt" timestamp with time zone,
+	"PageCount" integer,
+	"PagesTruncated" boolean DEFAULT false NOT NULL,
+	"ExtractAttempts" integer DEFAULT 0 NOT NULL,
 	CONSTRAINT "ExternalDocuments_ScanStatus_ck" CHECK (("ScanStatus" = ANY (ARRAY['pending'::text, 'clean'::text, 'infected'::text, 'failed'::text]))),
 	CONSTRAINT "ExternalDocuments_Kind_ck" CHECK (("Kind" = ANY (ARRAY['laudo'::text, 'receita'::text, 'exame'::text, 'encaminhamento'::text, 'relatorio_externo'::text, 'outro'::text]))),
 	CONSTRAINT "ExternalDocuments_Description_ck" CHECK ((("Description" IS NULL) OR (char_length("Description") <= 200))),
-	CONSTRAINT "ExternalDocuments_ObjectKey_ck" CHECK ((("ObjectKey" IS NOT NULL) OR ("ScanStatus" = 'infected') OR ("DeletedAt" IS NOT NULL)))
+	CONSTRAINT "ExternalDocuments_ObjectKey_ck" CHECK ((("ObjectKey" IS NOT NULL) OR ("ScanStatus" = 'infected') OR ("DeletedAt" IS NOT NULL))),
+	CONSTRAINT "ExternalDocuments_ReadStatus_ck" CHECK ((("ReadStatus" IS NULL) OR ("ReadStatus" = ANY (ARRAY['pending'::text, 'reading'::text, 'done'::text, 'failed'::text])))),
+	CONSTRAINT "ExternalDocuments_ReadClean_ck" CHECK ((("ReadStatus" IS NULL) OR ("ScanStatus" = 'clean'))),
+	CONSTRAINT "ExternalDocuments_PageCount_ck" CHECK ((("PageCount" IS NULL) OR ("PageCount" >= 0)))
+);
+CREATE TABLE "ExternalDocumentPages" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"ExternalDocumentId" uuid NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"PageNumber" integer NOT NULL,
+	"Text" text NOT NULL,
+	"FromOcr" boolean DEFAULT false NOT NULL,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "ExternalDocumentPages_Document_Page_key" UNIQUE ("ExternalDocumentId","PageNumber"),
+	CONSTRAINT "ExternalDocumentPages_PageNumber_ck" CHECK (("PageNumber" >= 1))
 );
 CREATE TABLE "ExtractedFacts" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -374,7 +396,16 @@ CREATE TABLE "ExtractedFacts" (
 	"ExcerptRefId" uuid,
 	"ConfirmedBy" uuid,
 	"ConfirmedAt" timestamp with time zone,
-	CONSTRAINT "ExtractedFacts_Kind_ck" CHECK (("Kind" = ANY (ARRAY['issuer'::text, 'registration'::text, 'issue_date'::text, 'icd'::text, 'medication'::text, 'conclusion'::text])))
+	"ProviderId" uuid NOT NULL,
+	"Status" text DEFAULT 'pending' NOT NULL,
+	"Quote" text,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"DiscardedAt" timestamp with time zone,
+	CONSTRAINT "ExtractedFacts_Kind_ck" CHECK (("Kind" = ANY (ARRAY['issuer'::text, 'registration'::text, 'issue_date'::text, 'icd'::text, 'medication'::text, 'conclusion'::text]))),
+	CONSTRAINT "ExtractedFacts_Status_ck" CHECK (("Status" = ANY (ARRAY['pending'::text, 'confirmed'::text, 'corrected'::text, 'discarded'::text]))),
+	CONSTRAINT "ExtractedFacts_Corrected_ck" CHECK ((("Status" <> 'corrected') OR ("CorrectedValue" IS NOT NULL))),
+	CONSTRAINT "ExtractedFacts_Reviewed_ck" CHECK ((("Status" <> ALL (ARRAY['confirmed'::text, 'corrected'::text])) OR (("ConfirmedBy" IS NOT NULL) AND ("ConfirmedAt" IS NOT NULL)))),
+	CONSTRAINT "ExtractedFacts_Discarded_ck" CHECK ((("Status" <> 'discarded') OR ("DiscardedAt" IS NOT NULL)))
 );
 CREATE TABLE "FocusAreas" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1062,6 +1093,9 @@ ALTER TABLE "ExternalDocuments" ADD CONSTRAINT "ExternalDocuments_Patient_fk" FO
 ALTER TABLE "ExcerptRefs" ADD CONSTRAINT "ExcerptRefs_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ExternalDocumentId_fkey" FOREIGN KEY ("ExternalDocumentId") REFERENCES "ExternalDocuments"("Id") ON DELETE CASCADE;
+ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
+ALTER TABLE "ExternalDocumentPages" ADD CONSTRAINT "ExternalDocumentPages_ExternalDocumentId_fkey" FOREIGN KEY ("ExternalDocumentId") REFERENCES "ExternalDocuments"("Id") ON DELETE CASCADE;
+ALTER TABLE "ExternalDocumentPages" ADD CONSTRAINT "ExternalDocumentPages_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "FocusAreas" ADD CONSTRAINT "FocusAreas_ParentId_fkey" FOREIGN KEY ("ParentId") REFERENCES "FocusAreas"("Id") ON DELETE SET NULL;
 ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE SET NULL;
 ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;

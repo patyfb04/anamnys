@@ -21,6 +21,7 @@ public class ExternalDocumentsMigrationTests(SharedAppHostFixture fixture)
             await RunPreviousMigrationsAsync(db);
             await RunMigrationAsync(db, MigrationFile);
             await RunMigrationAsync(db, MigrationFile);
+            await RunMigrationAsync(db, "2026-10-26-document-facts.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))
@@ -241,7 +242,12 @@ public class ExternalDocumentsMigrationTests(SharedAppHostFixture fixture)
         var shape = new List<string>();
         while (await reader.ReadAsync(Ct))
         {
-            shape.Add(reader.GetString(0));
+            var line = reader.GetString(0);
+            // Later migrations own the full action list of this constraint (2026-10-26-document-facts.sql).
+            if (!line.Contains("AuditEntries_subject_ck"))
+            {
+                shape.Add(line);
+            }
         }
         return shape;
     }

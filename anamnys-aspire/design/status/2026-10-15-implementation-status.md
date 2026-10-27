@@ -57,7 +57,7 @@ the schema still carries every table, but only the features below have code.
 | ID | State | Notes |
 |---|---|---|
 | F-07 Upload | done | PDF/JPG/PNG up to 20 MB checked by magic bytes, with kind, date and description; stored in the private bucket (`external/{providerId}/{documentId}`); scanned by a self-hosted ClamAV container before opening (infected: object deleted, row kept as blocked; scanner unreachable: stays pending and retries); open only when clean with a one-hour inline link; soft delete; read-only for archived patients; audited. Patient record card and Documentos > Recebidos tab. `ExternalDocuments/`, `documentation/26-external-documents.md`, ClamAV cost in `documentation/20-environment-configuration.md` 2.4b. Not in the F-60 export yet. |
-| F-08 OCR + fatos declarados | schema only | `ExtractedFacts` |
+| F-08 OCR + fatos declarados | done | Clean documents are read in process (embedded PDF text, Tesseract OCR for scans, up to 20 pages); the local model proposes issuer, registration, issue date, ICD, medication and conclusion, each with page and a literal quote located on the page; the provider confirms, corrects (original kept) or discards; only confirmed or corrected facts count. Interactive model use goes before extraction (priority gate); deleting a document deletes its facts. Provider app: read badge, "Ver fatos" modal, "Fatos de documentos" card. `DocumentReading/`, `DocumentFacts/`, `documentation/27-document-facts.md`, Tesseract setup in `documentation/20-environment-configuration.md` 2.4c. Crash-loop guard on extraction (`ExtractAttempts`, sweep gives up after 2) and a 50 MP decode cap on images. Recall is uneven, see the gaps file. |
 | F-09 Linha do tempo de medicação | partial | medications are entered by hand on the record (`MedicationEntries`); nothing comes from prescriptions |
 
 ### D · Camada longitudinal
@@ -132,7 +132,9 @@ the schema still carries every table, but only the features below have code.
 | 02 Transcrever ao vivo | done; buffer survives a reconnect within its expiry (better than the diagram's "no resume") |
 | 03 Digitar direto | done |
 | 04 Captura com termo | not started (D-03) |
-| 05 … 11 | not started |
+| 05, 06 | not started |
+| 07 Ler documento e fatos declarados | done (F-08) |
+| 08 … 11 | not started |
 | 12 Disponibilidade e agenda | partial (appointments only) |
 | 13 Google | not started |
 | 14 Lembrete | partial (e-mail, not WhatsApp) |
@@ -155,9 +157,7 @@ the schema still carries every table, but only the features below have code.
 
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
-1. **F-08 OCR + fatos declarados** — self-hosted OCR (documents never leave the server); facts with
-   page and issuer, confirmed by the provider.
-2. **F-09 Linha do tempo de medicação** from prescriptions.
+1. **F-09 Linha do tempo de medicação** from prescriptions (reads the confirmed facts of F-08, done 2026-10-26).
 3. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
 4. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
@@ -178,3 +178,4 @@ Verified 2026-10-24: full suite 935 total, 0 failed, 3 skipped (F-60 included; e
 after the final fixes). `2026-10-23-account-export.sql` is applied to the dev database; any other
 persistent environment needs it.
 Verified 2026-10-25 (F-07): full suite 1180 passed, 0 failed, 3 skipped before the final review fixes; external-document suites 108 passed after them. `2026-10-25-external-documents.sql` must be applied to any persistent environment.
+Verified 2026-10-27 (F-08): full suite 1401 total, 1 failure (an export endpoint test racing the Vite dev server start-up, fixed in the test fixture); after the final fixes 262 + 286 targeted tests passed, 0 failed. `2026-10-26-document-facts.sql` must be applied to any persistent environment, and re-run on a database that had an earlier version of it (the final-review wave added `ExternalDocuments.ExtractAttempts`).
