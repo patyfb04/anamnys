@@ -690,6 +690,8 @@ export interface DocumentFact {
   excerptRefId: string | null;
   createdAt: string;
   confirmedAt: string | null;
+  /** True when a medication record was made from this fact (F-09); absent until the server reports it. */
+  recorded?: boolean;
 }
 
 export interface DocumentFacts {
@@ -735,4 +737,79 @@ export interface ExternalDocumentUploadInput {
   kind: ExternalDocumentKind;
   documentDate?: string;
   description?: string;
+}
+
+// Medication timeline (F-09). Dates are yyyy-MM-dd.
+export type MedicationFactAction = "new" | "dose_change" | "stop";
+
+export interface MedicationDraft {
+  factId: string;
+  value: string;
+  quote: string | null;
+  page: number | null;
+  status: FactStatus;
+  recorded: boolean;
+  prefill: {
+    drug: string | null;
+    dose: string | null;
+    posology: string | null;
+    startedOn: string | null;
+    endedOn: string | null;
+  };
+  activeMatches: {
+    id: string;
+    treatmentId: string;
+    drug: string;
+    dose: string | null;
+    posology: string | null;
+    startedOn: string;
+  }[];
+}
+
+export interface MedicationFromFactRequest {
+  action: MedicationFactAction;
+  targetMedicationId?: string;
+  drug: string;
+  dose?: string;
+  posology?: string;
+  startedOn: string;
+  endedOn?: string;
+}
+
+export interface TimelineOrigin {
+  kind: "manual" | "document" | "document_deleted";
+  documentId: string | null;
+  documentKind: ExternalDocumentKind | null;
+  documentDate: string | null;
+  page: number | null;
+  excerptId: string | null;
+}
+
+export interface TimelineSegment {
+  medicationId: string;
+  dose: string | null;
+  posology: string | null;
+  startedOn: string;
+  endedOn: string | null;
+  origin: TimelineOrigin;
+}
+
+export interface TimelineMedication {
+  treatmentId: string;
+  drug: string;
+  segments: TimelineSegment[];
+}
+
+export interface TimelineScale {
+  instrumentId: string;
+  code: string;
+  name: string;
+  minScore: number;
+  maxScore: number;
+  points: { applicationId: string; score: number; appliedOn: string }[];
+}
+
+export interface PatientTimeline {
+  medications: TimelineMedication[];
+  scales: TimelineScale[];
 }

@@ -118,8 +118,15 @@ ALTER TABLE "ExcerptRefs"
 -- Fact review actions are audited with the provider as actor and the fact kind and id in NewValue
 -- (facts_deleted: the document id and how many facts went with it);
 -- they belong to no note or clinical document.
-ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
-ALTER TABLE "AuditEntries"
+-- Skipped once a later migration (2026-10-27-medication-timeline.sql) owns a longer action list.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'AuditEntries_subject_ck' AND pg_get_constraintdef(oid) LIKE '%medication_from_fact%') THEN
+    ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
+    ALTER TABLE "AuditEntries"
   ADD CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text]))));
+  END IF;
+END $$;
 
 COMMIT;

@@ -58,7 +58,7 @@ the schema still carries every table, but only the features below have code.
 |---|---|---|
 | F-07 Upload | done | PDF/JPG/PNG up to 20 MB checked by magic bytes, with kind, date and description; stored in the private bucket (`external/{providerId}/{documentId}`); scanned by a self-hosted ClamAV container before opening (infected: object deleted, row kept as blocked; scanner unreachable: stays pending and retries); open only when clean with a one-hour inline link; soft delete; read-only for archived patients; audited. Patient record card and Documentos > Recebidos tab. `ExternalDocuments/`, `documentation/26-external-documents.md`, ClamAV cost in `documentation/20-environment-configuration.md` 2.4b. Not in the F-60 export yet. |
 | F-08 OCR + fatos declarados | done | Clean documents are read in process (embedded PDF text, Tesseract OCR for scans, up to 20 pages); the local model proposes issuer, registration, issue date, ICD, medication and conclusion, each with page and a literal quote located on the page; the provider confirms, corrects (original kept) or discards; only confirmed or corrected facts count. Interactive model use goes before extraction (priority gate); deleting a document deletes its facts. Provider app: read badge, "Ver fatos" modal, "Fatos de documentos" card. `DocumentReading/`, `DocumentFacts/`, `documentation/27-document-facts.md`, Tesseract setup in `documentation/20-environment-configuration.md` 2.4c. Crash-loop guard on extraction (`ExtractAttempts`, sweep gives up after 2) and a 50 MP decode cap on images. Recall is uneven, see the gaps file. |
-| F-09 Linha do tempo de medicação | partial | medications are entered by hand on the record (`MedicationEntries`); nothing comes from prescriptions |
+| F-09 Linha do tempo de medicação | done | A medication fact (F-08) opens a prefilled form (text rules: drug, dose, posology, start, end) and becomes a medication record linked to the fact: new, dose change (closes the old record, same treatment) or stop; the fact is confirmed or corrected in the same transaction and audited (`medication_from_fact`). Card "Linha do tempo" on the patient record: medication lanes with origin (typed, document, deleted document) above scale series on one date axis, 6 m / 1 y / all, neutral colours, no relation stated. `Medications/`, `components/timeline/`, `documentation/28-medication-timeline.md`, migration `2026-10-27-medication-timeline.sql`. The patient record cards from Escalas down (Escalas, Linha do tempo, Documentos, Documentos recebidos, Fatos de documentos) collapse: closed by default, state remembered per browser. Stops never show "no prontuário"; not in the Análises page yet, see the gaps file. |
 
 ### D · Camada longitudinal
 
@@ -134,7 +134,9 @@ the schema still carries every table, but only the features below have code.
 | 04 Captura com termo | not started (D-03) |
 | 05, 06 | not started |
 | 07 Ler documento e fatos declarados | done (F-08) |
-| 08 … 11 | not started |
+| 08 | not started |
+| 09 Linha do tempo de medicação | partial: medication and scales on one axis done (F-09); the other layers wait for F-10 |
+| 10, 11 | not started |
 | 12 Disponibilidade e agenda | partial (appointments only) |
 | 13 Google | not started |
 | 14 Lembrete | partial (e-mail, not WhatsApp) |
@@ -157,14 +159,13 @@ the schema still carries every table, but only the features below have code.
 
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
-1. **F-09 Linha do tempo de medicação** from prescriptions (reads the confirmed facts of F-08, done 2026-10-26).
-3. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+1. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
-4. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
+2. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
    (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
    month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
-5. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
-6. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
+3. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
+4. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
    (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
    time while the account is active and for 60 days after cancellation, then the data is deleted;
    site and Terms say exactly that). Only the active-account half exists: F-57 (cancellation) must add the
@@ -179,3 +180,4 @@ after the final fixes). `2026-10-23-account-export.sql` is applied to the dev da
 persistent environment needs it.
 Verified 2026-10-25 (F-07): full suite 1180 passed, 0 failed, 3 skipped before the final review fixes; external-document suites 108 passed after them. `2026-10-25-external-documents.sql` must be applied to any persistent environment.
 Verified 2026-10-27 (F-08): full suite 1401 total, 1 failure (an export endpoint test racing the Vite dev server start-up, fixed in the test fixture); after the final fixes 262 + 286 targeted tests passed, 0 failed. `2026-10-26-document-facts.sql` must be applied to any persistent environment, and re-run on a database that had an earlier version of it (the final-review wave added `ExternalDocuments.ExtractAttempts`).
+Verified 2026-10-27 (F-09): full suite 1465 total, 2 failed, 3 skipped; both failures were the PDF text tests picking up the image-only OCR sample (`-escaneado`), now excluded from them (9/9 passed); medication suites 57/57 after fix round 1; provider build and lint clean after the final UI fixes. `2026-10-27-medication-timeline.sql` must be applied to any persistent environment.

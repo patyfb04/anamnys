@@ -104,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -505,6 +505,9 @@ CREATE TABLE "MedicationEntries" (
 	"StartedOn" date NOT NULL,
 	"EndedOn" date,
 	"SourceFactId" uuid,
+	"TreatmentId" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"FromDocument" boolean DEFAULT false NOT NULL,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "MedicationEntries_Dates_ck" CHECK ((("EndedOn" IS NULL) OR ("EndedOn" >= "StartedOn")))
 );
 CREATE TABLE "Notes" (
@@ -1011,6 +1014,8 @@ CREATE INDEX "FollowUpItems_PatientId_idx" ON "FollowUpItems" ("PatientId");
 CREATE INDEX "InsurerAuthorizations_ValidUntil_idx" ON "InsurerAuthorizations" ("ValidUntil");
 CREATE INDEX "IntakeResponses_PatientId_idx" ON "IntakeResponses" ("PatientId");
 CREATE INDEX "MedicationEntries_Patient_Started_idx" ON "MedicationEntries" ("PatientId","StartedOn");
+CREATE INDEX "MedicationEntries_Treatment_idx" ON "MedicationEntries" ("TreatmentId");
+CREATE UNIQUE INDEX "MedicationEntries_SourceFactId_key" ON "MedicationEntries" ("SourceFactId") WHERE "SourceFactId" IS NOT NULL;
 CREATE INDEX "Notes_PatientId_idx" ON "Notes" ("PatientId");
 CREATE INDEX "Notes_Patient_Created_idx" ON "Notes" ("PatientId","CreatedAt" DESC);
 CREATE INDEX "Notes_ProviderId_idx" ON "Notes" ("ProviderId");

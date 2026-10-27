@@ -375,16 +375,21 @@ public static class PatientRecords
         ResolvedOn = input.ResolvedOn,
     };
 
-    private static MedicationEntry NewMedication(Guid patientId, MedicationInput input) => new()
+    private static MedicationEntry NewMedication(Guid patientId, MedicationInput input)
     {
-        Id = Guid.NewGuid(),
-        PatientId = patientId,
-        Drug = ProfileText.Clean(input.Drug)!,
-        Dose = ProfileText.Clean(input.Dose),
-        Posology = ProfileText.Clean(input.Posology),
-        StartedOn = input.StartedOn!.Value,
-        EndedOn = input.EndedOn,
-    };
+        var id = Guid.NewGuid();
+        return new()
+        {
+            Id = id,
+            TreatmentId = id,
+            PatientId = patientId,
+            Drug = ProfileText.Clean(input.Drug)!,
+            Dose = ProfileText.Clean(input.Dose),
+            Posology = ProfileText.Clean(input.Posology),
+            StartedOn = input.StartedOn!.Value,
+            EndedOn = input.EndedOn,
+        };
+    }
 
     private static PlanObjective NewObjective(Guid planId, string? description, DateTimeOffset createdAt) => new()
     {

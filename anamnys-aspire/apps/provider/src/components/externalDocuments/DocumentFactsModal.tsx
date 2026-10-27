@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "@anamnys/shared/api/client";
 import { documentFactsApi } from "@anamnys/shared/api/documentFacts";
@@ -9,6 +9,7 @@ import { toast } from "@anamnys/shared/ui/Toaster";
 import { inputClass } from "@/components/patients/FormField";
 import Modal from "@/components/patients/Modal";
 import DocumentPassageModal from "./DocumentPassageModal";
+import MedicationFactModal from "./MedicationFactModal";
 import { FACT_KINDS, useFactsRefresh } from "./factsShared";
 
 const POLL_MS = 3000;
@@ -37,6 +38,10 @@ export default function DocumentFactsModal({
   const refresh = useFactsRefresh(doc);
   const [passageId, setPassageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [medicationFact, setMedicationFact] = useState<DocumentFact | null>(null);
+  // Facts turned into a record in this session (the list reports the same once reloaded).
+  const [recordedIds, setRecordedIds] = useState<Set<string>>(new Set());
 
   const query = useQuery({
     queryKey: ["document-facts", doc.id],
@@ -49,6 +54,8 @@ export default function DocumentFactsModal({
   const data = query.data;
   const facts = data?.facts ?? [];
   const pending = facts.filter((f) => f.status === "pending");
+  // Medication facts are confirmed through their own form, so "Confirmar todos" leaves them out.
+  const pendingPlain = pending.filter((f) => f.kind !== "medication");
   const busy = !!data && (data.extracting || data.readStatus === "pending" || data.readStatus === "reading");
 
   const onError = (e: unknown) => {
@@ -66,7 +73,7 @@ export default function DocumentFactsModal({
   const confirmAll = useMutation({
     mutationFn: async () => {
       // A fact reviewed meanwhile (elsewhere or by a re-extraction) answers not_pending: skip it.
-      for (const f of pending) {
+      for (const f of pendingPlain) {
         try {
           await documentFactsApi.confirm(doc.id, f.id);
         } catch (e) {
@@ -107,7 +114,7 @@ export default function DocumentFactsModal({
           <button type="button" className={link} onClick={onOpenOriginal}>
             {t("documentFacts.openOriginal")}
           </button>
-          {!readOnly && pending.length > 0 && (
+          {!readOnly && pendingPlain.length > 0 && (
             <button
               type="button"
               disabled={confirmAll.isPending}
@@ -143,6 +150,7 @@ export default function DocumentFactsModal({
                       key={f.id}
                       fact={f}
                       readOnly={readOnly}
+                      recorded={f.recorded === true || recordedIds.has(f.id)}
                       busy={act.isPending || confirmAll.isPending}
                       onConfirm={() => act.mutate(() => documentFactsApi.confirm(doc.id, f.id))}
                       onDiscard={() => act.mutate(() => documentFactsApi.discard(doc.id, f.id))}
@@ -152,6 +160,7 @@ export default function DocumentFactsModal({
                           () => false,
                         )
                       }
+                      onMedication={() => setMedicationFact(f)}
                       onView={() => f.excerptRefId && setPassageId(f.excerptRefId)}
                     />
                   ))}
@@ -161,6 +170,23 @@ export default function DocumentFactsModal({
           </>
         )}
       </div>
+      {medicationFact && (
+        <MedicationFactModal
+          documentId={doc.id}
+          fact={medicationFact}
+          onClose={() => setMedicationFact(null)}
+          onSaved={() => {
+            const id = medicationFact.id;
+            setMedicationFact(null);
+            setError(null);
+            setRecordedIds((prev) => new Set(prev).add(id));
+            toast.success(t("documentFacts.medication.saved"));
+            void refresh();
+            void queryClient.invalidateQueries({ queryKey: ["patient", doc.patientId] });
+            void queryClient.invalidateQueries({ queryKey: ["timeline", doc.patientId] });
+          }}
+        />
+      )}
       {passageId && <DocumentPassageModal excerptId={passageId} onClose={() => setPassageId(null)} />}
     </Modal>
   );
@@ -169,18 +195,22 @@ export default function DocumentFactsModal({
 function FactRow({
   fact,
   readOnly,
+  recorded,
   busy,
   onConfirm,
   onDiscard,
   onCorrect,
+  onMedication,
   onView,
 }: {
   fact: DocumentFact;
   readOnly: boolean;
+  recorded: boolean;
   busy: boolean;
   onConfirm: () => void;
   onDiscard: () => void;
   onCorrect: (value: string) => Promise<boolean>;
+  onMedication: () => void;
   onView: () => void;
 }) {
   const { t } = useTranslation();
@@ -188,6 +218,8 @@ function FactRow({
   const [draft, setDraft] = useState("");
   const corrected = fact.status === "corrected" && fact.correctedValue !== null;
   const link = "text-label-md text-primary hover:underline disabled:opacity-60";
+  // A pending medication fact goes through the medication form; once reviewed it keeps the plain correction.
+  const viaForm = fact.kind === "medication" && fact.status === "pending" && !recorded;
 
   return (
     <li className="rounded-radii-lg border border-outlineVariant p-3">
@@ -206,6 +238,7 @@ function FactRow({
         {fact.status === "confirmed" && <Badge label={t("documentFacts.status.confirmed")} tone="mint" />}
         {corrected && <Badge label={t("documentFacts.status.corrected")} tone="blue" />}
         {fact.status === "pending" && <Badge label={t("documentFacts.status.pending")} tone="lavender" />}
+        {recorded && <Badge label={t("documentFacts.recorded")} tone="mint" />}
       </div>
 
       {editing ? (
@@ -235,8 +268,8 @@ function FactRow({
         </form>
       ) : (
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          {!readOnly && fact.status === "pending" && (
-            <button type="button" disabled={busy} onClick={onConfirm} className={link}>
+          {!readOnly && fact.status === "pending" && !recorded && (
+            <button type="button" disabled={busy} onClick={viaForm ? onMedication : onConfirm} className={link}>
               {t("documentFacts.confirm")}
             </button>
           )}
@@ -245,6 +278,7 @@ function FactRow({
               type="button"
               disabled={busy}
               onClick={() => {
+                if (viaForm) return onMedication();
                 setDraft(fact.correctedValue ?? fact.value);
                 setEditing(true);
               }}
@@ -256,6 +290,11 @@ function FactRow({
           {!readOnly && (
             <button type="button" disabled={busy} onClick={onDiscard} className="text-label-md text-error hover:underline disabled:opacity-60">
               {t("documentFacts.discard")}
+            </button>
+          )}
+          {!readOnly && fact.kind === "medication" && fact.status !== "pending" && !recorded && (
+            <button type="button" disabled={busy} onClick={onMedication} className={link}>
+              {t("documentFacts.medication.register")}
             </button>
           )}
           {fact.excerptRefId && (

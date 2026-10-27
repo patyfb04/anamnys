@@ -145,6 +145,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         {
             e.ToTable("MedicationEntries");
             e.HasKey(x => x.Id);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
         });
 

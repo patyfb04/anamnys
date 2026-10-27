@@ -74,7 +74,9 @@ internal static class TestPdfs
     public static byte[] Sample(string name) =>
         File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "SampleDocuments", name));
 
+    // Text-layer samples only; the "-escaneado" PDF is image-only and exists to exercise OCR by hand.
     public static string[] SampleNames() =>
         Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "SampleDocuments"), "*.pdf")
-            .Select(Path.GetFileName).OfType<string>().Order().ToArray();
+            .Select(Path.GetFileName).OfType<string>()
+            .Where(n => !n.Contains("-escaneado", StringComparison.Ordinal)).Order().ToArray();
 }

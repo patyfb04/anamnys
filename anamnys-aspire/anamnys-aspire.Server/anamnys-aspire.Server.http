@@ -388,7 +388,7 @@ DELETE {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0
 
 ###
 ### Declared facts of an external document (F-08). List and search items also carry readStatus (null | pending | reading | done | failed), pendingFacts and extracting.
-### Facts under review (discarded left out). 200 { documentId, readStatus, pageCount, pagesTruncated, extracting, facts: [{ id, kind: issuer | registration | issue_date | icd | medication | conclusion, value, correctedValue, page, quote, status: pending | confirmed | corrected, excerptRefId, createdAt, confirmedAt }] }; 404.
+### Facts under review (discarded left out). 200 { documentId, readStatus, pageCount, pagesTruncated, extracting, facts: [{ id, kind: issuer | registration | issue_date | icd | medication | conclusion, value, correctedValue, page, quote, status: pending | confirmed | corrected, excerptRefId, createdAt, confirmedAt, recorded (a medication record was made from it) }] }; 404.
 GET {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts
 
 ###
@@ -414,3 +414,21 @@ POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-000
 ### Confirmed and corrected facts of a patient's documents, newest document first. 200 [{ id, documentId, documentKind, documentDate, uploadedAt, kind, value (the correction when corrected), readValue, corrected, page, quote, excerptRefId, confirmedAt }]; 404.
 ### The passage behind a fact: GET providers/me/excerpts/{excerptRefId} returns { id, sourceType: "document", kind, documentId, documentKind, patientId, datedAt, pageNumber, pageText, start, end }.
 GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/declared-facts
+
+###
+### Medication from a fact (F-09). Prefill for a medication fact (not discarded) plus the patient's active records of the same drug (case/accent-insensitive).
+### 200 { factId, value, quote, page, status, recorded, prefill: { drug, dose, posology, startedOn, endedOn }, activeMatches: [{ id, treatmentId, drug, dose, posology, startedOn }] }; 404; 409 { code: "not_medication" | "not_pending" (discarded) }.
+GET {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts/00000000-0000-0000-0000-000000000000/medication-draft
+
+###
+### Save the medication in one transaction, confirming the fact (or correcting it when the text differs from what was read). action: "new" | "dose_change" (closes targetMedicationId the day before startedOn and opens a record of the same treatment) | "stop" (targetMedicationId + endedOn; drug/dose/posology/startedOn ignored).
+### 201 { id } (the new record; the target for "stop"); 400 validation problem { action | drug | dose | posology | startedOn | endedOn | targetMedicationId }; 404 (also a target of another patient); 409 { code: "archived" | "not_pending" | "not_medication" | "already_recorded" | "target_not_active" }. Audited as medication_from_fact (ids and action only).
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts/00000000-0000-0000-0000-000000000000/medication
+Content-Type: application/json
+
+{ "action": "new", "targetMedicationId": null, "drug": "Sertralina", "dose": "50 mg", "posology": "1 comprimido pela manhã", "startedOn": "2026-09-14", "endedOn": null }
+
+###
+### Timeline of a patient: medication lanes (one per treatment, a segment per record) and scale series, dates only. from/to (yyyy-MM-dd) are optional; segments and points outside the period are left out. 400 when from is after to.
+### 200 { medications: [{ treatmentId, drug, segments: [{ medicationId, dose, posology, startedOn, endedOn, origin: { kind: "manual" | "document" | "document_deleted", documentId, documentKind, documentDate, page, excerptId } }] }], scales: [{ instrumentId, code, name, minScore, maxScore, points: [{ applicationId, score, appliedOn }] }] }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/timeline?from=2026-04-26&to=2026-10-26

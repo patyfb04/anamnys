@@ -64,6 +64,7 @@ export default function ScaleRecordModal({ patientId, sessionId, onClose, onReco
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["scales", patientId] });
+      await queryClient.invalidateQueries({ queryKey: ["timeline", patientId] });
       toast.success(t("scales.recorded"));
       onRecorded?.();
       onClose();
