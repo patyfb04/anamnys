@@ -385,3 +385,32 @@ POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-000
 ###
 ### Soft delete (the object is removed). 204; 404; 409 { code: "archived" }.
 DELETE {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000
+
+###
+### Declared facts of an external document (F-08). List and search items also carry readStatus (null | pending | reading | done | failed), pendingFacts and extracting.
+### Facts under review (discarded left out). 200 { documentId, readStatus, pageCount, pagesTruncated, extracting, facts: [{ id, kind: issuer | registration | issue_date | icd | medication | conclusion, value, correctedValue, page, quote, status: pending | confirmed | corrected, excerptRefId, createdAt, confirmedAt }] }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts
+
+###
+### Confirm a pending fact. 204 (also when already confirmed); 404; 409 { code: "not_pending" | "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts/00000000-0000-0000-0000-000000000000/confirm
+
+###
+### Correct a fact (kept next to what was read; the kind's format applies: ICD X00 / X00.0, a real date, council acronym + number). 204; 400 validation problem { value }; 404; 409 { code: "not_pending" (discarded) | "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts/00000000-0000-0000-0000-000000000000/correct
+Content-Type: application/json
+
+{ "value": "F43.1" }
+
+###
+### Discard a fact (soft). 204; 404; 409 { code: "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/facts/00000000-0000-0000-0000-000000000000/discard
+
+###
+### "Ler de novo": extract again (read done; reviewed facts kept) or read again (read failed; attempts reset). 202 { readStatus }; 404; 409 { code: "archived" | "not_available" (not scanned clean) }.
+POST {{Server_HostAddress}}/api/phi/providers/me/external-documents/00000000-0000-0000-0000-000000000000/extract
+
+###
+### Confirmed and corrected facts of a patient's documents, newest document first. 200 [{ id, documentId, documentKind, documentDate, uploadedAt, kind, value (the correction when corrected), readValue, corrected, page, quote, excerptRefId, confirmedAt }]; 404.
+### The passage behind a fact: GET providers/me/excerpts/{excerptRefId} returns { id, sourceType: "document", kind, documentId, documentKind, patientId, datedAt, pageNumber, pageText, start, end }.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/declared-facts

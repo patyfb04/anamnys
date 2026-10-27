@@ -51,7 +51,9 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
                 // The real model must never load in tests (the suggestion warm-up would).
                 ["--Parameters:resend-api-key=", "--Notifications:WorkerEnabled=false", "--NoteStructuring:WarmSuggestionOnStart=false",
                 // The fake scanner needs no ClamAV container (the AppHost skips it for this value).
-                "--ExternalDocuments:Scanner=fake"],
+                "--ExternalDocuments:Scanner=fake",
+                // No document fact extraction with the real model (F-08): the server uses NoFactExtractor.
+                "--DocumentFacts:Extractor=none"],
                 TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();
@@ -110,7 +112,25 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
             keycloakReadyTimeout.CancelAfter(TimeSpan.FromSeconds(90));
             await WaitForKeycloakHttpReadyAsync(KeycloakBaseAddress, keycloakReadyTimeout.Token);
         }
+
+        // Every login goes through a Vite dev origin, and the dev servers only start once "server" is
+        // healthy (WaitFor(server) in AppHost.cs). Without this wait the first test to reach a dev origin
+        // raced the dev server's start (npm, Vite, the route generator, on a CPU shared with the parallel
+        // test classes) against the 30 s budget of BrowserSession.WaitForDevServerAsync, and failed with
+        // a TaskCanceledException when the start took longer.
+        foreach (var (origin, path) in DevServers)
+        {
+            using var client = new HttpClient { BaseAddress = origin };
+            await BrowserSession.WaitForDevServerAsync(client, path, TestContext.Current.CancellationToken, TimeSpan.FromSeconds(180));
+        }
     }
+
+    // The dev origins the tests log in through (ports pinned in AppHost.cs and each vite.config.ts).
+    private static readonly (Uri Origin, string Path)[] DevServers =
+    [
+        (new Uri("http://localhost:5273/"), "/provider/"),
+        (new Uri("http://localhost:5276/"), "/admin/"),
+    ];
 
     private static async Task<string> ParameterValueAsync(IDistributedApplicationTestingBuilder appHost, string name)
     {

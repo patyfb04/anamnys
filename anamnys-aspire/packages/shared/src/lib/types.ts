@@ -469,16 +469,24 @@ export interface ThemeSelection {
 
 export interface ExcerptPassage {
   id: string;
+  /** "note" or "document". */
+  sourceType?: "note" | "document";
   kind: ExcerptKind;
-  noteId: string;
   patientId: string;
-  sessionStartsAt: string | null;
   datedAt: string;
-  sectionKey: string;
-  sectionTitle: string;
-  sectionText: string;
   start?: number;
   end?: number;
+  // Note passage.
+  noteId?: string;
+  sessionStartsAt?: string | null;
+  sectionKey?: string;
+  sectionTitle?: string;
+  sectionText?: string;
+  // Document passage: one page of the read text.
+  documentId?: string;
+  documentKind?: ExternalDocumentKind;
+  pageNumber?: number;
+  pageText?: string;
 }
 
 export interface ThemeSuggestion {
@@ -659,6 +667,55 @@ export interface ExternalDocumentItem {
   byteSize: number;
   uploadedAt: string;
   scannedAt: string | null;
+  /** Reading of the text (F-08); null until the scan is clean. */
+  readStatus?: ExternalReadStatus | null;
+  pendingFacts?: number;
+  /** Facts are being extracted right now. */
+  extracting?: boolean;
+}
+
+export type ExternalReadStatus = "pending" | "reading" | "done" | "failed";
+export type FactKind = "issuer" | "registration" | "issue_date" | "icd" | "medication" | "conclusion";
+export type FactStatus = "pending" | "confirmed" | "corrected" | "discarded";
+
+export interface DocumentFact {
+  id: string;
+  kind: FactKind;
+  /** As read from the document. */
+  value: string;
+  correctedValue: string | null;
+  page: number | null;
+  quote: string | null;
+  status: FactStatus;
+  excerptRefId: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+}
+
+export interface DocumentFacts {
+  documentId: string;
+  readStatus: ExternalReadStatus | null;
+  pageCount: number | null;
+  pagesTruncated: boolean;
+  extracting: boolean;
+  facts: DocumentFact[];
+}
+
+/** A confirmed or corrected fact of the patient record. `value` is the correction when there is one. */
+export interface DeclaredFact {
+  id: string;
+  documentId: string;
+  documentKind: ExternalDocumentKind;
+  documentDate: string | null;
+  uploadedAt: string;
+  kind: FactKind;
+  value: string;
+  readValue: string;
+  corrected: boolean;
+  page: number | null;
+  quote: string | null;
+  excerptRefId: string | null;
+  confirmedAt: string | null;
 }
 
 export interface ExternalDocumentSearchRequest {

@@ -66,6 +66,7 @@ public class ScanWorkerTests(SharedAppHostFixture fixture)
         var row = await db.ExternalDocuments.AsNoTracking().SingleAsync(d => d.Id == document.Id, Ct);
         row.ScanStatus.Should().Be("clean");
         row.ScannedAt.Should().Be(Now);
+        row.ReadStatus.Should().Be("pending");
         row.ObjectKey.Should().Be(document.ObjectKey);
         store.Objects.Should().ContainKey(document.ObjectKey!);
     }
@@ -89,6 +90,7 @@ public class ScanWorkerTests(SharedAppHostFixture fixture)
         var row = await db.ExternalDocuments.AsNoTracking().SingleAsync(d => d.Id == document.Id, Ct);
         row.ScanStatus.Should().Be("infected");
         row.ScannedAt.Should().Be(Now);
+        row.ReadStatus.Should().BeNull();
         row.ObjectKey.Should().BeNull();
         row.DeletedAt.Should().BeNull();
         store.Objects.Should().BeEmpty();

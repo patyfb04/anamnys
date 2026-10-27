@@ -51,8 +51,15 @@ CREATE INDEX IF NOT EXISTS "ExternalDocuments_Provider_Uploaded_idx" ON "Externa
 
 -- External document actions are audited with the provider as actor and the document id and kind in
 -- NewValue; they belong to no note or clinical document.
-ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
-ALTER TABLE "AuditEntries"
-  ADD CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text]))));
+-- Skipped once a later migration (2026-10-26-document-facts.sql) owns a longer action list.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                  WHERE conname = 'AuditEntries_subject_ck' AND pg_get_constraintdef(oid) LIKE '%fact_confirmed%') THEN
+    ALTER TABLE "AuditEntries" DROP CONSTRAINT IF EXISTS "AuditEntries_subject_ck";
+    ALTER TABLE "AuditEntries"
+      ADD CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text]))));
+  END IF;
+END $$;
 
 COMMIT;

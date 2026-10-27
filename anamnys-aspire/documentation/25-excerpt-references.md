@@ -199,7 +199,7 @@ The output token cap is per mode: 160 for codes (`CodesOutputTokens`), 720 for q
 prefix and the mode's cap, so the with-quotes mode takes room from the note text (cut to a prefix, as in
 chapter 23).
 
-- **The locate holds the shared gate** (about 6 s or more per job). A suggestion requested meanwhile
+- **The locate holds the shared gate** (about 6 s or more per job; it runs at background priority, so an interactive suggestion goes first, see chapter 27, section 7). A suggestion requested meanwhile
   waits for it. A note-wide locate of several tags is one job.
 - **Queued jobs are lost on restart**; the tags stay `section` until "Localizar trechos" is used.
 - **A provider-chosen section restricts the locate** to that section. If the model's passage is in
@@ -217,10 +217,12 @@ chapter 23).
 
 ## 9. What stays out
 
-- **Document facts and patient quotes** (F-08, F-15) will add their own `SourceType`; the model and the
-  helper are ready, nothing else is built.
+- **Documents are sources too** (F-08): a declared fact points at a page of an external document with
+  `SourceType` `document` and a `PageNumber` (chapter 27). **Patient quotes** (F-15) will add their own
+  `SourceType`; nothing is built for them.
 - **Longitudinal analyses** (F-10 onwards): the helper exists, no query uses it yet.
-- **Transcript and live-session text** are not sources: references point at note sections only.
+- **Transcript and live-session text** are not sources: references point at note sections and document
+  pages only.
 - **Bulk backfill with the model:** existing tags got `section` references from the migration;
   upgrading them is up to the provider, note by note.
 

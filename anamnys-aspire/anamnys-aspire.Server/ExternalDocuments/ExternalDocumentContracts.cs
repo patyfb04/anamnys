@@ -34,10 +34,12 @@ public sealed record ExternalDocumentUpload(string FileName, byte[] Content, str
 }
 
 // PatientName and PatientArchived are filled by the provider-wide search only (null in a patient's own list).
+// F-08: ReadStatus (null until scanned clean, then pending | reading | done | failed), PendingFacts (facts
+// awaiting review) and Extracting (an extraction is queued or running, set by the endpoint).
 public sealed record ExternalDocumentItem(
     Guid Id, Guid PatientId, string? PatientName, string FileName, string Kind, DateOnly? DocumentDate,
     string? Description, string ScanStatus, long ByteSize, DateTimeOffset UploadedAt, DateTimeOffset? ScannedAt,
-    bool? PatientArchived = null);
+    bool? PatientArchived = null, string? ReadStatus = null, int PendingFacts = 0, bool Extracting = false);
 
 public sealed record ExternalDocumentSearchResponse(IReadOnlyList<ExternalDocumentItem> Items, bool HasMore);
 

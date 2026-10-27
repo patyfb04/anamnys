@@ -29,6 +29,7 @@ import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
+import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
 import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
 import UploadExternalDocumentModal from "@/components/externalDocuments/UploadExternalDocumentModal";
@@ -244,6 +245,8 @@ function PatientDetailPage() {
       <DocumentsCard patientId={patientId} readOnly={archived} />
 
       <ExternalDocumentsCard patientId={patientId} readOnly={archived} />
+
+      <DeclaredFactsCard patientId={patientId} />
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />

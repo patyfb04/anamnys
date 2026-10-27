@@ -23,5 +23,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function hasPending(items: ExternalDocumentItem[] | undefined): boolean {
-  return (items ?? []).some((d) => d.scanStatus === "pending");
+  return (items ?? []).some(
+    (d) => d.scanStatus === "pending" || d.readStatus === "pending" || d.readStatus === "reading" || d.extracting === true,
+  );
 }

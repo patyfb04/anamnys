@@ -9,9 +9,12 @@ public enum ExcerptOutcome { Ok, NotFound, InvalidSelection }
 
 public sealed record ExcerptCreation(ExcerptOutcome Outcome, ExcerptRef? Ref = null);
 
+// SourceType "note": NoteId, SessionStartsAt and the Section fields are set. SourceType "document"
+// (F-08): DocumentId, DocumentKind, PageNumber and PageText are set, and Start/End point into PageText.
 public sealed record ExcerptPassage(
-    Guid Id, string Kind, Guid NoteId, Guid PatientId, DateTimeOffset? SessionStartsAt, DateTimeOffset DatedAt,
-    string SectionKey, string SectionTitle, string SectionText, int? Start, int? End);
+    Guid Id, string Kind, Guid? NoteId, Guid PatientId, DateTimeOffset? SessionStartsAt, DateTimeOffset DatedAt,
+    string? SectionKey, string? SectionTitle, string? SectionText, int? Start, int? End,
+    string SourceType = "note", Guid? DocumentId = null, string? DocumentKind = null, int? PageNumber = null, string? PageText = null);
 
 // References into note sections (design/specs/2026-10-24-excerpt-references-design.md §3). Create and
 // relocate only add to the context: the caller saves, inside the transaction that holds the note lock.
@@ -160,9 +163,40 @@ public static class ExcerptService
         return refs.Count;
     }
 
-    // Provider-scoped through the reference, the note and the patient; null for anything else.
+    // A reference to the sentence of a document page a fact was read from (F-08): exact, with the offsets
+    // the locator found in that page's text. Adds to the context only.
+    public static ExcerptRef AddDocumentPage(
+        AnamnysDbContext db, Guid providerId, Guid documentId, int pageNumber, string pageText, ExcerptSpan span, DateTimeOffset datedAt)
+    {
+        var reference = new ExcerptRef
+        {
+            Id = Guid.NewGuid(),
+            ProviderId = providerId,
+            SourceType = "document",
+            SourceId = documentId,
+            PageNumber = pageNumber,
+            DatedAt = datedAt,
+        };
+        MakeExact(reference, pageText, span);
+        db.ExcerptRefs.Add(reference);
+        return reference;
+    }
+
+    // The span of a quote in a document page, or null when absent or longer than a quote may be.
+    public static ExcerptSpan? FindInPage(string pageText, string? quote) =>
+        ExcerptLocator.Locate(pageText, quote) is { } span && span.End - span.Start <= ExcerptQueries.MaxQuoteLength ? span : null;
+
+    // Provider-scoped through the reference, the note (or document) and the patient; null for anything else.
     public static async Task<ExcerptPassage?> GetPassageAsync(AnamnysDbContext db, Guid providerId, Guid id, CancellationToken ct)
     {
+        var sourceType = await db.ExcerptRefs.AsNoTracking()
+            .Where(r => r.Id == id && r.ProviderId == providerId)
+            .Select(r => r.SourceType)
+            .SingleOrDefaultAsync(ct);
+        if (sourceType == "document")
+        {
+            return await GetDocumentPassageAsync(db, providerId, id, ct);
+        }
         var row = await (
             from r in db.ExcerptRefs.AsNoTracking()
             join n in db.Notes.AsNoTracking() on r.SourceId equals n.Id
@@ -192,6 +226,38 @@ public static class ExcerptService
         return new ExcerptPassage(
             id, exact ? "exact" : "section", row.NoteId, row.PatientId, session?.ActualStart ?? session?.ScheduledStart, row.DatedAt,
             key, NotePdfModel.SectionTitle(key), text, exact ? row.OffsetStart : null, exact ? row.OffsetEnd : null);
+    }
+
+    // A document page passage: the reference, the document (not deleted) and its patient all belong to the
+    // provider; null when the page text is gone (deleted document) or anything else does not match.
+    private static async Task<ExcerptPassage?> GetDocumentPassageAsync(AnamnysDbContext db, Guid providerId, Guid id, CancellationToken ct)
+    {
+        var row = await (
+            from r in db.ExcerptRefs.AsNoTracking()
+            join d in db.ExternalDocuments.AsNoTracking() on r.SourceId equals d.Id
+            join p in db.Patients.AsNoTracking() on d.PatientId equals p.Id
+            where r.Id == id && r.SourceType == "document" && r.ProviderId == providerId
+                  && d.ProviderId == providerId && d.DeletedAt == null && p.ProviderId == providerId
+            select new { r.Kind, r.Quote, r.PageNumber, r.OffsetStart, r.OffsetEnd, r.DatedAt, DocumentId = d.Id, DocumentKind = d.Kind, PatientId = p.Id })
+            .SingleOrDefaultAsync(ct);
+        if (row?.PageNumber is not { } page)
+        {
+            return null;
+        }
+        var text = await db.ExternalDocumentPages.AsNoTracking()
+            .Where(x => x.ExternalDocumentId == row.DocumentId && x.ProviderId == providerId && x.PageNumber == page)
+            .Select(x => x.Text)
+            .SingleOrDefaultAsync(ct);
+        if (text is null)
+        {
+            return null;
+        }
+        var exact = row.Kind == "exact" && row.OffsetStart is { } a && row.OffsetEnd is { } b && a >= 0 && b > a && b <= text.Length
+            && string.Equals(text[a..b], row.Quote, StringComparison.Ordinal);
+        return new ExcerptPassage(
+            id, exact ? "exact" : "section", null, row.PatientId, null, row.DatedAt, null, null, null,
+            exact ? row.OffsetStart : null, exact ? row.OffsetEnd : null,
+            "document", row.DocumentId, row.DocumentKind, page, text);
     }
 
     // "Localizar trechos": a section reference (or one whose quote was lost) becomes exact when the quote

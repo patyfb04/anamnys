@@ -18,8 +18,11 @@ public static class NoteStructuringSetup
         builder.Services.AddSingleton<INoteStructurer>(sp => new LlamaNoteStructurer(
             sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>()));
         // Same weights as the structurer: the provider loads the model once per process.
+        // One gate for every model run outside structuring: suggestions, locates and document facts (F-08).
+        builder.Services.AddSingleton<LlmGate>();
         builder.Services.AddSingleton<IThemeSuggester>(sp => new LlamaThemeSuggester(
-            sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>()));
+            sp.GetRequiredService<LlmModelProvider>(), sp.GetRequiredService<IOptions<NoteStructuringOptions>>(),
+            sp.GetRequiredService<LlmGate>()));
         builder.Services.AddSingleton<ThemeWarmupSignal>();
         builder.Services.AddHostedService<ThemeWarmupService>();
         builder.Services.AddSingleton<ThemeLocateQueue>();

@@ -113,10 +113,11 @@ internal sealed class BrowserSession : IDisposable
         return response;
     }
 
-    public static async Task WaitForDevServerAsync(HttpClient client, string appPath, CancellationToken cancellationToken)
+    public static async Task WaitForDevServerAsync(
+        HttpClient client, string appPath, CancellationToken cancellationToken, TimeSpan? budget = null)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        timeout.CancelAfter(budget ?? TimeSpan.FromSeconds(30));
         while (true)
         {
             try

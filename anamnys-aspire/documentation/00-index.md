@@ -79,6 +79,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 24. Full Account Export (F-60)
 25. Excerpt References (F-03)
 26. External Documents (F-07)
+27. Document Reading and Declared Facts (F-08)
 
 ## Building a single PDF from these files
 

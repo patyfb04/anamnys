@@ -14,11 +14,29 @@ public static class ExcerptEndpoints
                 return Results.Unauthorized();
             }
             var passage = await ExcerptService.GetPassageAsync(db, providerId, id, ct);
-            return passage is null
-                ? Results.NotFound()
+            if (passage is null)
+            {
+                return Results.NotFound();
+            }
+            return passage.SourceType == "document"
+                ? Results.Ok(new
+                {
+                    id = passage.Id,
+                    sourceType = passage.SourceType,
+                    kind = passage.Kind,
+                    documentId = passage.DocumentId,
+                    documentKind = passage.DocumentKind,
+                    patientId = passage.PatientId,
+                    datedAt = passage.DatedAt,
+                    pageNumber = passage.PageNumber,
+                    pageText = passage.PageText,
+                    start = passage.Start,
+                    end = passage.End,
+                })
                 : Results.Ok(new
                 {
                     id = passage.Id,
+                    sourceType = passage.SourceType,
                     kind = passage.Kind,
                     noteId = passage.NoteId,
                     patientId = passage.PatientId,
