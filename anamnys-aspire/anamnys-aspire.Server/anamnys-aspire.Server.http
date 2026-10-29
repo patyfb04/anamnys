@@ -474,3 +474,9 @@ GET {{Server_HostAddress}}/api/phi/providers/me/disposal-terms
 ###
 ### Signed link to a term's PDF (1 hour). 200 { url, expiresAt }; 404.
 GET {{Server_HostAddress}}/api/phi/providers/me/disposal-terms/00000000-0000-0000-0000-000000000000/pdf
+
+###
+### Case analysis of a patient (F-10, design/specs/2026-10-28-case-analysis-design.md §3). from/to (yyyy-MM-dd, practice-local day) optional. 400 when from is after to; 404 for another provider's or a discarded patient.
+### 200 { available, signedSessions, minimumSessions: 6, sessions: [{ noteId, on, sessionId?, appointmentId? }], themes: [{ termId, code, label, parentId?, active, supersededBy: [{ termId, label }], occurrences: [{ noteId, on, excerptId?, section?, quote? }] }], cooccurrence: [{ a, b, sessions }] }
+### With fewer than 6 signed notes in the period, available is false and only available, signedSessions and minimumSessions are filled.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/analysis?from=2025-10-28&to=2026-10-28

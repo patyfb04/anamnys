@@ -12,9 +12,11 @@ import { DAY_MS, PERIODS, dayMs, formatDay, periodFrom, todayIso, type TimelineP
 // Patient record card: medications (a lane per treatment) and applied-scale scores on one shared date
 // axis. It only places facts side by side in time; it never states a relation between them.
 // The period goes to the server as dates only (no PHI in the URL).
-export default function TimelineCard({ patientId }: { patientId: string }) {
+export default function TimelineCard({ patientId, period: fixedPeriod }: { patientId: string; period?: TimelinePeriod }) {
   const { t, i18n } = useTranslation();
-  const [period, setPeriod] = useState<TimelinePeriod>("1y");
+  const [ownPeriod, setPeriod] = useState<TimelinePeriod>("1y");
+  // When the page owns the period (analysis page), the card follows it and hides its own selector.
+  const period = fixedPeriod ?? ownPeriod;
   const [selection, setSelection] = useState<TimelineSelection | null>(null);
   const [passageId, setPassageId] = useState<string | null>(null);
   const today = todayIso();
@@ -60,7 +62,7 @@ export default function TimelineCard({ patientId }: { patientId: string }) {
       title={t("timeline.title")}
       icon={<GanttChartSquare size={20} />}
       action={
-        <div role="group" aria-label={t("timeline.periodLabel")} className="flex items-center gap-1">
+        fixedPeriod ? undefined : <div role="group" aria-label={t("timeline.periodLabel")} className="flex items-center gap-1">
           {PERIODS.map((p) => (
             <button
               key={p}

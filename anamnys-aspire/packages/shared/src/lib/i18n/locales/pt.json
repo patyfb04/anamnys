@@ -129,6 +129,53 @@
     "hours": "{{value}} h",
     "days": "{{value}} d"
   },
+  "analysis": {
+    "title": "Análises",
+    "subtitle": "Temas registrados por sessão assinada, com o trecho de origem de cada um.",
+    "chooseTitle": "Escolha um paciente",
+    "chooseHint": "Escolha um paciente para ver os temas registrados nas sessões assinadas.",
+    "searchLabel": "Buscar paciente",
+    "searchPlaceholder": "Nome do paciente",
+    "searching": "Buscando...",
+    "noPatients": "Nenhum paciente encontrado.",
+    "moreResults": "Mostrando {{shown}} de {{total}} pacientes. Digite parte do nome para encontrar os demais.",
+    "searchFailed": "Não foi possível buscar pacientes.",
+    "changePatient": "Trocar paciente",
+    "loadFailed": "Não foi possível carregar a análise.",
+    "unavailable_one": "Série indisponível: {{count}} sessão assinada no período (mínimo {{min}}).",
+    "unavailable_other": "Série indisponível: {{count}} sessões assinadas no período (mínimo {{min}}).",
+    "periodLabel": "Período",
+    "period": { "6m": "6 meses", "1y": "1 ano", "all": "Tudo" },
+    "themes": {
+      "title": "Temas por sessão",
+      "empty": "Nenhum tema registrado nas sessões assinadas do período.",
+      "sortLabel": "Ordenar por",
+      "sort": { "frequency": "Frequência", "recency": "Recência", "alphabetical": "Ordem alfabética" },
+      "gridLabel": "Temas registrados por sessão, {{count}} sessões",
+      "themeColumn": "Tema",
+      "expand": "Mostrar subtemas de {{label}}",
+      "collapse": "Ocultar subtemas de {{label}}",
+      "collapsedHint": "O marcador indica o tema ou algum subtema.",
+      "supersededBy": "substituído por {{labels}}",
+      "inactive": "inativo",
+      "cell": "{{label}}, registrado em {{date}}",
+      "cellEmpty": "{{label}}, não registrado em {{date}}"
+    },
+    "cooccurrence": {
+      "title": "Aparecem juntos com mais frequência",
+      "empty": "Nenhum par de temas aparece junto em uma mesma sessão no período.",
+      "sessions_one": "{{count}} sessão",
+      "sessions_other": "{{count}} sessões"
+    },
+    "passage": {
+      "title": "Registrado em {{date}}",
+      "noQuote": "Sem trecho de origem registrado para este tema.",
+      "sameSession": "na mesma sessão: {{labels}}",
+      "openNote": "Abrir a nota",
+      "openNoteFor": "Abrir a nota neste trecho de {{label}}",
+      "close": "Fechar"
+    }
+  },
   "timeline": {
     "title": "Linha do tempo",
     "periodLabel": "Período",

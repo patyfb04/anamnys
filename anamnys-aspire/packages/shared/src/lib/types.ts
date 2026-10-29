@@ -898,3 +898,45 @@ export interface DisposalTerm {
   basis: string;
   counts: Record<string, number>;
 }
+
+// Case analysis (F-10): signed sessions as columns, theme lanes with the passage that originated each
+// occurrence. When "available" is false only the counts are filled (the other members are null/absent).
+export interface AnalysisSession {
+  noteId: string;
+  on: string;
+  sessionId?: string | null;
+  appointmentId?: string | null;
+}
+
+export interface AnalysisOccurrence {
+  noteId: string;
+  on: string;
+  excerptId?: string | null;
+  section?: string | null;
+  quote?: string | null;
+}
+
+export interface AnalysisTheme {
+  termId: string;
+  code: string;
+  label: string;
+  parentId?: string | null;
+  active: boolean;
+  supersededBy: { termId: string; label: string }[];
+  occurrences: AnalysisOccurrence[];
+}
+
+export interface AnalysisPair {
+  a: string;
+  b: string;
+  sessions: number;
+}
+
+export interface CaseAnalysis {
+  available: boolean;
+  signedSessions: number;
+  minimumSessions: number;
+  sessions?: AnalysisSession[] | null;
+  themes?: AnalysisTheme[] | null;
+  cooccurrence?: AnalysisPair[] | null;
+}

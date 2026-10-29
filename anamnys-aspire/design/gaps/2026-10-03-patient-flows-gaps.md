@@ -445,6 +445,16 @@ Attendance statistics (F-04; chapter `documentation/29-attendance-stats.md`).
   computation.
 - **Not exercised in a browser;** the real-database tests were compiled but not run (Aspire was running).
 
+## Análise do caso
+
+Case analysis (F-10 + F-11; chapter `documentation/31-case-analysis.md`).
+
+- **No note passage modal.** The cell modal shows the quote stored in the excerpt reference and links to the
+  note, where the passage is highlighted in place; there is no modal with the passage in its note context.
+- **No practice-wide view.** The page is per patient; nothing aggregates across patients.
+- **No export of the analysis.** The grid, pairs and timeline cannot be saved or printed from the page.
+- **Not exercised in a browser;** the page is type-checked and built only (build and lint).
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

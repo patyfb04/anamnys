@@ -64,7 +64,9 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-10 … F-13, F-15, F-16 | not started | depend on F-01…F-03 |
+| F-10 Camada de agregação | done | One call returns a patient's theme history: signed notes only (date = actual session start, else appointment, else signing day), tags not removed and not untouched AI proposals, one lane per term with parents always included, retired/split terms keep their old sessions with `supersededBy` (D-01), origin (excerpt, section, quote) on every occurrence, co-occurrence counts per session, 6-signed-note minimum. `GET providers/me/patients/{id}/analysis`. `Analysis/`, `documentation/31-case-analysis.md`. No migration. |
+| F-11 Linha do tempo de temas | done | "Análises" page (`/analyses`, patient id only in the URL): patient picker, period 6 m / 1 y / all, card "Temas por sessão" (sessions as columns, lanes with collapsible children, sort by frequency/recency/alphabet, "substituído por X"), cell modal with the stored quote, link to the highlighted passage and "na mesma sessão", card "Aparecem juntos com mais frequência", and the "Linha do tempo" card reused with the page period. `components/analysis/`, `documentation/31-case-analysis.md`. Build and lint only; see the gaps file. |
+| F-12, F-13, F-15, F-16 | not started | depend on F-01…F-03 |
 | F-14 Plano terapêutico e lacunas | partial | treatment plan objectives CRUD on the record (`TreatmentPlans`, `PlanObjectives`); no comparison with registered themes, `FollowUpItems` schema only |
 
 ### E · Compartilhamento protegido
@@ -135,7 +137,7 @@ the schema still carries every table, but only the features below have code.
 | 05, 06 | not started |
 | 07 Ler documento e fatos declarados | done (F-08) |
 | 08 | not started |
-| 09 Linha do tempo de medicação | partial: medication and scales on one axis done (F-09); the other layers wait for F-10 |
+| 09 Linha do tempo de medicação | partial: medication and scales on one axis (F-09), themes per session and co-occurrence on the Análises page (F-10, F-11); F-12 and F-13 pending |
 | 10, 11 | not started |
 | 12 Disponibilidade e agenda | partial (appointments only) |
 | 13 Google | not started |
@@ -162,7 +164,7 @@ the schema still carries every table, but only the features below have code.
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
 1. **Close groups A and B first (user, 2026-10-27):** ~~F-04 (attendance statistics)~~ done, ~~F-06 (retention panel)~~ done; groups A and B are closed.
-   **Next = analyses:** F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+   **Next = analyses:** ~~F-10 (aggregation layer)~~ and ~~F-11 (theme timeline)~~ done; now F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
 2. F-15 (patient quotes), F-16 (natural-language search); F-17/F-18
    (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
@@ -186,3 +188,4 @@ Verified 2026-10-27 (F-08): full suite 1401 total, 1 failure (an export endpoint
 Verified 2026-10-27 (F-09): full suite 1465 total, 2 failed, 3 skipped; both failures were the PDF text tests picking up the image-only OCR sample (`-escaneado`), now excluded from them (9/9 passed); medication suites 57/57 after fix round 1; provider build and lint clean after the final UI fixes. `2026-10-27-medication-timeline.sql` must be applied to any persistent environment.
 Verified 2026-10-27 (F-04): full suite 1480 total, 0 failed, 3 skipped, after the final review fixes; provider build and lint clean. No migration.
 Verified 2026-10-28 (F-06, with F-04 in the same tree): full suite 1540 total, 0 failed, 3 skipped, after the final review fixes; provider build and lint clean. `2026-10-28-retention-panel.sql` must be applied to any persistent environment (re-run it where an earlier version was applied: it added the insert trigger and `DisposalTerms.RetentionUntil` later). Merged into develop on 2026-10-28 (commit 8219ab7). Dev seeds: `dev-seed/attendance-samples.sql` (appointment history) and `dev-seed/retention-samples.sql` (expired and near-expiry records).
+Verified 2026-10-29 (F-10 + F-11): full suite 1549 total, 0 failed, 3 skipped; provider build and lint clean after the final review fixes. No migration.

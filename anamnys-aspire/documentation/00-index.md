@@ -83,6 +83,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 28. Medication Timeline (F-09)
 29. Attendance Statistics (F-04)
 30. Retention and Compliance Panel (F-06)
+31. Case Analysis (F-10 + F-11)
 
 ## Building a single PDF from these files
 
