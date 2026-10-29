@@ -5,6 +5,7 @@ import { GanttChartSquare, X } from "lucide-react";
 import { medicationTimelineApi } from "@anamnys/shared/api/medicationTimeline";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import DocumentPassageModal from "@/components/externalDocuments/DocumentPassageModal";
+import { AttendanceLegend } from "@/components/attendance/AttendanceMark";
 import TimelineChart, { type TimelineSelection } from "./TimelineChart";
 import { DAY_MS, PERIODS, dayMs, formatDay, periodFrom, todayIso, type TimelinePeriod } from "./timelineGeometry";
 
@@ -23,6 +24,7 @@ export default function TimelineCard({ patientId }: { patientId: string }) {
     queryFn: () => medicationTimelineApi.timeline(patientId, from),
   });
   const data = query.data;
+  const hasAppts = (data?.appointments.length ?? 0) > 0;
   const hasMeds = (data?.medications.length ?? 0) > 0;
   const hasScales = (data?.scales.length ?? 0) > 0;
 
@@ -30,6 +32,10 @@ export default function TimelineCard({ patientId }: { patientId: string }) {
   let startMs = Infinity;
   let endMs = dayMs(today);
   if (data) {
+    for (const a of data.appointments) {
+      startMs = Math.min(startMs, dayMs(a.on));
+      endMs = Math.max(endMs, dayMs(a.on) + DAY_MS);
+    }
     for (const m of data.medications)
       for (const s of m.segments) {
         startMs = Math.min(startMs, dayMs(s.startedOn));
@@ -74,11 +80,12 @@ export default function TimelineCard({ patientId }: { patientId: string }) {
     >
       {query.isPending ? null : query.isError || !data ? (
         <p className="text-body-md text-error">{t("timeline.loadFailed")}</p>
-      ) : !hasMeds && !hasScales ? (
+      ) : !hasAppts && !hasMeds && !hasScales ? (
         <p className="text-body-md text-onSurfaceVariant">{t("timeline.empty")}</p>
       ) : (
         <div className="flex flex-col gap-3">
           <TimelineChart data={data} startMs={startMs} endMs={endMs} selection={selection} onSelect={setSelection} />
+          {hasAppts && <AttendanceLegend label={(k) => t(`attendance.kinds.${k}`)} />}
           {!hasMeds && <p className="text-body-sm text-onSurfaceVariant">{t("timeline.noMedications")}</p>}
           {!hasScales && <p className="text-body-sm text-onSurfaceVariant">{t("timeline.noScales")}</p>}
           {selection && (
@@ -112,7 +119,15 @@ function Details({
 
   let title: string;
   let body: React.ReactNode;
-  if (selection.kind === "point") {
+  if (selection.kind === "appointment") {
+    title = t("timeline.appointments");
+    body = (
+      <dl className="grid gap-3 sm:grid-cols-3">
+        {row(t("timeline.date"), formatDay(selection.appointment.on, locale))}
+        {row(t("timeline.status"), t(`attendance.kinds.${selection.appointment.kind}`))}
+      </dl>
+    );
+  } else if (selection.kind === "point") {
     title = selection.scale.name;
     body = (
       <dl className="grid gap-3 sm:grid-cols-3">

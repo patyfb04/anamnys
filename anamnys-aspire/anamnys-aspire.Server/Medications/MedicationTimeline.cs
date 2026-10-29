@@ -15,7 +15,10 @@ public sealed record TimelinePoint(Guid ApplicationId, int Score, DateOnly Appli
 
 public sealed record TimelineScale(Guid InstrumentId, string Code, string Name, int MinScore, int MaxScore, IReadOnlyList<TimelinePoint> Points);
 
-public sealed record PatientTimeline(IReadOnlyList<TimelineMedication> Medications, IReadOnlyList<TimelineScale> Scales);
+public sealed record TimelineAppointment(Guid Id, DateOnly On, string Kind);
+
+public sealed record PatientTimeline(
+    IReadOnlyList<TimelineMedication> Medications, IReadOnlyList<TimelineScale> Scales, IReadOnlyList<TimelineAppointment> Appointments);
 
 // design/specs/2026-10-27-medication-timeline-design.md §3: medication lanes (one per treatment, a segment per
 // record) and applied-scale series for one patient, optionally within a period of dates. Dates only; no
@@ -27,9 +30,9 @@ public static class MedicationTimeline
     public const string DocumentDeleted = "document_deleted";
 
     public static async Task<PatientTimeline?> GetAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, DateOnly? from, DateOnly? to, CancellationToken ct)
+        AnamnysDbContext db, Guid providerId, Guid patientId, DateOnly? from, DateOnly? to, CancellationToken ct, DateTimeOffset? now = null)
     {
-        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId && p.ProviderId == providerId, ct))
+        if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null, ct))
         {
             return null;
         }
@@ -97,6 +100,10 @@ public static class MedicationTimeline
                 g.OrderBy(x => x.a.AppliedAt).ThenBy(x => x.a.Id).Select(x => new TimelinePoint(x.a.Id, x.a.Score, x.On)).ToList()))
             .ToList();
 
-        return new PatientTimeline(medications, scales);
+        var appointments = (await Attendance.AttendanceQuery.EventsAsync(db, providerId, patientId, from, to, now ?? DateTimeOffset.UtcNow, ct))!
+            .Select(e => new TimelineAppointment(e.Id, e.On, e.Kind))
+            .ToList();
+
+        return new PatientTimeline(medications, scales, appointments);
     }
 }

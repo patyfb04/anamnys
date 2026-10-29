@@ -19,6 +19,8 @@ public class Provider
     public string? PracticeCity { get; set; }
     // 'blocking' (default) or 'advisory'; constrained by Providers_DocumentCheckMode_ck.
     public string DocumentCheckMode { get; set; } = "blocking";
+    // Age in days from which an unsigned note is listed on the compliance panel (Providers_UnsignedNoteDays_ck: >= 1).
+    public int UnsignedNoteDays { get; set; } = 7;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

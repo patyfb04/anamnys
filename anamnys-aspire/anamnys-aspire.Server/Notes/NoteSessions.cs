@@ -1,6 +1,7 @@
 using Anamnys.Server.Appointments;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Notes;
@@ -59,6 +60,10 @@ public static class NoteSessions
             session.ActualEnd = actualEnd;
         }
         session.Attendance = "attended";
+        // A session is a record of the patient: the retention deadline moves with it (F-06). The push is an UPDATE
+        // dated by the session, independent of the tracked changes the caller saves later; it relies on the
+        // caller's transaction (both callers own one) so the deadline commits or rolls back with the session.
+        await RetentionClock.PushAsync(db, providerId, patientId, session.ActualStart ?? session.CreatedAt, ct);
 
         var nowUtc = now.ToUniversalTime();
         if (appointment is { Status: AppointmentStatus.Scheduled or AppointmentStatus.Confirmed } && appointment.StartsAt <= nowUtc)

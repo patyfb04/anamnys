@@ -18,7 +18,7 @@ public sealed class TranscriptionHub(
         var check = await LiveRecordings.CheckBeginAsync(db, ProviderId, patientId, appointmentId, format, language, Context.ConnectionAborted);
         if (check != BeginCheck.Ok)
         {
-            return new BeginAck(check == BeginCheck.Invalid ? "invalid" : "not_found");
+            return new BeginAck(check switch { BeginCheck.Invalid => "invalid", BeginCheck.Archived => "archived", _ => "not_found" });
         }
         var meta = new RecordingMeta(ProviderId, patientId, appointmentId, format, language, clock.GetUtcNow());
         return new BeginAck(buffers.Begin(recordingId, meta) == BeginStatus.Forbidden ? "forbidden" : "ok");

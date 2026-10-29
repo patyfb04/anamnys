@@ -315,7 +315,12 @@ export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
 }
 
 // Provider notifications and booking policy (/api/phi/providers/me/...).
-export type NotificationKind = "appointment_confirmed" | "appointment_auto_cancelled" | "account_export_ready";
+export type NotificationKind =
+  | "appointment_confirmed"
+  | "appointment_auto_cancelled"
+  | "account_export_ready"
+  | "unsigned_note"
+  | "retention_due";
 
 export interface ProviderNotification {
   id: string;
@@ -809,7 +814,87 @@ export interface TimelineScale {
   points: { applicationId: string; score: number; appliedOn: string }[];
 }
 
+export type AttendanceKind =
+  | "attended"
+  | "attended_unscheduled"
+  | "no_show"
+  | "cancelled_provider"
+  | "cancelled_patient"
+  | "unrecorded";
+
+export interface TimelineAppointment {
+  id: string;
+  on: string;
+  kind: AttendanceKind;
+}
+
 export interface PatientTimeline {
+  appointments: TimelineAppointment[];
   medications: TimelineMedication[];
   scales: TimelineScale[];
+}
+
+export interface AttendanceSummary {
+  counts: {
+    attended: number;
+    attendedUnscheduled: number;
+    noShow: number;
+    cancelledByProvider: number;
+    cancelledByPatient: number;
+    unrecorded: number;
+  };
+  cancellationLeadHours: { median: number; min: number; max: number; count: number } | null;
+  intervalDays: { median: number; min: number; max: number; last: number } | null;
+  daysSinceLast: number | null;
+}
+
+// Retention and compliance panel (F-06): /api/phi/providers/me/compliance, settings/retention, disposal terms.
+export interface UnsignedNoteItem {
+  noteId: string;
+  patientId: string;
+  patientName: string;
+  createdAt: string;
+  ageDays: number;
+}
+
+export interface RetentionItem {
+  patientId: string;
+  patientName: string;
+  lastRecordAt: string; // yyyy-MM-dd
+  retentionUntil: string; // yyyy-MM-dd
+  expired: boolean;
+  hasFutureAppointment: boolean;
+}
+
+export interface ComplianceDocumentItem {
+  documentId: string;
+  patientId: string;
+  patientName: string;
+  kind: string;
+  status: "draft" | "signed";
+  missing: string[]; // element codes
+  createdAt: string;
+}
+
+export interface ComplianceSummary {
+  unsignedNotes: UnsignedNoteItem[];
+  retention: RetentionItem[];
+  documents: ComplianceDocumentItem[];
+}
+
+export interface RetentionSettings {
+  guardYears: number;
+  unsignedNoteDays: number;
+}
+
+export interface DisposalTerm {
+  id: string;
+  patientId: string;
+  patientName: string;
+  createdAt: string;
+  periodFrom: string;
+  periodTo: string;
+  guardYears: number;
+  basis: string;
+  counts: Record<string, number>;
 }

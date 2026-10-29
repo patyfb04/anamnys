@@ -11,7 +11,6 @@ export type DashboardNavFeature =
   | "documentIntake"
   | "analytics"
   | "secureSharing"
-  | "complianceVault"
   | "billing";
 
 export type FeatureFlags = Record<DashboardNavFeature, boolean>;
@@ -23,7 +22,6 @@ const MOCK_FLAGS: FeatureFlags = {
   documentIntake: true,
   analytics: true,
   secureSharing: true,
-  complianceVault: true,
   billing: true,
 };
 

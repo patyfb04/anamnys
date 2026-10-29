@@ -44,6 +44,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ExternalDocument> ExternalDocuments => Set<ExternalDocument>();
     public DbSet<ExternalDocumentPage> ExternalDocumentPages => Set<ExternalDocumentPage>();
     public DbSet<ExtractedFact> ExtractedFacts => Set<ExtractedFact>();
+    public DbSet<RetentionRule> RetentionRules => Set<RetentionRule>();
+    public DbSet<DisposalTerm> DisposalTerms => Set<DisposalTerm>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -218,6 +220,30 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("AccountExports");
             e.HasKey(x => x.Id);
             e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RetentionRule>(e =>
+        {
+            e.ToTable("RetentionRules");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.ProviderId, x.RecordKind }).IsUnique();
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DisposalTerm>(e =>
+        {
+            e.ToTable("DisposalTerms");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(x => x.Counts).HasColumnType("jsonb").HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                v => JsonSerializer.Deserialize<Dictionary<string, int>>(v, (JsonSerializerOptions?)null) ?? new(),
+                new ValueComparer<Dictionary<string, int>>(
+                    (a, b) => a != null && b != null && a.Count == b.Count && !a.Except(b).Any(),
+                    v => v.Aggregate(0, (h, kv) => HashCode.Combine(h, kv.Key, kv.Value)),
+                    v => new Dictionary<string, int>(v)));
+            e.HasIndex(x => x.PatientId).IsUnique();
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<BookingPolicy>(e =>

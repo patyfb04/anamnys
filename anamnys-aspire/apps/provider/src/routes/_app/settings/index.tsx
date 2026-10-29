@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import BookingPolicySection from "../../../components/settings/BookingPolicySection";
 import AccountExportSection from "../../../components/settings/AccountExportSection";
 import DocumentSettingsSection from "../../../components/settings/DocumentSettingsSection";
+import RetentionSettingsSection from "../../../components/settings/RetentionSettingsSection";
 
 export const Route = createFileRoute("/_app/settings/")({
   component: SettingsPage,
@@ -15,6 +16,7 @@ function SettingsPage() {
       <h1 className="text-headline-sm text-onSurface">{t("settings.pageTitle")}</h1>
       <BookingPolicySection />
       <DocumentSettingsSection />
+      <RetentionSettingsSection />
       <AccountExportSection />
     </div>
   );

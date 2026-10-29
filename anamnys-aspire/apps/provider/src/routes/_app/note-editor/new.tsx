@@ -67,6 +67,8 @@ function NewNotePage() {
     onSuccess: (noteId) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      void queryClient.invalidateQueries({ queryKey: ["attendance", patient!.id] });
+      void queryClient.invalidateQueries({ queryKey: ["timeline", patient!.id] });
       navigate({ to: "/notes/$noteId", params: { noteId } });
     },
     onError: (err) => {

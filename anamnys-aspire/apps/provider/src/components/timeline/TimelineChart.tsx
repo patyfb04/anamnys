@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
-import type { PatientTimeline, TimelineScale, TimelineSegment } from "@anamnys/shared/lib/types";
+import type { PatientTimeline, TimelineAppointment, TimelineScale, TimelineSegment } from "@anamnys/shared/lib/types";
+import AttendanceMark from "@/components/attendance/AttendanceMark";
 import { DAY_MS, dayMs, formatDay, monthTicks } from "./timelineGeometry";
 
 export type TimelineSelection =
+  | { kind: "appointment"; appointment: TimelineAppointment }
   | { kind: "segment"; drug: string; segment: TimelineSegment }
   | { kind: "point"; scale: TimelineScale; point: TimelineScale["points"][number] };
 
@@ -44,9 +46,12 @@ export default function TimelineChart({
   const x = (ms: number) => LABEL_W + ((Math.min(Math.max(ms, startMs), endMs) - startMs) / span) * plotW;
   const ticks = monthTicks(startMs, endMs, locale);
 
+  const apptSection = data.appointments.length > 0;
   const medSection = data.medications.length > 0;
   const scaleSection = data.scales.length > 0;
   let y = AXIS_H;
+  const apptTop = y;
+  if (apptSection) y += SECTION_H + LANE_H;
   const medTop = y;
   if (medSection) y += SECTION_H + data.medications.length * LANE_H;
   const scaleTop = y;
@@ -79,6 +84,50 @@ export default function TimelineChart({
             </text>
           </g>
         ))}
+
+        {apptSection && (
+          <g>
+            <text x={0} y={apptTop + 14} className="fill-onSurfaceVariant" fontSize={11} fontWeight={600}>
+              {t("timeline.appointments")}
+            </text>
+            {data.appointments.map((a) => {
+              const ms = dayMs(a.on);
+              if (ms + DAY_MS < startMs || ms > endMs) return null;
+              // Marks on the same day are spread a few px apart (centred on the day) so each stays clickable.
+              const sameDay = data.appointments.filter((o) => o.on === a.on);
+              const slot = sameDay.findIndex((o) => o.id === a.id);
+              const cx = x(ms + DAY_MS / 2) + (slot - (sameDay.length - 1) / 2) * 14;
+              const cy = apptTop + SECTION_H + LANE_H / 2;
+              const selected = selection?.kind === "appointment" && selection.appointment.id === a.id;
+              const status = t(`attendance.kinds.${a.kind}`);
+              const pick = () => onSelect({ kind: "appointment", appointment: a });
+              return (
+                <g
+                  key={a.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t("timeline.appointmentLabel", { status, date: formatDay(a.on, locale) })}
+                  aria-pressed={selected}
+                  className="cursor-pointer outline-none [&:focus-visible>rect]:stroke-primary"
+                  onClick={pick}
+                  onKeyDown={(e) => activate(e, pick)}
+                >
+                  <rect
+                    x={cx - 10}
+                    y={cy - 11}
+                    width={20}
+                    height={22}
+                    rx={4}
+                    className={selected ? "fill-pastelLavender stroke-primary" : "fill-transparent stroke-transparent hover:fill-pastelLavender"}
+                    strokeWidth={1.5}
+                  />
+                  <AttendanceMark kind={a.kind} cx={cx} cy={cy} />
+                  <title>{`${formatDay(a.on, locale)}: ${status}`}</title>
+                </g>
+              );
+            })}
+          </g>
+        )}
 
         {medSection && (
           <g>

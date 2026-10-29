@@ -21,7 +21,13 @@ export function useAppointmentsQuery(days: string[], status?: AppointmentStatus)
 
 export function useAppointmentMutations() {
   const queryClient = useQueryClient();
-  const onSuccess = () => queryClient.invalidateQueries({ queryKey: [KEY] });
+  // The patient id is not known here, so the patient-record attendance and timeline are invalidated by prefix.
+  const onSuccess = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: [KEY] }),
+      queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+      queryClient.invalidateQueries({ queryKey: ["timeline"] }),
+    ]);
   return {
     create: useMutation({ mutationFn: (r: CreateAppointmentRequest) => appointmentsApi.create(r), onSuccess }),
     update: useMutation({

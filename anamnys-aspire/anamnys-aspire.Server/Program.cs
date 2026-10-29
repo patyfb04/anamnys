@@ -17,6 +17,8 @@ using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
+using Anamnys.Server.Retention;
+using Anamnys.Server.Attendance;
 using Anamnys.Server.Medications;
 using Anamnys.Server.Scales;
 using Anamnys.Server.Storage;
@@ -49,6 +51,8 @@ builder.Services.AddSingleton(TimeProvider.System);
 if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
 {
     builder.Services.AddHostedService<AppointmentNotificationWorker>();
+    // The daily retention run creates bell notifications too (design/specs/2026-10-28-retention-panel-design.md §3).
+    builder.Services.AddHostedService<RetentionJob>();
 }
 
 // Public routes (/api/public/...) are anonymous: 30 requests per minute per client IP.
@@ -62,6 +66,7 @@ builder.Services.AddRateLimiter(o =>
 });
 
 // Add services to the container.
+builder.Services.AddExceptionHandler<DiscardedPatientExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -157,6 +162,9 @@ phi.MapExportEndpoints();
 phi.MapExternalDocumentEndpoints();
 phi.MapFactEndpoints();
 phi.MapMedicationEndpoints();
+phi.MapAttendanceEndpoints();
+phi.MapRetentionEndpoints();
+phi.MapDiscardEndpoints();
 phi.MapProviderNotificationEndpoints();
 app.MapConfirmationEndpoints(phi);
 

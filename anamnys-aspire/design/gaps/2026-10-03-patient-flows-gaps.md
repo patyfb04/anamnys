@@ -432,6 +432,38 @@ Medication timeline (F-09; chapter `documentation/28-medication-timeline.md`).
 - **The F-60 export does not include external documents,** so the origin of a document-based medication
   is not exported either.
 
+## Comparecimento
+
+Attendance statistics (F-04; chapter `documentation/29-attendance-stats.md`).
+
+- **No duration line.** The statistics use dates only; session length is not shown or computed.
+- **Appointment invalidation is by prefix.** The appointment hooks do not know the patient id, so a change
+  refreshes the attendance and timeline queries of every patient in the cache.
+- **Sessions marked `scheduled` with no appointment are ignored.** They are treated as a plan; only
+  `attended` sessions without an appointment count.
+- **No practice-wide view until F-10.** The card is per patient; the Análises page will reuse the same
+  computation.
+- **Not exercised in a browser;** the real-database tests were compiled but not run (Aspire was running).
+
+## Guarda e descarte
+
+Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).
+
+- **The discard dialog shows categories, not counts.** The server knows the counts only after the discard,
+  so the dialog lists what is deleted and what is kept; the exact counts are on the disposal term.
+- **Export ZIPs made before a discard keep the record** until they expire (`ExportSweep`), and so does any
+  copy the provider downloaded. The discard does not touch them.
+- **The Keycloak user of a patient portal account is not removed.** Only the `PatientAccounts` row is
+  deleted, and only when no other provider's patient row uses it.
+- **The guard rule per record kind is not used beyond `prontuario`.** `RetentionRules` can hold other
+  kinds, but the clock reads only the `prontuario` row.
+- **The per-note and per-document audit rows of a discarded patient are deleted** (they hold clinical text
+  and have restrict foreign keys). Only the `patient_discarded` row (ids and counts) and the provider-level
+  rows remain.
+- **No e-mail alerts, by decision.** Deadlines and unsigned notes reach the provider only through the bell
+  and the page.
+- **Not exercised in a browser;** the page, dialog and settings section are type-checked and built only.
+
 ## Exportação
 
 Full account export (F-60; chapter `documentation/24-account-export.md`).

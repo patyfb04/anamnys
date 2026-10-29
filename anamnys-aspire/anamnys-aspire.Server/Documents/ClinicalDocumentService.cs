@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -267,6 +268,7 @@ public static class ClinicalDocumentService
             });
             DocumentAudit.Add(db, document.Id, providerId, "document_signed", null, null, document.SignedByCrp, now);
             await db.SaveChangesAsync(ct);
+            await RetentionClock.PushAsync(db, providerId, document.PatientId, now, ct);
             return new DocumentResult(DocumentOutcome.Ok, document.Id);
         }, ct);
     }

@@ -28,6 +28,7 @@ import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
+import AttendanceCard from "@/components/attendance/AttendanceCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
 import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
@@ -70,6 +71,7 @@ function PatientDetailPage() {
     await queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
     await queryClient.invalidateQueries({ queryKey: ["patients"] });
     await queryClient.invalidateQueries({ queryKey: ["timeline", patientId] });
+    await queryClient.invalidateQueries({ queryKey: ["attendance", patientId] });
   };
 
   const archive = useMutation({
@@ -243,6 +245,8 @@ function PatientDetailPage() {
 
       {/* Full width: each instrument's series gets its own column inside the card. */}
       <ScalesCard patientId={patientId} readOnly={archived} />
+
+      <AttendanceCard patientId={patientId} />
 
       <TimelineCard patientId={patientId} />
 

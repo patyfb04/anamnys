@@ -10,6 +10,7 @@ internal sealed class FakeNoteFileStore : INoteFileStore
     public Exception? FailWith { get; set; }
     public List<string> Deleted { get; } = [];
     public bool FailDelete { get; set; }
+    public int DeleteAttempts { get; private set; }
 
     public Task PutAsync(string key, byte[] content, string contentType, CancellationToken ct)
     {
@@ -38,6 +39,7 @@ internal sealed class FakeNoteFileStore : INoteFileStore
 
     public Task DeleteAsync(string key, CancellationToken ct)
     {
+        DeleteAttempts++;
         if (FailDelete)
         {
             throw new HttpRequestException("store down");

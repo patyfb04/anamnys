@@ -43,14 +43,14 @@ the schema still carries every table, but only the features below have code.
 | F-01 Escalas aplicadas | done | Score-only recording with three regimes, opt-in, soft removal, series chart; `Scales/`, `documentation/21-psychometric-scales.md` |
 | F-02 Vocabulário de temas | done | Closed vocabulary `mh-1` (28 terms + 12 children); local-model proposals after structuring and on demand ("Sugerir temas"; cached vocabulary prefix in a 4096-token context, ≈ 4–5 s per suggestion after the first), tags editable on drafts and signed notes with audit, search by theme (term or child, signed notes), admin page with add, rename, retire, split and merge under D-01. `Themes/`, `documentation/23-theme-vocabulary.md` |
 | F-03 Referências de trecho | done | Every theme tag points at an exact passage or a section of its note; the chip opens the note, highlights it and scrolls to it, from the note or from a theme search result (`?excerpt=`). Selection in a section tags it; the model quotes the passage (proposals, background locate after accepting a suggestion, "Localizar trechos"); drafts relocate references on every save; `Excerpts.RequireExcerpt` plus an architecture test for analyses. The migration deleted the old unusable `ExcerptRefs` rows once and backfilled `section` references for the existing tags. `Excerpts/`, `Themes/`, `documentation/25-excerpt-references.md`. Verified 2026-10-25: full suite 1067 passed before the final fixes; targeted suites 355 passed after. |
-| F-04 Metadados da sessão | partial | `Sessions` (scheduled/actual times, modality, attendance) and appointment status/cancellation are stored; a `Sessions` row is created by a live recording or a typed note linked to an appointment, and no attendance statistics exist |
+| F-04 Metadados da sessão | done | `Sessions` (scheduled/actual times, modality, attendance) and appointment status/cancellation are stored; a `Sessions` row is created by a live recording or a typed note linked to an appointment. Attendance statistics per patient (no migration): the appointment is the base, sessions without appointment count only when attended, past appointments with no status are "sem registro", future ones are excluded; counts, cancellation lead (median, range), interval between attended sessions (median, range, last) and days since the last one. Card "Comparecimento" on the patient record (6 m / 1 y / all, neutral wording) and a "Consultas" lane at the top of "Linha do tempo". `Attendance/`, `components/attendance/`, `documentation/29-attendance-stats.md`. No duration line; appointment changes invalidate by prefix; not in the Análises page yet, see the gaps file. |
 
 ### B · Conformidade documental
 
 | ID | State | Notes |
 |---|---|---|
 | F-05 Validador CFP 006/2019 | done | all six kinds of art. 8 (declaração, atestado, relatório, relatório multiprofissional with a typed team, laudo, parecer): form per kind, conformity check, confirmations, blocking/advisory modes, signing, correction by new version, PDF export. `Documents/`, `documentation/22-psychological-documents.md` |
-| F-06 Guarda e descarte | schema only | `RetentionRules`, `DisposalRecords` |
+| F-06 Guarda e descarte | done | One retention deadline per patient record: last record (signed note, signed document, attended session or appointment) plus guard years (default 5, Res. CFP 001/2009, configurable upward in Settings > Guarda). Page "Conformidade" (`/compliance`) with three date-ordered blocks: unsigned notes, records within 90 days of the deadline or past it, documents with compliance pending. Daily job creates one bell notification per new item (deduplicated, `Notifications:WorkerEnabled`), no e-mail. Irreversible discard of an expired record with no future appointment, confirmed by typing the patient's name: generates a disposal term (PDF), deletes the clinical content and the per-note audit rows, keeps a minimal patient row, the term and the `patient_discarded` audit row; object deletes after commit with retries; a database trigger on 18 tables refuses new rows for a discarded patient (404 `discarded`). Terms are in the F-60 export. `Retention/`, `components/compliance/`, `documentation/30-retention-panel.md`, migration `2026-10-28-retention-panel.sql`. Earlier export ZIPs and downloaded copies keep the record; the Keycloak user is untouched; see the gaps file. |
 
 ### C · Documentos externos
 
@@ -142,7 +142,9 @@ the schema still carries every table, but only the features below have code.
 | 14 Lembrete | partial (e-mail, not WhatsApp) |
 | 15, 16 | not started |
 | 17 Sala própria | not started (D-06) |
-| 18 … 22 | not started |
+| 18 | not started |
+| 19 Guarda e descarte | built (F-06) |
+| 20 … 22 | not started |
 | 23 Exportar conta | done for active accounts (F-60); the 60-day window after cancellation and the deletion wait for F-57 |
 
 ## Built but not in the backlog
@@ -159,9 +161,10 @@ the schema still carries every table, but only the features below have code.
 
 Everything that does not depend on subscription and billing comes first; billing waits for D-07.
 
-1. **Analyses:** F-04 (attendance), F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
+1. **Close groups A and B first (user, 2026-10-27):** ~~F-04 (attendance statistics)~~ done, ~~F-06 (retention panel)~~ done; groups A and B are closed.
+   **Next = analyses:** F-10 (aggregation layer), F-11 (theme timeline), F-12 (absence
    detection), F-13 (scale trajectory with events), F-14 (plan adherence and follow-ups).
-2. F-15 (patient quotes), F-16 (natural-language search); F-06 (retention panel); F-17/F-18
+2. F-15 (patient quotes), F-16 (natural-language search); F-17/F-18
    (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
    month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
 3. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
@@ -181,3 +184,5 @@ persistent environment needs it.
 Verified 2026-10-25 (F-07): full suite 1180 passed, 0 failed, 3 skipped before the final review fixes; external-document suites 108 passed after them. `2026-10-25-external-documents.sql` must be applied to any persistent environment.
 Verified 2026-10-27 (F-08): full suite 1401 total, 1 failure (an export endpoint test racing the Vite dev server start-up, fixed in the test fixture); after the final fixes 262 + 286 targeted tests passed, 0 failed. `2026-10-26-document-facts.sql` must be applied to any persistent environment, and re-run on a database that had an earlier version of it (the final-review wave added `ExternalDocuments.ExtractAttempts`).
 Verified 2026-10-27 (F-09): full suite 1465 total, 2 failed, 3 skipped; both failures were the PDF text tests picking up the image-only OCR sample (`-escaneado`), now excluded from them (9/9 passed); medication suites 57/57 after fix round 1; provider build and lint clean after the final UI fixes. `2026-10-27-medication-timeline.sql` must be applied to any persistent environment.
+Verified 2026-10-27 (F-04): full suite 1480 total, 0 failed, 3 skipped, after the final review fixes; provider build and lint clean. No migration.
+Verified 2026-10-28 (F-06, with F-04 in the same tree): full suite 1540 total, 0 failed, 3 skipped, after the final review fixes; provider build and lint clean. `2026-10-28-retention-panel.sql` must be applied to any persistent environment (re-run it where an earlier version was applied: it added the insert trigger and `DisposalTerms.RetentionUntil` later).

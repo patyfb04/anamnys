@@ -25,6 +25,9 @@ public sealed record ExportObjective(
 // Previous/new values are never selected (spec 2026-10-23 §1).
 public sealed record ExportAudit(DateTimeOffset At, string Action, string? Field, Guid? NoteId, Guid? DocumentId);
 
+// A disposal term (F-06) with the name kept on the discarded patient row.
+public sealed record ExportTerm(DisposalTerm Term, string PatientName);
+
 public sealed record AccountData(
     Provider Provider,
     IReadOnlyList<ExportPatient> Patients,
@@ -39,7 +42,8 @@ public sealed record AccountData(
     ILookup<Guid, ExportObjective> ObjectivesByPatient,
     ILookup<Guid, ExportScale> ScalesByPatient,
     IReadOnlyList<Appointment> Appointments,
-    IReadOnlyList<ExportAudit> Audit);
+    IReadOnlyList<ExportAudit> Audit,
+    IReadOnlyList<ExportTerm> Terms);
 
 // Everything the export shows, read once and scoped to the provider on every query. PDFs are not
 // loaded here: the builder reads or renders them one at a time.
@@ -49,7 +53,8 @@ public static class ExportData
     {
         var provider = await db.Providers.AsNoTracking().SingleAsync(p => p.Id == providerId, ct);
 
-        var patients = await db.Patients.AsNoTracking().Where(p => p.ProviderId == providerId).ToListAsync(ct);
+        // A discarded record appears only through its disposal term (design/specs/2026-10-28-retention-panel-design.md §3).
+        var patients = await db.Patients.AsNoTracking().Where(p => p.ProviderId == providerId && p.DiscardedAt == null).ToListAsync(ct);
 
         var notes = await db.Notes.AsNoTracking()
             .Where(n => n.ProviderId == providerId)
@@ -145,6 +150,14 @@ public static class ExportData
             .Select(a => new ExportAudit(a.At, a.Action, a.FieldChanged, a.NoteId, a.DocumentId))
             .ToListAsync(ct);
 
+        var terms = await (
+                from t in db.DisposalTerms.AsNoTracking()
+                join p in db.Patients.AsNoTracking() on t.PatientId equals p.Id
+                where t.ProviderId == providerId && p.ProviderId == providerId
+                orderby t.CreatedAt, t.Id
+                select new ExportTerm(t, p.FirstName + " " + p.LastName))
+            .ToListAsync(ct);
+
         return new AccountData(
             provider,
             AssignFolders(patients),
@@ -159,7 +172,8 @@ public static class ExportData
             planRows,
             scales.ToLookup(s => s.PatientId),
             appointments,
-            audit);
+            audit,
+            terms);
     }
 
     // NNN = position by name, XX = initials: the folder never carries the patient's name.

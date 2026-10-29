@@ -4,7 +4,7 @@ import { liveSessionHub } from "@/lib/signalr";
 import { ChunkLog } from "@/lib/chunkLog";
 
 export type LiveState = "idle" | "recording" | "paused" | "finalizing" | "done" | "error";
-export type LiveError = "permission" | "device" | "connect" | "invalid" | "not_found" | "forbidden" | "too_long" | "finalize";
+export type LiveError = "permission" | "device" | "connect" | "invalid" | "not_found" | "forbidden" | "archived" | "too_long" | "finalize";
 
 export interface StartOptions {
   patientId: string;
@@ -19,9 +19,9 @@ export const WARN_AT_MS = 85 * 60 * 1000;
 export const MAX_MS = 90 * 60 * 1000;
 const MAX_AUDIO_BYTES = 90 * 60 * 16000 * 2;
 
-type FatalCode = "invalid" | "not_found" | "forbidden";
+type FatalCode = "invalid" | "not_found" | "forbidden" | "archived";
 const codeOf = (e: unknown): string | undefined => (e as { code?: string } | null)?.code;
-const isFatal = (c: string | undefined): c is FatalCode => c === "invalid" || c === "not_found" || c === "forbidden";
+const isFatal = (c: string | undefined): c is FatalCode => c === "invalid" || c === "not_found" || c === "forbidden" || c === "archived";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Mic -> worklet (PCM 16 kHz) -> ChunkLog -> TranscriptionHub, resending after reconnects.
