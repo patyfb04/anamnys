@@ -47,8 +47,9 @@ public static class ExportHtml
         </html>
         """;
 
-    public static string Index(AccountData data, PerfilJson profile, IReadOnlyList<PatientExport> patients)
+    public static string Index(AccountData data, PerfilJson profile, IReadOnlyList<PatientExport> patients, IReadOnlyList<TermPdfPlan>? terms = null)
     {
+        terms ??= [];
         var sb = new StringBuilder();
         sb.Append($"<h1>Exportação da conta Anamnys</h1>\n");
         sb.Append($"<p class=\"muted\">Gerada em {E(ExportFormat.Display(profile.ExportacaoGeradaEm))}. Arquivo com dados de saúde: guarde-o em local seguro.</p>\n");
@@ -83,6 +84,26 @@ public static class ExportHtml
                     .Append($"<td>{(j.Arquivado ? "Arquivado" : "Ativo")}</td>")
                     .Append($"<td>{j.Notas.Count}</td>")
                     .Append($"<td>{j.Documentos.Count}</td>")
+                    .Append("</tr>\n");
+            }
+            sb.Append("</table>\n");
+        }
+
+        // Discarded records appear only through their disposal term (F-06).
+        if (terms.Count > 0)
+        {
+            sb.Append("<h2>Termos de descarte</h2>\n");
+            sb.Append("<p class=\"muted\">Prontuários descartados após o prazo de guarda. Dados estruturados em ")
+                .Append($"<a href=\"{ExportViews.TermsFolder}/termos.json\">termos.json</a>.</p>\n");
+            sb.Append("<table>\n<tr><th>Descartado em</th><th>Paciente</th><th>Período</th><th>Termo</th></tr>\n");
+            foreach (var t in terms)
+            {
+                var j = t.Json;
+                sb.Append("<tr>")
+                    .Append($"<td>{E(ExportFormat.Display(j.DescartadoEm))}</td>")
+                    .Append($"<td>{E(j.Paciente)}</td>")
+                    .Append($"<td>{E(ExportFormat.Display(j.PeriodoInicio))} a {E(ExportFormat.Display(j.PeriodoFim))}</td>")
+                    .Append($"<td><a href=\"{E(j.Pdf)}\">PDF</a></td>")
                     .Append("</tr>\n");
             }
             sb.Append("</table>\n");

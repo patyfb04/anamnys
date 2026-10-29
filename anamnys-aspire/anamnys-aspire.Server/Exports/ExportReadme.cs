@@ -52,6 +52,12 @@ public static class ExportReadme
           conta/perfil.json     Seu perfil profissional.
           conta/agenda.csv      Todos os agendamentos.
           conta/auditoria.csv   Histórico de auditoria das notas, documentos e da conta, sem valores.
+          conta/termos-de-descarte/
+                                Só quando houve descarte: um prontuário descartado após o prazo de guarda
+                                aparece apenas aqui, pelo seu termo (não tem pasta em pacientes/).
+            AAAA-MM-DD-termo[-N].pdf
+                                PDF de cada termo de descarte (data do descarte).
+            termos.json         Os termos, estruturados (veja abaixo).
           pacientes/NNN-XX/     Uma pasta por paciente, inclusive arquivados. NNN é o número do paciente
                                 em ordem alfabética do nome; XX são as iniciais. O nome completo não
                                 aparece em nenhum nome de pasta ou arquivo.
@@ -114,10 +120,26 @@ public static class ExportReadme
         data              Quando a ação aconteceu.
         acao              Código da ação (ex.: note_created, ai_generated, section_edited, signed,
                           exported, pdf_link_issued, theme_added, theme_removed, document_signed,
-                          document_corrected, document_exported, account_export_requested).
+                          document_corrected, document_exported, account_export_requested,
+                          patient_discarded). O histórico das notas e documentos de um prontuário
+                          descartado foi eliminado com ele; o descarte fica registrado como patient_discarded.
         campo             Campo alterado, quando houver (sem os valores).
         nota_id           Nota afetada (veja "id" em notas.json).
         documento_id      Documento afetado (veja "id" em documentos.json).
+
+        conta/termos-de-descarte/termos.json
+        ------------------------------------
+        id, codigo        Identificador e código do termo (o código aparece no rodapé do PDF).
+        descartadoEm      Data e hora do descarte.
+        paciente          Nome do paciente (o único dado mantido do cadastro).
+        periodoInicio, periodoFim
+                          Primeiro e último registro do prontuário (nota ou documento assinado, sessão realizada).
+        anosGuarda, guardaAte, fundamento
+                          Prazo de guarda aplicado, data em que terminou e sua base (ex.: Res. CFP 001/2009).
+        contagens         Quantidade de registros eliminados por tipo (notes = notas, clinicalDocuments =
+                          documentos, externalDocuments = documentos externos, sessions = sessões,
+                          appointments = agendamentos, transcripts = transcrições, etc.).
+        pdf               Caminho do PDF do termo dentro da pasta principal.
 
         paciente.json
         -------------

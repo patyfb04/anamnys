@@ -2,6 +2,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Excerpts;
 using Anamnys.Server.NoteStructuring;
+using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Notes;
@@ -189,6 +190,7 @@ public static class NoteEditing
             note.UpdatedAt = now;
             NoteAudit.Add(db, noteId, providerId, "signed", null, null, crp, now);
             await db.SaveChangesAsync(ct);
+            await RetentionClock.PushAsync(db, providerId, note.PatientId, now, ct);
             await tx.CommitAsync(ct);
             outcome = SignOutcome.Signed;
         });

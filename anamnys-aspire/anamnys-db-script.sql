@@ -104,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -307,6 +307,23 @@ CREATE TABLE "DisposalRecords" (
 	"DisposedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"TermObjectKey" text,
 	"PerformedBy" uuid
+);
+CREATE TABLE "DisposalTerms" (
+	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	"ProviderId" uuid NOT NULL,
+	"PatientId" uuid NOT NULL,
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ObjectKey" text NOT NULL,
+	"PeriodFrom" date NOT NULL,
+	"PeriodTo" date NOT NULL,
+	"GuardYears" integer NOT NULL,
+	"Basis" text NOT NULL,
+	"Counts" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"RetentionUntil" date NOT NULL,
+	CONSTRAINT "DisposalTerms_PatientId_key" UNIQUE("PatientId"),
+	CONSTRAINT "DisposalTerms_Period_ck" CHECK (("PeriodFrom" <= "PeriodTo")),
+	CONSTRAINT "DisposalTerms_GuardYears_ck" CHECK (("GuardYears" >= 5)),
+	CONSTRAINT "DisposalTerms_Counts_ck" CHECK ((jsonb_typeof("Counts") = 'object'::text))
 );
 CREATE TABLE "DocumentHashes" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -562,6 +579,7 @@ CREATE TABLE "Notifications" (
 	"SentAt" timestamp with time zone,
 	"DeliveryStatus" text DEFAULT 'pending' NOT NULL,
 	"ReadAt" timestamp with time zone,
+	"DedupeKey" text,
 	CONSTRAINT "Notifications_Channel_ck" CHECK (("Channel" = ANY (ARRAY['email'::text, 'push'::text, 'in_app'::text]))),
 	CONSTRAINT "Notifications_Status_ck" CHECK (("DeliveryStatus" = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text, 'cancelled'::text])))
 );
@@ -601,6 +619,9 @@ CREATE TABLE "Patients" (
 	"ArchivedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"LastRecordAt" date,
+	"RetentionUntil" date,
+	"DiscardedAt" timestamp with time zone,
 	CONSTRAINT "Patients_Id_ProviderId_key" UNIQUE("Id","ProviderId"),
 	CONSTRAINT "Patients_Account_Provider_key" UNIQUE("AccountId","ProviderId")
 );
@@ -708,6 +729,8 @@ CREATE TABLE "Providers" (
 	"UpdatedAt" timestamp with time zone DEFAULT now() NOT NULL,
 	"PracticeCity" text,
 	"DocumentCheckMode" text DEFAULT 'blocking' NOT NULL,
+	"UnsignedNoteDays" integer DEFAULT 7 NOT NULL,
+	CONSTRAINT "Providers_UnsignedNoteDays_ck" CHECK (("UnsignedNoteDays" >= 1)),
 	CONSTRAINT "Providers_DocumentCheckMode_ck" CHECK (("DocumentCheckMode" = ANY (ARRAY['blocking'::text, 'advisory'::text]))),
 	CONSTRAINT "Providers_Crp_ck" CHECK ((("CrpNumber" IS NULL) = ("CrpRegion" IS NULL))),
 	CONSTRAINT "Providers_NoteFormat_ck" CHECK (("PreferredNoteFormat" = ANY (ARRAY['DAP'::text, 'SOAP'::text, 'Biopsychosocial'::text, 'PtFunctional'::text])))
@@ -1005,6 +1028,7 @@ CREATE INDEX "DenialFlags_GuideId_idx" ON "DenialFlags" ("GuideId");
 CREATE INDEX "Denials_ReasonCode_idx" ON "Denials" ("ReasonCode");
 CREATE INDEX "DisclosureAuthorizations_DocumentId_idx" ON "DisclosureAuthorizations" ("DocumentId");
 CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
+CREATE INDEX "DisposalTerms_Provider_Created_idx" ON "DisposalTerms" ("ProviderId", "CreatedAt" DESC);
 CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
 CREATE INDEX "ExcerptRefs_Provider_Source_idx" ON "ExcerptRefs" ("ProviderId","SourceType","SourceId");
 CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientId");
@@ -1024,8 +1048,10 @@ CREATE UNIQUE INDEX "Notes_RecordingId_key" ON "Notes" ("RecordingId");
 CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
 CREATE INDEX "Notifications_Provider_Scheduled_idx" ON "Notifications" ("ProviderId", "ScheduledFor" DESC);
+CREATE UNIQUE INDEX "Notifications_Provider_DedupeKey_key" ON "Notifications" ("ProviderId", "DedupeKey") WHERE "DedupeKey" IS NOT NULL;
 CREATE INDEX "PatientQuotes_NoteId_idx" ON "PatientQuotes" ("NoteId");
 CREATE INDEX "Patients_ProviderId_idx" ON "Patients" ("ProviderId");
+CREATE INDEX "Patients_Provider_RetentionUntil_idx" ON "Patients" ("ProviderId", "RetentionUntil");
 CREATE UNIQUE INDEX "PatientAccounts_Email_key" ON "PatientAccounts" (lower("Email"));
 CREATE UNIQUE INDEX "PatientInvitations_OnePending_key" ON "PatientInvitations" ("PatientId") WHERE "AcceptedAt" IS NULL AND "RevokedAt" IS NULL;
 CREATE INDEX "PatientDiagnoses_PatientId_idx" ON "PatientDiagnoses" ("PatientId");
@@ -1092,6 +1118,7 @@ ALTER TABLE "DisclosureAuthorizations" ADD CONSTRAINT "DisclosureAuthorizations_
 ALTER TABLE "DisclosureAuthorizations" ADD CONSTRAINT "DisclosureAuthorizations_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
 ALTER TABLE "DisposalRecords" ADD CONSTRAINT "DisposalRecords_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE SET NULL;
 ALTER TABLE "DisposalRecords" ADD CONSTRAINT "DisposalRecords_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
+ALTER TABLE "DisposalTerms" ADD CONSTRAINT "DisposalTerms_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
 ALTER TABLE "DocumentHashes" ADD CONSTRAINT "DocumentHashes_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE RESTRICT;
 ALTER TABLE "Dossiers" ADD CONSTRAINT "Dossiers_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
 ALTER TABLE "ExternalDocuments" ADD CONSTRAINT "ExternalDocuments_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
@@ -1623,3 +1650,33 @@ select v."Id", t.code, t.label, p."Id"
 on conflict ("VocabularyId","Code") do nothing;
 
 
+-- A discarded record takes no new rows (design/specs/2026-10-28-retention-panel-design.md section 3). FOR KEY SHARE
+-- waits for an open discard (it holds the patient row FOR UPDATE) and then reads the committed row, so an insert that
+-- races the discard fails once the discard commits. SQLSTATE ANDIS is mapped by the server (Retention/DiscardedPatient).
+CREATE OR REPLACE FUNCTION "Patients_not_discarded"() RETURNS trigger LANGUAGE plpgsql AS $fn$
+DECLARE
+  discarded timestamp with time zone;
+BEGIN
+  IF NEW."PatientId" IS NULL THEN
+    RETURN NEW;
+  END IF;
+  SELECT p."DiscardedAt" INTO discarded FROM "Patients" p WHERE p."Id" = NEW."PatientId" FOR KEY SHARE;
+  IF discarded IS NOT NULL THEN
+    RAISE EXCEPTION 'patient record % was discarded', NEW."PatientId" USING ERRCODE = 'ANDIS';
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+DO $$
+DECLARE
+  t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['Appointments', 'AppointmentSeries', 'BookingHolds', 'ClinicalDocuments', 'DisclosureAuthorizations',
+                           'Dossiers', 'ExternalDocuments', 'FollowUpItems', 'InsurerAuthorizations', 'IntakeResponses',
+                           'MedicationEntries', 'Notes', 'PatientDiagnoses', 'PatientInvitations', 'RecordingConsents',
+                           'ScaleApplications', 'Sessions', 'TreatmentPlans'] LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I', t || '_patient_not_discarded', t);
+    EXECUTE format('CREATE TRIGGER %I BEFORE INSERT ON %I FOR EACH ROW EXECUTE FUNCTION "Patients_not_discarded"()',
+                   t || '_patient_not_discarded', t);
+  END LOOP;
+END $$;

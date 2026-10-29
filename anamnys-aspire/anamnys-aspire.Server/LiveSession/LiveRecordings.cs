@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.LiveSession;
 
-public enum BeginCheck { Ok, Invalid, NotFound }
+public enum BeginCheck { Ok, Invalid, NotFound, Archived }
 
 public enum FinalizeStatus { Ok, Expired }
 
@@ -21,9 +21,18 @@ public static class LiveRecordings
         {
             return BeginCheck.Invalid;
         }
-        if (!await db.Patients.AnyAsync(p => p.Id == patientId && p.ProviderId == providerId, ct))
+        // A discarded record (F-06) is gone; an archived one takes no new notes.
+        var patient = await db.Patients.AsNoTracking()
+            .Where(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null)
+            .Select(p => new { p.ArchivedAt })
+            .SingleOrDefaultAsync(ct);
+        if (patient is null)
         {
             return BeginCheck.NotFound;
+        }
+        if (patient.ArchivedAt is not null)
+        {
+            return BeginCheck.Archived;
         }
         if (appointmentId is { } id
             && !await db.Appointments.AnyAsync(a => a.Id == id && a.ProviderId == providerId && a.PatientId == patientId, ct))

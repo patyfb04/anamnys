@@ -5,6 +5,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Documents;
 using Anamnys.Server.Notes;
+using Anamnys.Server.Retention;
 using Anamnys.Server.Storage;
 
 namespace Anamnys.Server.Exports;
@@ -70,7 +71,20 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
             await TextAsync(archive, $"{folder}/temas.csv", ThemesCsv(j), ct);
         }
 
-        await TextAsync(archive, $"{root}/index.html", ExportHtml.Index(data, profile, patients), ct);
+        // Disposal terms (F-06): the stored PDF, or the same term rendered again from its row when the object is gone.
+        var terms = ExportViews.Terms(data);
+        foreach (var term in terms)
+        {
+            var bytes = await StoredAsync(term.Term.Term.ObjectKey, ct)
+                ?? DisposalTermPdf.Render(DisposalTermPdfModel.From(term.Term.Term, term.Term.PatientName, data.Provider));
+            await BytesAsync(archive, $"{root}/{term.Path}", bytes, ct);
+        }
+        if (terms.Count > 0)
+        {
+            await TextAsync(archive, $"{root}/{ExportViews.TermsFolder}/termos.json", Json(terms.Select(t => t.Json).ToList()), ct);
+        }
+
+        await TextAsync(archive, $"{root}/index.html", ExportHtml.Index(data, profile, patients, terms), ct);
         await TextAsync(archive, $"{root}/LEIA-ME.txt", ExportReadme.Text(root, generatedAt), ct);
         await TextAsync(archive, $"{root}/conta/perfil.json", Json(profile), ct);
         await TextAsync(archive, $"{root}/conta/agenda.csv", Agenda(data), ct);

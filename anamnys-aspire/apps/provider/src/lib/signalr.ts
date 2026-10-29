@@ -5,7 +5,7 @@ import type { LiveLanguage, LiveNoteFormat, NoteFailureReason, NoteSnapshot } fr
 // same-origin proxy to the server resource (see also api/client.ts).
 const SIGNALR_URL = import.meta.env.VITE_SIGNALR_URL ?? "/hubs";
 
-export interface BeginAck { status: "ok" | "invalid" | "not_found" | "forbidden" }
+export interface BeginAck { status: "ok" | "invalid" | "not_found" | "forbidden" | "archived" }
 export interface ChunkAck {
   status: "accepted" | "duplicate" | "gap" | "buffer_expired" | "forbidden" | "too_long";
   lastSeq: number;

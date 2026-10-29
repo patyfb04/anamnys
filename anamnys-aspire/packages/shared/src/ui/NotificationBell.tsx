@@ -54,6 +54,9 @@ export default function NotificationBell({ className }: { className?: string }) 
   const items = data?.items ?? [];
 
   const label = (n: ProviderNotification) => {
+    if (n.kind === "unsigned_note" || n.kind === "retention_due") {
+      return t(n.kind === "unsigned_note" ? "notifications.unsignedNote" : "notifications.retentionDue", { patient: n.patientName ?? "" });
+    }
     if (n.kind === "account_export_ready") {
       return t("notifications.exportReady", { when: whenFormat.format(new Date(n.createdAt)) });
     }
@@ -98,7 +101,11 @@ export default function NotificationBell({ className }: { className?: string }) 
             <ul>
               {items.map((n) => (
                 <li key={n.id} className="border-b border-outlineVariant last:border-b-0">
-                  {n.kind === "account_export_ready" ? (
+                  {n.kind === "unsigned_note" || n.kind === "retention_due" ? (
+                    <Link to="/compliance" className={itemClass(n)} onClick={onItemClick(n)}>
+                      {label(n)}
+                    </Link>
+                  ) : n.kind === "account_export_ready" ? (
                     <Link to="/settings" hash="exportar-dados" className={itemClass(n)} onClick={onItemClick(n)}>
                       {label(n)}
                     </Link>

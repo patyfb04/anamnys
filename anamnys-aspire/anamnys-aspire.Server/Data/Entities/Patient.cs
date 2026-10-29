@@ -28,6 +28,15 @@ public class Patient
     // design/specs/2026-10-01-patient-records-design.md).
     public DateTimeOffset? ArchivedAt { get; set; }
 
+    // Retention clock (design/specs/2026-10-28-retention-panel-design.md §2): the practice-local date of the
+    // last record (signed note, signed clinical document, attended session) and that date plus the guard years.
+    // Kept by Retention/RetentionClock; both null while the record has none.
+    public DateOnly? LastRecordAt { get; set; }
+    public DateOnly? RetentionUntil { get; set; }
+
+    // Set by the discard: the clinical content is gone, the row stays with the name and the disposal term.
+    public DateTimeOffset? DiscardedAt { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

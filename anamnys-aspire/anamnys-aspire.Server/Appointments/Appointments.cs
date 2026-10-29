@@ -2,6 +2,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Notifications;
 using Anamnys.Server.Profile;
+using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -185,7 +186,18 @@ public static class Appointments
         }
 
         // One SaveChanges: the status and LastVisit change in one transaction.
-        return await SaveAsync(db, cancellationToken);
+        var outcome = await SaveAsync(db, cancellationToken);
+        // An appointment marked attended is a record of the patient (F-06). After the save, so a refused change
+        // never moves the deadline; undoing "attended" recomputes it from the records that remain.
+        if (outcome == AppointmentOutcome.Ok && to == AppointmentStatus.Attended)
+        {
+            await RetentionClock.PushAsync(db, providerId, appointment.PatientId, appointment.StartsAt, cancellationToken);
+        }
+        else if (outcome == AppointmentOutcome.Ok && from == AppointmentStatus.Attended)
+        {
+            await RetentionClock.RecomputeAsync(db, cancellationToken, providerId: providerId, patientId: appointment.PatientId);
+        }
+        return outcome;
     }
 
     // Side effects of an appointment becoming attended; never saves, so callers keep one unit of work.

@@ -430,5 +430,47 @@ Content-Type: application/json
 
 ###
 ### Timeline of a patient: medication lanes (one per treatment, a segment per record) and scale series, dates only. from/to (yyyy-MM-dd) are optional; segments and points outside the period are left out. 400 when from is after to.
+### Also appointments: [{ id, on, kind }] (kind: attended | attended_unscheduled | no_show | cancelled_provider | cancelled_patient | unrecorded; past only, same period).
 ### 200 { medications: [{ treatmentId, drug, segments: [{ medicationId, dose, posology, startedOn, endedOn, origin: { kind: "manual" | "document" | "document_deleted", documentId, documentKind, documentDate, page, excerptId } }] }], scales: [{ instrumentId, code, name, minScore, maxScore, points: [{ applicationId, score, appliedOn }] }] }; 404.
 GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/timeline?from=2026-04-26&to=2026-10-26
+
+###
+### Attendance statistics of a patient (design/specs/2026-10-27-attendance-stats-design.md §3), dates only. from/to (yyyy-MM-dd, practice-local day) are optional; only events up to now. 400 when from is after to; 404 for another provider's patient.
+### 200 { counts: { attended, attendedUnscheduled, noShow, cancelledByProvider, cancelledByPatient, unrecorded }, cancellationLeadHours: { median, min, max, count } | null, intervalDays: { median, min, max, last } | null, daysSinceLast: number | null }
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/attendance?from=2025-10-26&to=2026-10-26
+
+###
+### Compliance panel (F-06, design/specs/2026-10-28-retention-panel-design.md §3). Three lists, each by date, provider-scoped, discarded patients left out.
+### unsignedNotes: notes without a signature at least unsignedNoteDays practice days old, oldest first. retention: deadline within 90 days or past, earliest first (expired = the deadline day has gone by; hasFutureAppointment = scheduled/confirmed after now).
+### documents: drafts (missing = what the current ruleset/profile still lacks) and signed documents whose signature check did not pass (status "signed"), oldest first; superseded ones left out.
+### 200 { unsignedNotes: [{ noteId, patientId, patientName, createdAt, ageDays }], retention: [{ patientId, patientName, lastRecordAt, retentionUntil, expired, hasFutureAppointment }], documents: [{ documentId, patientId, patientName, kind, status: "draft" | "signed", missing: [elementCode], createdAt }] }
+GET {{Server_HostAddress}}/api/phi/providers/me/compliance
+
+###
+### Retention settings ("Guarda"). 200 { guardYears, unsignedNoteDays } (defaults 5 and 7).
+GET {{Server_HostAddress}}/api/phi/providers/me/settings/retention
+
+###
+### Save them. guardYears 5..100 (Res. CFP 001/2009 minimum), unsignedNoteDays 1..365. Changing guardYears recomputes the provider's deadlines in the same transaction.
+### 204; 400 validation problem { guardYears | unsignedNoteDays }.
+PUT {{Server_HostAddress}}/api/phi/providers/me/settings/retention
+Content-Type: application/json
+
+{ "guardYears": 6, "unsignedNoteDays": 7 }
+
+###
+### Discard an expired record (irreversible). Only when the deadline day has gone by and no appointment is scheduled/confirmed after now; confirmName is the patient's full name (trimmed, case- and accent-insensitive).
+### One transaction deletes the clinical content, stores the disposal term PDF and audits patient_discarded (ids and counts); the stored objects go after the commit.
+### 200 { termId, counts: { notes, clinicalDocuments, externalDocuments, sessions, appointments, transcripts, ... } }; 404; 409 { code: "not_expired" | "future_appointment" | "name_mismatch" | "already_discarded" }; 503 { code: "storage_unavailable" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/discard
+Content-Type: application/json
+
+{ "confirmName": "Ana Silva" }
+
+###
+### Disposal terms, oldest first. 200 [{ id, patientId, patientName, createdAt, periodFrom, periodTo, guardYears, retentionUntil, basis, counts }]
+GET {{Server_HostAddress}}/api/phi/providers/me/disposal-terms
+
+###
+### Signed link to a term's PDF (1 hour). 200 { url, expiresAt }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/disposal-terms/00000000-0000-0000-0000-000000000000/pdf

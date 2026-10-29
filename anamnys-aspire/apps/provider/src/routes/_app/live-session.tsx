@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useBlocker } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Cpu, Lock } from "lucide-react";
 import type { LiveNoteFormat } from "@anamnys/shared/lib/types";
@@ -38,6 +38,14 @@ function LiveSessionPage() {
   const holdsAudio = recorder.state === "recording" || recorder.state === "paused" || recorder.state === "finalizing";
   const processing = recorder.state === "finalizing" || recorder.state === "done";
   const locked = recorder.state !== "idle" && recorder.state !== "error";
+
+  // A finished session shows up in the patient's attendance and timeline.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!recorder.noteId || !patient) return;
+    void queryClient.invalidateQueries({ queryKey: ["attendance", patient.id] });
+    void queryClient.invalidateQueries({ queryKey: ["timeline", patient.id] });
+  }, [recorder.noteId, patient, queryClient]);
 
   // Opened from a patient's page: preselect that patient once.
   const preselected = useQuery({

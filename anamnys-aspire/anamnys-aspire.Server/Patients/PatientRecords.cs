@@ -64,7 +64,7 @@ public static class PatientRecords
     {
         var nowUtc = now.ToUniversalTime();
         var patient = await db.Patients.AsNoTracking()
-            .SingleOrDefaultAsync(p => p.Id == patientId && p.ProviderId == providerId, cancellationToken);
+            .SingleOrDefaultAsync(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null, cancellationToken);
         if (patient is null)
         {
             return null;
@@ -162,11 +162,12 @@ public static class PatientRecords
         AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken)
     {
         var patient = await db.Patients.AsNoTracking()
-            .Where(p => p.Id == patientId && p.ProviderId == providerId)
+            .Where(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null)
             .Select(p => new { p.AccountId })
             .SingleOrDefaultAsync(cancellationToken);
         if (patient is null)
         {
+            // A discarded record (F-06) is kept for its disposal term and cannot be deleted.
             return RecordOutcome.NotFound;
         }
         if (patient.AccountId is not null || await HasClinicalRecordsAsync(db, patientId, cancellationToken))
@@ -180,9 +181,10 @@ public static class PatientRecords
             await db.Patients.Where(p => p.Id == patientId && p.ProviderId == providerId).ExecuteDeleteAsync(cancellationToken);
             return RecordOutcome.Ok;
         }
-        catch (PostgresException e) when (e.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        catch (PostgresException e) when (e.SqlState is PostgresErrorCodes.ForeignKeyViolation or PostgresErrorCodes.RestrictViolation)
         {
-            // A clinical record arrived between the check and the delete; RESTRICT caught it.
+            // A clinical record (or a disposal term) arrived between the check and the delete; the foreign key caught
+            // it. Npgsql reports ON DELETE RESTRICT as 23001, NO ACTION as 23503.
             return RecordOutcome.Conflict;
         }
     }
@@ -334,8 +336,9 @@ public static class PatientRecords
             && db.TreatmentPlans.Any(t => t.Id == o.PlanId && t.PatientId == patientId
                 && db.Patients.Any(p => p.Id == patientId && p.ProviderId == providerId)));
 
+    // A discarded record (F-06) is only its disposal term: it can no longer be edited, archived or unarchived.
     private static Task<Patient?> FindPatientAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken) =>
-        db.Patients.SingleOrDefaultAsync(p => p.Id == patientId && p.ProviderId == providerId, cancellationToken);
+        db.Patients.SingleOrDefaultAsync(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null, cancellationToken);
 
     private static Task<bool> OwnsAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken) =>
         db.Patients.AnyAsync(p => p.Id == patientId && p.ProviderId == providerId, cancellationToken);

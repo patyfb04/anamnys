@@ -106,17 +106,44 @@
       }
     }
   },
+  "attendance": {
+    "title": "Comparecimento",
+    "loadFailed": "Não foi possível carregar o comparecimento.",
+    "empty": "Nenhuma consulta no período.",
+    "countsTitle": "Consultas no período",
+    "kinds": {
+      "attended": "Compareceu",
+      "attended_unscheduled": "Compareceu, sem agendamento",
+      "no_show": "Não compareceu",
+      "cancelled_provider": "Cancelada pelo profissional",
+      "cancelled_patient": "Cancelada pelo paciente",
+      "unrecorded": "Sem registro de comparecimento"
+    },
+    "leadTitle": "Antecedência dos cancelamentos",
+    "intervalTitle": "Intervalo entre consultas",
+    "median": "Mediana",
+    "range": "Variação",
+    "cancellations": "Cancelamentos",
+    "lastInterval": "Último intervalo",
+    "daysSinceLast": "Dias desde o último comparecimento",
+    "hours": "{{value}} h",
+    "days": "{{value}} d"
+  },
   "timeline": {
     "title": "Linha do tempo",
     "periodLabel": "Período",
     "period": { "6m": "6 meses", "1y": "1 ano", "all": "Tudo" },
     "loadFailed": "Não foi possível carregar a linha do tempo.",
-    "empty": "Nenhum medicamento ou escala no período.",
+    "empty": "Nenhuma consulta, medicamento ou escala no período.",
+    "appointments": "Consultas",
+    "appointmentLabel": "{{status}} em {{date}}",
+    "status": "Situação",
+    "date": "Data",
     "medications": "Medicamentos",
     "scales": "Escalas",
     "noMedications": "Nenhum medicamento no período.",
     "noScales": "Nenhuma escala no período.",
-    "chartLabel": "Linha do tempo de medicamentos e escalas, de {{from}} a {{to}}",
+    "chartLabel": "Linha do tempo de consultas, medicamentos e escalas, de {{from}} a {{to}}",
     "segmentLabel": "{{drug}}, {{dose}}, desde {{start}}",
     "pointLabel": "{{name}}: {{score}} em {{date}}",
     "noDose": "sem dose registrada",
@@ -406,6 +433,7 @@
       "invalid": "Formato ou idioma inválido.",
       "not_found": "Paciente ou consulta não encontrados.",
       "forbidden": "Acesso negado a esta gravação.",
+      "archived": "Paciente arquivado: desarquive o cadastro para gravar.",
       "too_long": "Limite de 90 minutos atingido.",
       "finalize": "Não foi possível concluir a gravação."
     }
@@ -791,6 +819,72 @@
       "totpAction": "Configurar 2FA"
     }
   },
+  "compliance": {
+    "title": "Conformidade",
+    "subtitle": "Notas sem assinatura, prazos de guarda e documentos com conformidade pendente, em ordem de data.",
+    "loadFailed": "Não foi possível carregar o painel de conformidade.",
+    "unsigned": {
+      "title": "Notas sem assinatura",
+      "empty": "Nenhuma nota sem assinatura além do prazo.",
+      "item": "criada em {{date}} ({{days}} dias)",
+      "open": "Abrir nota"
+    },
+    "retention": {
+      "title": "Prazo de guarda",
+      "empty": "Nenhum prontuário com prazo de guarda nos próximos 90 dias ou vencido.",
+      "item": "Último registro em {{last}}; guarda até {{until}}",
+      "expired": "Prazo vencido",
+      "within": "Vence em até 90 dias",
+      "discard": "Descartar",
+      "futureAppointment": "Há consulta futura agendada; o descarte fica disponível depois dela."
+    },
+    "documents": {
+      "title": "Documentos com conformidade pendente",
+      "empty": "Nenhum documento com conformidade pendente.",
+      "status": {
+        "draft": "Rascunho",
+        "signed": "Assinado"
+      },
+      "missing": "Faltando: {{items}}",
+      "onlySignature": "Aguardando assinatura",
+      "open": "Abrir documento"
+    },
+    "terms": {
+      "title": "Termos de descarte",
+      "empty": "Nenhum termo de descarte emitido.",
+      "item": "{{patient}}, descartado em {{date}}",
+      "openPdf": "Abrir PDF",
+      "openFailed": "Não foi possível abrir o termo.",
+      "popupBlocked": "O navegador bloqueou a nova aba. Permita pop-ups e tente de novo.",
+      "loadFailed": "Não foi possível carregar os termos de descarte."
+    },
+    "discard": {
+      "title": "Descartar prontuário",
+      "irreversible": "O descarte do prontuário de {{patient}} é irreversível. Depois de confirmado, não há como recuperar os dados.",
+      "willDelete": "Serão apagados:",
+      "deleted": {
+        "notes": "notas, seções, transcrições e PDFs",
+        "documents": "documentos psicológicos e seus PDFs",
+        "external": "documentos externos recebidos",
+        "sessions": "sessões e gravações",
+        "appointments": "consultas e lembretes",
+        "other": "diagnósticos, medicações, plano terapêutico, escalas e demais registros do paciente"
+      },
+      "kept": "Será mantido apenas o nome do paciente, com um termo de descarte em PDF que registra a data, o período e a quantidade de itens apagados.",
+      "typeName": "Para confirmar, digite o nome do paciente: {{patient}}",
+      "nameLabel": "Nome do paciente",
+      "confirm": "Descartar definitivamente",
+      "done": "Prontuário descartado. O termo de descarte está na lista.",
+      "errors": {
+        "already_discarded": "Este prontuário já foi descartado.",
+        "not_expired": "O prazo de guarda deste prontuário ainda não venceu.",
+        "future_appointment": "Há uma consulta futura agendada para este paciente.",
+        "name_mismatch": "O nome digitado não confere com o nome do paciente.",
+        "storage_unavailable": "O armazenamento está indisponível. Nada foi apagado; tente novamente em instantes.",
+        "unknown": "Não foi possível descartar o prontuário. Nada foi apagado."
+      }
+    }
+  },
   "notifications": {
     "title": "Avisos",
     "empty": "Nenhum aviso.",
@@ -798,6 +892,8 @@
     "confirmed": "{{patient}} confirmou a consulta de {{when}}",
     "autoCancelled": "Consulta de {{patient}} em {{when}} cancelada por falta de confirmação",
     "exportReady": "Sua exportação está pronta ({{when}})",
+    "unsignedNote": "Nota sem assinatura de {{patient}}",
+    "retentionDue": "Prazo de guarda do prontuário de {{patient}}",
     "open": "Abrir avisos"
   },
   "settings": {
@@ -835,6 +931,17 @@
       "downloadFailed": "Não foi possível baixar a exportação.",
       "loadFailed": "Não foi possível carregar o estado da exportação.",
       "inProgress": "Já existe uma exportação em andamento."
+    },
+    "retention": {
+      "title": "Guarda",
+      "description": "Defina por quantos anos o prontuário é mantido e após quantos dias uma nota sem assinatura aparece em Conformidade.",
+      "guardYears": "Anos de guarda do prontuário",
+      "guardYearsHint": "Mínimo de 5 anos (Res. CFP 001/2009).",
+      "unsignedNoteDays": "Dias para avisar de nota sem assinatura",
+      "unsignedNoteDaysHint": "Mínimo de 1 dia.",
+      "save": "Salvar",
+      "saved": "Configuração salva.",
+      "saveFailed": "Não foi possível salvar."
     },
     "documentCheck": {
       "title": "Conferência de documentos",

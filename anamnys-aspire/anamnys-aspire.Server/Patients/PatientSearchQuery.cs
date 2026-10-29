@@ -25,7 +25,8 @@ public static class PatientSearchQuery
         var nowUtc = now.ToUniversalTime();
 
         // Scope first, always. The subqueries repeat the provider filter as defence in depth.
-        var patients = db.Patients.AsNoTracking().Where(p => p.ProviderId == providerId);
+        // A discarded record (F-06) appears only through its disposal term.
+        var patients = db.Patients.AsNoTracking().Where(p => p.ProviderId == providerId && p.DiscardedAt == null);
         patients = request.Archived
             ? patients.Where(p => p.ArchivedAt != null)
             : patients.Where(p => p.ArchivedAt == null);

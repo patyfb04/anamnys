@@ -84,11 +84,10 @@ const NAV_ITEMS: NavItem[] = [
     feature: "secureSharing",
   },
   {
-    href: "/compliance-vault",
+    href: "/compliance",
     Icon: ShieldCheck,
     labelKey: "nav.complianceVault",
-    matchPrefix: "/compliance-vault",
-    feature: "complianceVault",
+    matchPrefix: "/compliance",
   },
   {
     href: "/billing",

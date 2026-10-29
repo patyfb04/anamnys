@@ -50,6 +50,13 @@ public sealed record CampoJson(string Codigo, string Rotulo, string Valor);
 
 public sealed record EquipeJson(string Nome, string Categoria, string Registro, string Analise);
 
+// conta/termos-de-descarte/termos.json (F-06): one row per discarded record; pdf is relative to the root folder.
+public sealed record TermoDescarteJson(
+    Guid Id, string Codigo, DateTimeOffset DescartadoEm, string Paciente, DateOnly PeriodoInicio, DateOnly PeriodoFim,
+    int AnosGuarda, DateOnly GuardaAte, string Fundamento, IReadOnlyDictionary<string, int> Contagens, string Pdf);
+
+public sealed record TermPdfPlan(ExportTerm Term, string Path, TermoDescarteJson Json);
+
 public sealed record NotePdfPlan(ExportNote Note, string Path);
 
 public sealed record DocumentPdfPlan(ClinicalDocument Document, string Path);
@@ -194,6 +201,25 @@ public static class ExportViews
                 .ToList(),
             d.Team.Select(t => new EquipeJson(t.Name, t.Category, t.Registry, t.Analysis)).ToList(),
             d.Body);
+
+    public const string TermsFolder = "conta/termos-de-descarte";
+
+    // Disposal terms by discard date; the file name carries the date only, never the patient's name.
+    public static IReadOnlyList<TermPdfPlan> Terms(AccountData data) =>
+        NumberedPaths(data.Terms, t => $"{TermsFolder}/{ExportFormat.IsoDate(t.Term.CreatedAt)}-termo", _ => "")
+            .Select(x => new TermPdfPlan(x.Item, x.Path, new TermoDescarteJson(
+                x.Item.Term.Id,
+                Retention.DisposalTerms.CodeFor(x.Item.Term.Id),
+                ExportFormat.Local(x.Item.Term.CreatedAt),
+                x.Item.PatientName.Trim(),
+                x.Item.Term.PeriodFrom,
+                x.Item.Term.PeriodTo,
+                x.Item.Term.GuardYears,
+                x.Item.Term.RetentionUntil,
+                x.Item.Term.Basis,
+                x.Item.Term.Counts,
+                x.Path)))
+            .ToList();
 
     public static bool CanRender(AccountData data, ClinicalDocument d) =>
         d.RulesetId is { } id && data.Rulesets.ContainsKey(id);

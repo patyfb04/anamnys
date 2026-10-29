@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Exports;
+using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Notifications;
@@ -45,7 +46,22 @@ public static class ProviderNotifications
             where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == AccountExportService.SubjectType
                 && e.ProviderId == providerId
             select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = null, StartsAt = null, ExportId = e.Id, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt };
-        var rows = await appointmentItems.Concat(exportItems)
+        // Retention panel items (F-06): a patient whose deadline is near or past, an unsigned note; both open the
+        // "Conformidade" page. A discarded patient's items are not listed.
+        var retentionItems =
+            from n in db.Notifications.AsNoTracking()
+            join p in db.Patients.AsNoTracking() on n.SubjectId equals p.Id
+            where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == RetentionJobSteps.PatientSubject
+                && p.ProviderId == providerId && p.DiscardedAt == null
+            select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = p.FirstName + " " + p.LastName, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt };
+        var noteItems =
+            from n in db.Notifications.AsNoTracking()
+            join note in db.Notes.AsNoTracking() on n.SubjectId equals note.Id
+            join p in db.Patients.AsNoTracking() on note.PatientId equals p.Id
+            where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == RetentionJobSteps.NoteSubject
+                && note.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
+            select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = p.FirstName + " " + p.LastName, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt };
+        var rows = await appointmentItems.Concat(exportItems).Concat(retentionItems).Concat(noteItems)
             .OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Id)
             .Skip((page - 1) * PageSize).Take(PageSize)
             .ToListAsync(ct);

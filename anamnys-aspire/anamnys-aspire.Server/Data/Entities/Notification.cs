@@ -13,4 +13,6 @@ public class Notification
     public DateTimeOffset? SentAt { get; set; }
     public string DeliveryStatus { get; set; } = "sent";
     public DateTimeOffset? ReadAt { get; set; }
+    // Names the item a notification is about, so a job never notifies it twice (unique per provider when set).
+    public string? DedupeKey { get; set; }
 }
