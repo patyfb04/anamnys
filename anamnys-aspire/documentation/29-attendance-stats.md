@@ -176,3 +176,7 @@ only.
 | Card | `apps/provider/src/components/attendance/` |
 | Timeline lane | `apps/provider/src/components/timeline/` |
 | API client | `packages/shared/src/api/attendance.ts` |
+
+## Dev seed
+
+`dev-seed/attendance-samples.sql` gives the first four active patients of every non-test provider about ten months of weekly past appointments (6 attended, 1 no-show, 1 cancelled by the patient 30 h before, 1 cancelled by the provider 3 h before, 1 left unmarked every 10 weeks; the third patient comes every other week) and one attended session without appointment. Rows are marked `ExternalEventId = 'dev-seed-attendance'`; slots are at 06:xx São Paulo time and overlaps are skipped. Never run outside a local database.

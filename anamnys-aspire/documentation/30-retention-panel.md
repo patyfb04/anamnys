@@ -396,3 +396,7 @@ migration applied, and need Aspire stopped.
 | Page and dialog | `apps/provider/src/routes/_app/compliance.tsx`, `apps/provider/src/components/compliance/` |
 | Settings section | `apps/provider/src/components/settings/RetentionSettingsSection.tsx` |
 | API client | `packages/shared/src/api/compliance.ts` |
+
+## Dev seed
+
+`dev-seed/retention-samples.sql` creates two fictitious patients per non-test provider: Rodrigo Teixeira (one signed note on 2020-03-10, retention ended 2025-03-10, can be discarded) and Marina Coelho (signed note on 2021-12-15, retention ends 2026-12-15, inside the 90-day window, plus a note ready for review left unsigned for 15 days). Every note has DAP sections. Never run outside a local database.
