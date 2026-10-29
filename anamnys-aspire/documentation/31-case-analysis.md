@@ -164,6 +164,10 @@ mapping mirrors the attendance endpoint). The provider app was checked with buil
 | Page | `apps/provider/src/routes/_app/analyses.tsx`, `apps/provider/src/components/analysis/` |
 | API client | `packages/shared/src/api/analysis.ts` |
 
+## Patient picker
+
+The picker spans the page width, shows patients as a responsive grid of cards (1 to 4 columns) and lists up to 100 active patients at once; with more, it says how many are shown and asks to type part of the name. Archived and discarded patients are not listed.
+
 ## Dev seed
 
 `dev-seed/analysis-samples.sql` adds 12 signed DAP notes (one every 30 days from about 11 months ago) to the first two active patients of every non-test provider, each tag with an exact passage: Sono in notes 1-8, Ansiedade 5-12, two Trabalho children (Sobrecarga e jornada, Conflito no trabalho), Família, Luto and Saudade e desenraizamento. It passes the 6-session minimum and gives lanes, a parent with children, co-occurrence and a theme that stops (useful for F-12). Never run outside a local database.
