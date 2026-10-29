@@ -70,10 +70,10 @@ const NAV_ITEMS: NavItem[] = [
     matchPrefix: "/documents",
   },
   {
-    href: "/analytics",
+    href: "/analyses",
     Icon: BarChart3,
     labelKey: "nav.analytics",
-    matchPrefix: "/analytics",
+    matchPrefix: "/analyses",
     feature: "analytics",
   },
   {
