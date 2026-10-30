@@ -176,6 +176,44 @@
       "cell": "{{label}}, registrado em {{date}}",
       "cellEmpty": "{{label}}, não registrado em {{date}}"
     },
+    "trajectory": {
+      "title": "Trajetória de escala",
+      "loadFailed": "Não foi possível carregar a trajetória de escala.",
+      "empty": "Nenhuma escala aplicada no período.",
+      "instrument": "Escala",
+      "applications_one": "{{count}} aplicação",
+      "applications_other": "{{count}} aplicações",
+      "eventsLabel": "Eventos no gráfico",
+      "groups": { "medication": "Medicação", "notes": "Notas", "absences": "Faltas e cancelamentos" },
+      "chartLabel": "Pontuações de {{name}} e eventos registrados, de {{from}} a {{to}}",
+      "kinds": {
+        "medication_start": "Início de medicamento",
+        "medication_dose": "Mudança de dose",
+        "medication_stop": "Fim de medicamento",
+        "note": "Nota assinada",
+        "no_show": "Não compareceu",
+        "cancelled_provider": "Cancelada pelo profissional",
+        "cancelled_patient": "Cancelada pelo paciente"
+      },
+      "events": {
+        "medication_start": "Início de {{drug}}, {{dose}}",
+        "medication_dose": "Mudança de dose de {{drug}}, {{dose}}",
+        "medication_stop": "Fim de {{drug}}",
+        "note": "Nota assinada",
+        "no_show": "Não compareceu",
+        "cancelled_provider": "Consulta cancelada pelo profissional",
+        "cancelled_patient": "Consulta cancelada pelo paciente"
+      },
+      "notesUnavailable": "As notas são listadas a partir de {{min}} sessões assinadas.",
+      "drug": "Medicamento",
+      "openNote": "Abrir a nota",
+      "openRecord": "Abrir o prontuário",
+      "listTitle": "Eventos no período",
+      "noEvents": "Nenhum evento dos tipos escolhidos no período.",
+      "previousPage": "Anteriores",
+      "nextPage": "Próximos",
+      "pageRange": "{{from}}–{{to}} de {{total}} eventos"
+    },
     "cooccurrence": {
       "title": "Aparecem juntos com mais frequência",
       "empty": "Nenhum par de temas aparece junto em uma mesma sessão no período.",

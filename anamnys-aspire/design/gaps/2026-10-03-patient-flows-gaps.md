@@ -471,6 +471,16 @@ Theme absence (F-12; chapter `documentation/32-theme-absence.md`).
 - **Not exercised in a browser;** the card, the lane mark and the settings section are type-checked and built
   only (build and lint).
 
+## Trajetória de escala
+
+Scale trajectory (F-13; chapter `documentation/33-scale-trajectory.md`).
+
+- **No PDF export for operadoras yet.** The chart cannot be saved or printed from the page.
+- **Notes need at least 6 signed sessions.** They come from the case analysis, so with fewer sessions the
+  "Notas" toggle has nothing to show.
+- **No frontend unit tests.** The provider app has no test runner; the model is kept pure for when one is added.
+- **Not exercised in a browser;** the card is type-checked and built only (build and lint).
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).
