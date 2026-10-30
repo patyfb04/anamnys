@@ -479,4 +479,17 @@ GET {{Server_HostAddress}}/api/phi/providers/me/disposal-terms/00000000-0000-000
 ### Case analysis of a patient (F-10, design/specs/2026-10-28-case-analysis-design.md §3). from/to (yyyy-MM-dd, practice-local day) optional. 400 when from is after to; 404 for another provider's or a discarded patient.
 ### 200 { available, signedSessions, minimumSessions: 6, sessions: [{ noteId, on, sessionId?, appointmentId? }], themes: [{ termId, code, label, parentId?, active, supersededBy: [{ termId, label }], occurrences: [{ noteId, on, excerptId?, section?, quote? }] }], cooccurrence: [{ a, b, sessions }] }
 ### With fewer than 6 signed notes in the period, available is false and only available, signedSessions and minimumSessions are filled.
+### F-12 adds absences: [{ termId, code, label, parentId?, recordedIn, spanSessions, firstOn, lastOn, sessionsSince, daysSince, lastOccurrence: { noteId, excerptId?, section?, quote? } }] and absenceSessions (N), always over the patient's whole signed history (not the period), ordered by lastOn; empty when available is false.
 GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/analysis?from=2025-10-28&to=2026-10-28
+
+###
+### Analysis settings (F-12). 200 { absenceSessions } (default 4).
+GET {{Server_HostAddress}}/api/phi/providers/me/settings/analysis
+
+###
+### Save them. absenceSessions 2..20: consecutive signed sessions without a record after which a theme recorded in at least 3 sessions is listed as absent.
+### 204; 400 validation problem { absenceSessions }.
+PUT {{Server_HostAddress}}/api/phi/providers/me/settings/analysis
+Content-Type: application/json
+
+{ "absenceSessions": 4 }

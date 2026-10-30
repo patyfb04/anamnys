@@ -6,6 +6,7 @@ import {
   Archive,
   ArchiveRestore,
   ArrowLeft,
+  BarChart3,
   CalendarClock,
   CalendarDays,
   CalendarPlus,
@@ -172,6 +173,10 @@ function PatientDetailPage() {
               {t("externalDocuments.upload")}
             </button>
           )}
+          <Link to="/analyses" search={{ patientId }} className={actionButton}>
+            <BarChart3 size={18} />
+            {t("patients.detail.viewAnalysis")}
+          </Link>
           <MoreActions label={t("patients.detail.moreActions")}>
             <MenuItem icon={<Pencil size={18} />} label={t("common.edit")} onSelect={() => setEditing(true)} />
             {archived ? (

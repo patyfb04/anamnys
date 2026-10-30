@@ -24,5 +24,29 @@ public static class CaseAnalysisEndpoints
                 ? Results.Ok(analysis)
                 : Results.NotFound();
         });
+
+        group.MapGet("settings/analysis", async (HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            return Results.Ok(await AnalysisSettings.GetAsync(db, providerId, ct));
+        });
+
+        group.MapPut("settings/analysis", async (AnalysisSettingsRequest request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            var errors = request.Validate();
+            if (errors.Count > 0)
+            {
+                return Results.ValidationProblem(errors);
+            }
+            await AnalysisSettings.SaveAsync(db, providerId, request, ct);
+            return Results.NoContent();
+        });
     }
 }

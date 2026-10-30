@@ -455,6 +455,22 @@ Case analysis (F-10 + F-11; chapter `documentation/31-case-analysis.md`).
 - **No export of the analysis.** The grid, pairs and timeline cannot be saved or printed from the page.
 - **Not exercised in a browser;** the page is type-checked and built only (build and lint).
 
+## Ausência de temas
+
+Theme absence (F-12; chapter `documentation/32-theme-absence.md`).
+
+- **The modal opened from the card has no "na mesma sessão" list.** The card carries only the absence and its
+  last passage, not the other terms of that session; the modal also reads "Registrado em" with the date of the
+  last record.
+- **No notifications, by decision.** Absence only shows on the Análises page; nothing is sent or listed in the
+  notification centre.
+- **`daysSince` counts to today,** not to the latest signed session, so the number keeps growing while the
+  patient has no new session.
+- **Per term as recorded.** A renamed or split theme is not followed to its successor; the old term is excluded
+  (superseded) and the successor is judged on its own records.
+- **Not exercised in a browser;** the card, the lane mark and the settings section are type-checked and built
+  only (build and lint).
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

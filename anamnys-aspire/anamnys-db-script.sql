@@ -730,7 +730,9 @@ CREATE TABLE "Providers" (
 	"PracticeCity" text,
 	"DocumentCheckMode" text DEFAULT 'blocking' NOT NULL,
 	"UnsignedNoteDays" integer DEFAULT 7 NOT NULL,
+	"AbsenceSessions" integer DEFAULT 4 NOT NULL,
 	CONSTRAINT "Providers_UnsignedNoteDays_ck" CHECK (("UnsignedNoteDays" >= 1)),
+	CONSTRAINT "Providers_AbsenceSessions_ck" CHECK ((("AbsenceSessions" >= 2) AND ("AbsenceSessions" <= 20))),
 	CONSTRAINT "Providers_DocumentCheckMode_ck" CHECK (("DocumentCheckMode" = ANY (ARRAY['blocking'::text, 'advisory'::text]))),
 	CONSTRAINT "Providers_Crp_ck" CHECK ((("CrpNumber" IS NULL) = ("CrpRegion" IS NULL))),
 	CONSTRAINT "Providers_NoteFormat_ck" CHECK (("PreferredNoteFormat" = ANY (ARRAY['DAP'::text, 'SOAP'::text, 'Biopsychosocial'::text, 'PtFunctional'::text])))

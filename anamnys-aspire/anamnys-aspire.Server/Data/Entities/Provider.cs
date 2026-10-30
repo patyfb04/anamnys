@@ -21,6 +21,8 @@ public class Provider
     public string DocumentCheckMode { get; set; } = "blocking";
     // Age in days from which an unsigned note is listed on the compliance panel (Providers_UnsignedNoteDays_ck: >= 1).
     public int UnsignedNoteDays { get; set; } = 7;
+    // Consecutive signed sessions without a record after which a repeated theme is listed as absent (Providers_AbsenceSessions_ck: 2..20).
+    public int AbsenceSessions { get; set; } = 4;
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
