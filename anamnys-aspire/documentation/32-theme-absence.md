@@ -167,3 +167,7 @@ lint only.
 | Migration | `design/migrations/2026-10-29-theme-absence.sql` |
 | Tests | `anamnys-aspire.Tests/Analysis/`, `anamnys-aspire.Tests/Data/ThemeAbsenceMigrationTests.cs` |
 | Provider app | `components/analysis/AbsenceCard.tsx`, `ThemeGridCard.tsx`, `components/settings/AnalysisSettingsSection.tsx` |
+
+## Entry point from the patient record
+
+The patient record header has a "Ver análises" button (also for archived patients, since it only reads) that opens `/analyses?patientId=<id>` with the patient selected.
