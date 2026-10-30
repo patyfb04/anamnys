@@ -146,6 +146,21 @@
     "unavailable_other": "Série indisponível: {{count}} sessões assinadas no período (mínimo {{min}}).",
     "periodLabel": "Período",
     "period": { "6m": "6 meses", "1y": "1 ano", "all": "Tudo" },
+    "absence": {
+      "title": "Temas sem registro recente",
+      "empty_one": "Nenhum tema sem registro na última sessão.",
+      "empty_other": "Nenhum tema sem registro nas últimas {{count}} sessões.",
+      "line": "registrado em {{recorded}} das {{span}} primeiras sessões; sem registro {{since}} (desde {{date}}, {{days}})",
+      "sessionsSince_one": "na sessão seguinte",
+      "sessionsSince_other": "nas {{count}} seguintes",
+      "days_zero": "hoje",
+      "days_one": "há {{count}} dia",
+      "days_other": "há {{count}} dias",
+      "mark_one": "sem registro na última sessão",
+      "mark_other": "sem registro nas últimas {{count}}",
+      "markHint_one": "Este tema não foi registrado na última sessão assinada.",
+      "markHint_other": "Este tema não foi registrado nas últimas {{count}} sessões assinadas."
+    },
     "themes": {
       "title": "Temas por sessão",
       "empty": "Nenhum tema registrado nas sessões assinadas do período.",
@@ -979,6 +994,15 @@
       "loadFailed": "Não foi possível carregar o estado da exportação.",
       "inProgress": "Já existe uma exportação em andamento."
     },
+    "analysis": {
+      "title": "Análises",
+      "description": "Defina quantas sessões assinadas seguidas sem registro fazem um tema aparecer em Temas sem registro recente.",
+      "absenceSessions": "Sessões sem registro",
+      "absenceSessionsHint": "Entre {{min}} e {{max}} sessões.",
+      "save": "Salvar",
+      "saved": "Configuração salva.",
+      "saveFailed": "Não foi possível salvar."
+    },
     "retention": {
       "title": "Guarda",
       "description": "Defina por quantos anos o prontuário é mantido e após quantos dias uma nota sem assinatura aparece em Conformidade.",
@@ -1166,6 +1190,7 @@
       "noNotes": "Nenhuma nota ainda.",
       "startSession": "Iniciar sessão",
       "schedule": "Agendar consulta",
+      "viewAnalysis": "Ver análises",
       "newDocument": "Novo documento",
       "moreActions": "Mais ações",
       "viewNote": "Ver nota",

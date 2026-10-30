@@ -939,4 +939,25 @@ export interface CaseAnalysis {
   sessions?: AnalysisSession[] | null;
   themes?: AnalysisTheme[] | null;
   cooccurrence?: AnalysisPair[] | null;
+  /** Themes recorded repeatedly and not in the last N signed sessions (whole history, F-12). */
+  absences?: AnalysisAbsence[] | null;
+  absenceSessions?: number;
+}
+
+export interface AnalysisAbsence {
+  termId: string;
+  code: string;
+  label: string;
+  parentId?: string | null;
+  recordedIn: number;
+  spanSessions: number;
+  firstOn: string;
+  lastOn: string;
+  sessionsSince: number;
+  daysSince: number;
+  lastOccurrence: { noteId: string; excerptId?: string | null; section?: string | null; quote?: string | null };
+}
+
+export interface AnalysisSettings {
+  absenceSessions: number;
 }

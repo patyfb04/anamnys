@@ -84,6 +84,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 29. Attendance Statistics (F-04)
 30. Retention and Compliance Panel (F-06)
 31. Case Analysis (F-10 + F-11)
+32. Theme Absence (F-12)
 
 ## Building a single PDF from these files
 

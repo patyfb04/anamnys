@@ -8,6 +8,7 @@ import { patientsApi } from "@anamnys/shared/api/patients";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import PatientPicker from "@/components/analysis/PatientPicker";
 import ThemeGridCard from "@/components/analysis/ThemeGridCard";
+import AbsenceCard from "@/components/analysis/AbsenceCard";
 import CooccurrenceCard from "@/components/analysis/CooccurrenceCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import { PERIODS, periodFrom, todayIso, type TimelinePeriod } from "@/components/timeline/timelineGeometry";
@@ -90,14 +91,18 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
           {t("analysis.loadFailed")}
         </p>
       ) : !data.available ? (
-        <DetailCard title={t("analysis.themes.title")} icon={<BarChart3 size={20} />}>
-          <p className="text-body-md text-onSurfaceVariant">
-            {t("analysis.unavailable", { count: data.signedSessions, min: data.minimumSessions })}
-          </p>
-        </DetailCard>
+        <>
+          <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
+          <DetailCard title={t("analysis.themes.title")} icon={<BarChart3 size={20} />}>
+            <p className="text-body-md text-onSurfaceVariant">
+              {t("analysis.unavailable", { count: data.signedSessions, min: data.minimumSessions })}
+            </p>
+          </DetailCard>
+        </>
       ) : (
         <>
-          <ThemeGridCard sessions={data.sessions ?? []} themes={themes} />
+          <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
+          <ThemeGridCard sessions={data.sessions ?? []} themes={themes} absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} />
           <CooccurrenceCard pairs={data.cooccurrence ?? []} themes={themes} />
         </>
       )}

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronRight, Rows3 } from "lucide-react";
-import type { AnalysisOccurrence, AnalysisSession, AnalysisTheme } from "@anamnys/shared/lib/types";
+import type { AnalysisAbsence, AnalysisOccurrence, AnalysisSession, AnalysisTheme } from "@anamnys/shared/lib/types";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import { inputClass } from "@/components/patients/FormField";
 import { LANE_SORTS, buildLanes, relatives, sameSessionLabels, type CellItem, type LaneSort } from "./analysisModel";
@@ -20,11 +20,22 @@ interface Open {
 // "Temas por sessão": sessions as columns, one lane per term as recorded. Children sit indented under
 // their parent; a collapsed parent marks a session when the parent or any child was recorded in it.
 // One neutral mark colour; the orders offered are observation orders only.
-export default function ThemeGridCard({ sessions, themes }: { sessions: AnalysisSession[]; themes: AnalysisTheme[] }) {
+export default function ThemeGridCard({
+  sessions,
+  themes,
+  absences = [],
+  absenceSessions = 4,
+}: {
+  sessions: AnalysisSession[];
+  themes: AnalysisTheme[];
+  absences?: AnalysisAbsence[];
+  absenceSessions?: number;
+}) {
   const { t, i18n } = useTranslation();
   const [sort, setSort] = useState<LaneSort>("frequency");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Open | null>(null);
+  const absent = useMemo(() => new Set(absences.map((a) => a.termId)), [absences]);
   const lanes = useMemo(() => buildLanes(themes, sort, i18n.language), [themes, sort, i18n.language]);
 
   const toggle = (id: string) =>
@@ -110,6 +121,14 @@ export default function ThemeGridCard({ sessions, themes }: { sessions: Analysis
           )}
           <span className="min-w-0 break-words text-body-md text-onSurface">
             {theme.label}
+            {absent.has(theme.termId) && (
+              <span
+                className="block text-body-sm text-onSurfaceVariant"
+                title={t("analysis.absence.markHint", { count: absenceSessions })}
+              >
+                {t("analysis.absence.mark", { count: absenceSessions })}
+              </span>
+            )}
             {!theme.active && <span className="text-body-sm text-onSurfaceVariant"> ({t("analysis.themes.inactive")})</span>}
             {theme.supersededBy.length > 0 && (
               <span className="block text-body-sm text-onSurfaceVariant">

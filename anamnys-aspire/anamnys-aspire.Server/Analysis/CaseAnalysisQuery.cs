@@ -17,27 +17,35 @@ public sealed record CaseAnalysisTheme(
 
 public sealed record CaseAnalysisPair(Guid A, Guid B, int Sessions);
 
-// When Available is false only the first three fields are filled.
+// When Available is false only the first three fields, Absences and AbsenceSessions are filled.
+// Absences always cover the patient's whole signed history, whatever the period and its availability (F-12):
+// they are empty only when the whole history has fewer than MinimumSessions signed sessions.
 public sealed record CaseAnalysis(
     bool Available, int SignedSessions, int MinimumSessions,
-    IReadOnlyList<CaseAnalysisSession>? Sessions, IReadOnlyList<CaseAnalysisTheme>? Themes, IReadOnlyList<CaseAnalysisPair>? Cooccurrence);
+    IReadOnlyList<CaseAnalysisSession>? Sessions, IReadOnlyList<CaseAnalysisTheme>? Themes, IReadOnlyList<CaseAnalysisPair>? Cooccurrence,
+    IReadOnlyList<ThemeAbsenceItem> Absences, int AbsenceSessions);
 
 // One patient's longitudinal theme history (design/specs/2026-10-28-case-analysis-design.md §2, §3).
 // Signed notes are the session columns; a note's day is its session's actual start, else its appointment's start,
 // else the signing day (practice-local). Tags count when not removed and not an untouched AI proposal
 // (CreatedBy 'ai' with no AddedById). Fixed number of queries; ids, dates, labels and the stored quote only.
+// Theme absences (design/specs/2026-10-29-theme-absence-design.md) are computed from the same tags over the whole
+// signed history, in memory.
 public static class CaseAnalysisQuery
 {
     public const int MinimumSessions = 6;
     private static readonly string[] Signed = ["Signed", "Exported"];
 
+    private sealed record TermInfo(Guid Id, string Code, string Label, Guid? ParentId, string Status);
+
     public static async Task<CaseAnalysis?> ExecuteAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, DateOnly? from, DateOnly? to, CancellationToken ct)
+        AnamnysDbContext db, Guid providerId, Guid patientId, DateOnly? from, DateOnly? to, CancellationToken ct, DateOnly? today = null)
     {
         if (!await db.Patients.AsNoTracking().AnyAsync(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null, ct))
         {
             return null;
         }
+        var absenceSessions = await AnalysisSettings.AbsenceSessionsAsync(db, providerId, ct);
 
         var notes = await db.Notes.AsNoTracking()
             .Where(n => n.ProviderId == providerId && n.PatientId == patientId && Signed.Contains(n.Status))
@@ -56,7 +64,8 @@ public static class CaseAnalysisQuery
             .GroupBy(a => a.SessionId)
             .ToDictionary(g => g.Key, g => g.OrderBy(a => a.StartsAt).ThenBy(a => a.Id).First());
 
-        var sessions = notes
+        // The whole signed history, in order; the period only narrows what the page lists.
+        var history = notes
             .Select(n =>
             {
                 appointments.TryGetValue(n.SessionId ?? Guid.Empty, out var appointment);
@@ -64,23 +73,23 @@ public static class CaseAnalysisQuery
                     : appointment?.StartsAt ?? n.SignedAt ?? n.CreatedAt;
                 return new { Row = new CaseAnalysisSession(n.Id, PatientSearchQuery.PracticeToday(at), n.SessionId, appointment?.Id), At = at };
             })
-            .Where(s => (from == null || s.Row.On >= from) && (to == null || s.Row.On <= to))
             .OrderBy(s => s.Row.On).ThenBy(s => s.At).ThenBy(s => s.Row.NoteId)
             .Select(s => s.Row)
             .ToList();
-        if (sessions.Count < MinimumSessions)
+        var sessions = history.Where(s => (from == null || s.On >= from) && (to == null || s.On <= to)).ToList();
+        if (history.Count < MinimumSessions)
         {
-            return new CaseAnalysis(false, sessions.Count, MinimumSessions, null, null, null);
+            return new CaseAnalysis(false, sessions.Count, MinimumSessions, null, null, null, [], absenceSessions);
         }
 
-        var dayOf = sessions.ToDictionary(s => s.NoteId, s => s.On);
-        var noteIds = dayOf.Keys.ToList();
-        var tags = await (
+        var historyDayOf = history.ToDictionary(s => s.NoteId, s => s.On);
+        var historyNoteIds = historyDayOf.Keys.ToList();
+        var allTags = await (
             from tag in db.ThemeTags.AsNoTracking()
             join term in db.ThemeTerms.AsNoTracking() on tag.TermId equals term.Id
             join r in db.ExcerptRefs.AsNoTracking().Where(r => r.ProviderId == providerId && r.SourceType == "note") on new { Id = tag.ExcerptRefId, Note = tag.NoteId } equals new { Id = (Guid?)r.Id, Note = r.SourceId } into refs
             from r in refs.DefaultIfEmpty()
-            where noteIds.Contains(tag.NoteId) && tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null)
+            where historyNoteIds.Contains(tag.NoteId) && tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null)
             select new
             {
                 tag.NoteId, tag.CreatedAt, term.Id, term.Code, term.Label, term.ParentTermId, term.Status,
@@ -89,15 +98,47 @@ public static class CaseAnalysisQuery
             .ToListAsync(ct);
 
         // Every listed child brings its parent (and its ancestors) even without occurrences, so the UI can nest.
-        var termIds = tags.Select(t => t.Id).Distinct().ToList();
-        var parents = new List<ThemeTerm>();
-        var missing = tags.Where(t => t.ParentTermId != null).Select(t => t.ParentTermId!.Value).Distinct().Except(termIds).ToList();
+        var info = allTags.GroupBy(t => t.Id).Select(g => g.First())
+            .ToDictionary(t => t.Id, t => new TermInfo(t.Id, t.Code, t.Label, t.ParentTermId, t.Status));
+        var missing = info.Values.Where(t => t.ParentId != null).Select(t => t.ParentId!.Value).Distinct().Where(id => !info.ContainsKey(id)).ToList();
         while (missing.Count > 0)
         {
             var loaded = await db.ThemeTerms.AsNoTracking().Where(t => missing.Contains(t.Id)).ToListAsync(ct);
-            parents.AddRange(loaded);
-            var known = termIds.Concat(parents.Select(p => p.Id)).ToHashSet();
-            missing = loaded.Where(t => t.ParentTermId != null).Select(t => t.ParentTermId!.Value).Distinct().Where(id => !known.Contains(id)).ToList();
+            foreach (var t in loaded)
+            {
+                info[t.Id] = new TermInfo(t.Id, t.Code, t.Label, t.ParentTermId, t.Status);
+            }
+            missing = loaded.Where(t => t.ParentTermId != null).Select(t => t.ParentTermId!.Value).Distinct().Where(id => !info.ContainsKey(id)).ToList();
+        }
+
+        // Absences: the whole history, every known term (parents without records included, to follow the links).
+        var recordsOf = allTags
+            .GroupBy(t => t.Id)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<AbsenceRecord>)g.OrderBy(t => historyDayOf[t.NoteId]).ThenBy(t => t.CreatedAt).ThenBy(t => t.NoteId)
+                    .Select(t => new AbsenceRecord(t.NoteId, t.RefId, t.SectionKey, t.Quote)).ToList());
+        var absences = ThemeAbsence.Detect(
+            history.Select(s => new AbsenceSession(s.NoteId, s.On)).ToList(),
+            info.Values.Select(t => new AbsenceTerm(t.Id, t.Code, t.Label, t.ParentId, t.Status == "active", recordsOf.GetValueOrDefault(t.Id) ?? [])).ToList(),
+            absenceSessions, today ?? PatientSearchQuery.PracticeToday(DateTimeOffset.UtcNow));
+
+        if (sessions.Count < MinimumSessions)
+        {
+            return new CaseAnalysis(false, sessions.Count, MinimumSessions, null, null, null, absences, absenceSessions);
+        }
+
+        var dayOf = sessions.ToDictionary(s => s.NoteId, s => s.On);
+        var tags = allTags.Where(t => dayOf.ContainsKey(t.NoteId)).ToList();
+        var termIds = tags.Select(t => t.Id).Distinct().ToList();
+        var parents = new List<TermInfo>();
+        var seen = termIds.ToHashSet();
+        foreach (var id in termIds.ToList())
+        {
+            for (var parent = info[id].ParentId; parent is { } p && seen.Add(p); parent = info[p].ParentId)
+            {
+                parents.Add(info[p]);
+            }
         }
         termIds.AddRange(parents.Select(p => p.Id));
         var successions = await (
@@ -125,7 +166,7 @@ public static class CaseAnalysisQuery
                         .Select(t => new CaseAnalysisOccurrence(t.NoteId, dayOf[t.NoteId], t.RefId, t.SectionKey, t.Quote)).ToList());
             })
             .Concat(parents.Select(p => new CaseAnalysisTheme(
-                p.Id, p.Code, p.Label, p.ParentTermId, p.Status == "active", supersededBy.GetValueOrDefault(p.Id) ?? [], [])))
+                p.Id, p.Code, p.Label, p.ParentId, p.Status == "active", supersededBy.GetValueOrDefault(p.Id) ?? [], [])))
             .OrderBy(t => t.Code, StringComparer.Ordinal)
             .ToList();
 
@@ -150,6 +191,7 @@ public static class CaseAnalysisQuery
             .ThenBy(p => p.A).ThenBy(p => p.B)
             .ToList();
 
-        return new CaseAnalysis(true, sessions.Count, MinimumSessions, sessions, themes, cooccurrence);
+
+        return new CaseAnalysis(true, sessions.Count, MinimumSessions, sessions, themes, cooccurrence, absences, absenceSessions);
     }
 }

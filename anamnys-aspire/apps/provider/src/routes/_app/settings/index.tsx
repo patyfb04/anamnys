@@ -4,6 +4,7 @@ import BookingPolicySection from "../../../components/settings/BookingPolicySect
 import AccountExportSection from "../../../components/settings/AccountExportSection";
 import DocumentSettingsSection from "../../../components/settings/DocumentSettingsSection";
 import RetentionSettingsSection from "../../../components/settings/RetentionSettingsSection";
+import AnalysisSettingsSection from "../../../components/settings/AnalysisSettingsSection";
 
 export const Route = createFileRoute("/_app/settings/")({
   component: SettingsPage,
@@ -17,6 +18,7 @@ function SettingsPage() {
       <BookingPolicySection />
       <DocumentSettingsSection />
       <RetentionSettingsSection />
+      <AnalysisSettingsSection />
       <AccountExportSection />
     </div>
   );
