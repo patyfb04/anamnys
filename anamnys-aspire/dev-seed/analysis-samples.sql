@@ -6,6 +6,8 @@
 --   sono                     1-8        ansiedade                 5-12
 --   sobrecarga_jornada       1,2,4,5,7  conflito_no_trabalho      3,6     (children of Trabalho)
 --   familia                  2,6,9,11   luto                      10-12   saudade_desenraizamento 9,12
+-- Also monthly PHQ-9 scores (18 down to 7) and a fictitious treatment (Sertralina 50mg, dose change to 100mg,
+-- stop) for F-13.
 -- Every person and event is fictitious. Idempotent: a patient that already has these notes is skipped.
 -- Never run outside a local development database.
 --   docker exec -i <postgres-container> sh -c 'PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U postgres -d anamnysdb' < dev-seed/analysis-samples.sql
@@ -75,6 +77,37 @@ BEGIN
         WHERE tt."Code" = ph.code;
       END LOOP;
     END LOOP;
+  END LOOP;
+END $$;
+
+-- F-13: monthly PHQ-9 applications and one treatment with a dose change and a stop, for the same patients.
+-- Skipped for a patient that already has the "Sertralina (exemplo)" treatment.
+DO $$
+DECLARE
+  t record;
+  i int;
+  tid uuid;
+  phq uuid;
+  scores int[] := ARRAY[18,17,16,15,13,12,12,10,9,9,8,7];
+BEGIN
+  SELECT "Id" INTO phq FROM "Instruments" WHERE lower(replace("Code", '-', '')) = 'phq9' LIMIT 1;
+  IF phq IS NULL THEN RAISE NOTICE 'PHQ-9 not in the catalog; scale samples skipped'; END IF;
+  FOR t IN
+    SELECT DISTINCT n."PatientId" AS patient_id, n."ProviderId" AS provider_id
+    FROM "Notes" n
+    WHERE n."RawTranscript" LIKE 'Seed de análise (exemplo)%'
+      AND NOT EXISTS (SELECT 1 FROM "MedicationEntries" m WHERE m."PatientId" = n."PatientId" AND m."Drug" = 'Sertralina (exemplo)')
+  LOOP
+    tid := gen_random_uuid();
+    INSERT INTO "MedicationEntries" ("PatientId","Drug","Dose","Posology","StartedOn","EndedOn","TreatmentId") VALUES
+      (t.patient_id, 'Sertralina (exemplo)', '50mg', '1x/dia pela manhã', current_date - 320, current_date - 200, tid),
+      (t.patient_id, 'Sertralina (exemplo)', '100mg', '1x/dia pela manhã', current_date - 199, current_date - 60, tid);
+    IF phq IS NOT NULL THEN
+      FOR i IN 1..12 LOOP
+        INSERT INTO "ScaleApplications" ("PatientId","InstrumentId","Score","AppliedAt","AppliedBy")
+        VALUES (t.patient_id, phq, scores[i], now() - make_interval(days => 350 - (i - 1) * 30), t.provider_id);
+      END LOOP;
+    END IF;
   END LOOP;
 END $$;
 
