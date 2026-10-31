@@ -97,10 +97,13 @@ public static class PatientRecords
         var plan = await OpenPlanAsync(db, patientId, cancellationToken);
         var objectives = plan is null
             ? []
-            : await db.PlanObjectives.AsNoTracking()
-                .Where(o => o.PlanId == plan.Id)
-                .OrderBy(o => o.CreatedAt)
-                .Select(o => new ObjectiveItem(o.Id, o.Description, o.CreatedAt))
+            : await (
+                from o in db.PlanObjectives.AsNoTracking()
+                join t in db.ThemeTerms.AsNoTracking() on o.TermId equals (Guid?)t.Id into terms
+                from t in terms.DefaultIfEmpty()
+                where o.PlanId == plan.Id
+                orderby o.CreatedAt
+                select new ObjectiveItem(o.Id, o.Description, o.CreatedAt, o.TermId, t == null ? null : t.Label))
                 .ToListAsync(cancellationToken);
 
         // The linked portal account, unless it was disabled: providers see only its login
@@ -291,13 +294,17 @@ public static class PatientRecords
                 && db.Patients.Any(p => p.Id == patientId && p.ProviderId == providerId))
             .ExecuteDeleteAsync(cancellationToken) > 0;
 
-    // Objectives live on the patient's open plan; the first objective opens one.
-    public static async Task<Guid?> AddObjectiveAsync(
+    // Objectives live on the patient's open plan; the first objective opens one. An archived record is read-only
+    // (Conflict), like its other clinical writes (F-14).
+    public static async Task<ObjectiveResult> AddObjectiveAsync(
         AnamnysDbContext db, Guid providerId, Guid patientId, ObjectiveInput input, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        if (!await OwnsAsync(db, providerId, patientId, cancellationToken))
+        switch (await ArchivedAsync(db, providerId, patientId, cancellationToken))
         {
-            return null;
+            case null:
+                return new ObjectiveResult(RecordOutcome.NotFound);
+            case true:
+                return new ObjectiveResult(RecordOutcome.Conflict);
         }
 
         var nowUtc = now.ToUniversalTime();
@@ -309,27 +316,83 @@ public static class PatientRecords
         }
 
         var objective = NewObjective(plan.Id, input.Description, nowUtc);
+        objective.TermId = input.TermId;
         db.PlanObjectives.Add(objective);
         await db.SaveChangesAsync(cancellationToken);
-        return objective.Id;
+        return new ObjectiveResult(RecordOutcome.Ok, objective.Id);
     }
 
-    public static async Task<bool> UpdateObjectiveAsync(
+    public static async Task<RecordOutcome> UpdateObjectiveAsync(
         AnamnysDbContext db, Guid providerId, Guid patientId, Guid itemId, ObjectiveInput input, CancellationToken cancellationToken)
     {
         var objective = await OwnedObjectives(db, providerId, patientId, itemId).SingleOrDefaultAsync(cancellationToken);
         if (objective is null)
         {
-            return false;
+            return RecordOutcome.NotFound;
+        }
+        switch (await ArchivedAsync(db, providerId, patientId, cancellationToken))
+        {
+            case null:
+                return RecordOutcome.NotFound;
+            case true:
+                return RecordOutcome.Conflict;
         }
         objective.Description = ProfileText.Clean(input.Description)!;
+        objective.TermId = input.TermId;
         await db.SaveChangesAsync(cancellationToken);
-        return true;
+        return RecordOutcome.Ok;
     }
 
-    public static async Task<bool> RemoveObjectiveAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, Guid itemId, CancellationToken cancellationToken) =>
-        await OwnedObjectives(db, providerId, patientId, itemId).ExecuteDeleteAsync(cancellationToken) > 0;
+    // F-14: an objective's theme is an active term of the active vocabulary, or none. The term an objective of this
+    // provider's patient already has stays accepted on its edits after the term was retired, so the description can
+    // still be changed.
+    public static async Task<bool> ObjectiveTermAcceptedAsync(
+        AnamnysDbContext db, Guid providerId, Guid patientId, Guid? objectiveId, Guid? termId, CancellationToken cancellationToken)
+    {
+        if (termId is not { } id)
+        {
+            return true;
+        }
+        if (objectiveId is { } current
+            && await OwnedObjectives(db, providerId, patientId, current).AsNoTracking().AnyAsync(o => o.TermId == id, cancellationToken))
+        {
+            return true;
+        }
+        return await (
+            from t in db.ThemeTerms.AsNoTracking()
+            join v in db.ThemeVocabularies.AsNoTracking() on t.VocabularyId equals v.Id
+            where t.Id == id && v.Active && t.Status == "active"
+            select t.Id).AnyAsync(cancellationToken);
+    }
+
+    public static async Task<RecordOutcome> RemoveObjectiveAsync(
+        AnamnysDbContext db, Guid providerId, Guid patientId, Guid itemId, CancellationToken cancellationToken)
+    {
+        if (!await OwnedObjectives(db, providerId, patientId, itemId).AnyAsync(cancellationToken))
+        {
+            return RecordOutcome.NotFound;
+        }
+        switch (await ArchivedAsync(db, providerId, patientId, cancellationToken))
+        {
+            case null:
+                return RecordOutcome.NotFound;
+            case true:
+                return RecordOutcome.Conflict;
+        }
+        return await OwnedObjectives(db, providerId, patientId, itemId).ExecuteDeleteAsync(cancellationToken) > 0
+            ? RecordOutcome.Ok
+            : RecordOutcome.NotFound;
+    }
+
+    // Null: not the provider's patient (or discarded); otherwise whether the record is archived.
+    private static async Task<bool?> ArchivedAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken)
+    {
+        var row = await db.Patients.AsNoTracking()
+            .Where(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null)
+            .Select(p => new { p.ArchivedAt })
+            .SingleOrDefaultAsync(cancellationToken);
+        return row is null ? null : row.ArchivedAt is not null;
+    }
 
     private static IQueryable<PlanObjective> OwnedObjectives(AnamnysDbContext db, Guid providerId, Guid patientId, Guid itemId) =>
         db.PlanObjectives.Where(o => o.Id == itemId

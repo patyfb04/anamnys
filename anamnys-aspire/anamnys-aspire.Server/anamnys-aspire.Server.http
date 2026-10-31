@@ -493,3 +493,46 @@ PUT {{Server_HostAddress}}/api/phi/providers/me/settings/analysis
 Content-Type: application/json
 
 { "absenceSessions": 4 }
+
+###
+### Plan adherence (F-14, design/specs/2026-10-30-plan-adherence-design.md §3). 404 for another provider's or a discarded patient.
+### 200 { plan: { planId?, reviewedAt? }, objectives: [{ objectiveId, description, createdAt, term?: { termId, label }, firstOn?, lastOn?, lastNoteId?, sessionsSince?, daysSince? }],
+###       followUps: [{ id, description, createdAt, noteId?, excerpt?: { excerptId, section, quote }, resolvedAt?, resolvedNoteId?, sessionsSince, originOn? }] }
+### Objectives of the open plan by createdAt; a theme counts when the term or a descendant was recorded in a signed note (confirmed tags, F-10 session date).
+### Never recorded: first/last null, sessionsSince/daysSince counted from the definition. No term: all five null.
+### Follow-ups: open first (oldest first), then resolved (latest resolution first).
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/plan-adherence
+
+###
+### Mark the open plan as reviewed now (creates the plan when there is none). Audited plan_reviewed (patient and plan ids).
+### 200 { planId, reviewedAt }; 404; 409 { code: "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/plan/review
+
+###
+### Objectives accept an optional theme: termId, an active term of the active vocabulary (the one the objective already has stays accepted). 400 { termId } otherwise. Writes on an archived patient: 409 { code: "archived" }.
+### The patient detail lists objectives as { id, description, createdAt, termId?, termLabel? }.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/objectives
+Content-Type: application/json
+
+{ "description": "Dormir melhor", "termId": "00000000-0000-0000-0000-000000000000" }
+
+###
+### Mark a point "para retomar" on a note. Passage optional: { sectionKey, offsetStart, offsetEnd } (selection), { sectionKey } (section) or { quote }.
+### Only on notes in review or signed. A quote that is not found is refused.
+### 201 { id }; 400 { description | offsetStart | quote } (code "invalid_selection" when the passage does not match); 404; 409 { code: "archived" | "note_not_ready" }. Audited follow_up_created (note and follow-up ids).
+POST {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-000000000000/follow-ups
+Content-Type: application/json
+
+{ "description": "Retomar a relação com o pai", "sectionKey": "evolucao", "offsetStart": 0, "offsetEnd": 20 }
+
+###
+### Resolve it, from a later note of the same patient ("retomada nesta nota", not the origin note nor one dated before it) or from the plan card (no noteId). 204 (also when already resolved);
+### 400 { noteId } with code "invalid_note"; 404; 409 { code: "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/follow-ups/00000000-0000-0000-0000-000000000000/resolve
+Content-Type: application/json
+
+{ "noteId": "00000000-0000-0000-0000-000000000000" }
+
+###
+### Reopen a resolved one. 204 (also when already open); 404; 409 { code: "archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/follow-ups/00000000-0000-0000-0000-000000000000/reopen

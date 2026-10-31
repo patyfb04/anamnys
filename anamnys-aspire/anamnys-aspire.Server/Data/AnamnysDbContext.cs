@@ -46,6 +46,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ExtractedFact> ExtractedFacts => Set<ExtractedFact>();
     public DbSet<RetentionRule> RetentionRules => Set<RetentionRule>();
     public DbSet<DisposalTerm> DisposalTerms => Set<DisposalTerm>();
+    public DbSet<FollowUpItem> FollowUpItems => Set<FollowUpItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -163,6 +164,17 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("PlanObjectives");
             e.HasKey(x => x.Id);
             e.HasOne<TreatmentPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.TermId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FollowUpItem>(e =>
+        {
+            e.ToTable("FollowUpItems");
+            e.HasKey(x => x.Id);
+            e.HasOne<Note>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<Note>().WithMany().HasForeignKey(x => x.ResolvedNoteId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<ExcerptRef>().WithMany().HasForeignKey(x => x.ExcerptRefId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.PatientId, x.ResolvedAt });
         });
 
         modelBuilder.Entity<AppointmentConfirmation>(e =>

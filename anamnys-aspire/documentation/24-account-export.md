@@ -88,10 +88,11 @@ anamnys-exportacao-AAAA-MM-DD/
     documentos/AAAA-MM-DD-<tipo>[-N][-substituido].pdf
     documentos/documentos.json
     escalas.csv, diagnosticos.csv, medicacoes.csv, objetivos.csv, temas.csv
+    pontos-para-retomar.csv  follow-ups (F-14): description, created, origin note, resolved, resolving note, quote
 ```
 
 - **Included:** note sections (signed notes, and drafts marked "rascunho"), psychological documents
-  (superseded ones marked), scales, diagnoses, medications, plan objectives, themes, appointments
+  (superseded ones marked), scales, diagnoses, medications, plan objectives (with the linked theme), follow-ups, themes, appointments
   (with the cancellation reason: it is provider-created data), patient registration data, archived
   patients too.
 - **HTML:** static, inline CSS, no JavaScript, no external resources, `lang="pt-BR"`, readable printed.

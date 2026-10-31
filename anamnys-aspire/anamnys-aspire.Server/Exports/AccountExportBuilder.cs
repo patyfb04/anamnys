@@ -69,6 +69,7 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
             await TextAsync(archive, $"{folder}/medicacoes.csv", MedicationsCsv(j), ct);
             await TextAsync(archive, $"{folder}/objetivos.csv", ObjectivesCsv(j), ct);
             await TextAsync(archive, $"{folder}/temas.csv", ThemesCsv(j), ct);
+            await TextAsync(archive, $"{folder}/pontos-para-retomar.csv", FollowUpsCsv(j), ct);
         }
 
         // Disposal terms (F-06): the stored PDF, or the same term rendered again from its row when the object is gone.
@@ -174,10 +175,15 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
 
     private static string ObjectivesCsv(PacienteJson j) =>
         ExportFormat.Csv(
-            ["plano_id", "plano_criado_em", "plano_revisado_em", "plano_encerrado_em", "objetivo_id", "objetivo", "criado_em"],
+            ["plano_id", "plano_criado_em", "plano_revisado_em", "plano_encerrado_em", "objetivo_id", "objetivo", "criado_em", "tema"],
             j.Planos.SelectMany(p => p.Objetivos.Count == 0
-                ? new[] { new object?[] { p.Id, p.CriadoEm, p.RevisadoEm, p.EncerradoEm, null, null, null } }
-                : p.Objetivos.Select(o => new object?[] { p.Id, p.CriadoEm, p.RevisadoEm, p.EncerradoEm, o.Id, o.Descricao, o.CriadoEm })));
+                ? new[] { new object?[] { p.Id, p.CriadoEm, p.RevisadoEm, p.EncerradoEm, null, null, null, null } }
+                : p.Objetivos.Select(o => new object?[] { p.Id, p.CriadoEm, p.RevisadoEm, p.EncerradoEm, o.Id, o.Descricao, o.CriadoEm, o.Tema })));
+
+    private static string FollowUpsCsv(PacienteJson j) =>
+        ExportFormat.Csv(
+            ["descricao", "criado_em", "nota_origem_id", "resolvido_em", "nota_resolucao_id", "trecho"],
+            j.PontosParaRetomar.Select(f => new object?[] { f.Descricao, f.CriadoEm, f.NotaOrigemId, f.ResolvidoEm, f.NotaResolucaoId, f.Trecho }));
 
     private static string ThemesCsv(PacienteJson j) =>
         ExportFormat.Csv(

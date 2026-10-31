@@ -481,6 +481,20 @@ Scale trajectory (F-13; chapter `documentation/33-scale-trajectory.md`).
 - **No frontend unit tests.** The provider app has no test runner; the model is kept pure for when one is added.
 - **Not exercised in a browser;** the card is type-checked and built only (build and lint).
 
+## Plano terapêutico
+
+- The export carries follow-ups in `pontos-para-retomar.csv` and `paciente.json`, but the readable `paciente.html` shows neither them nor the objective's theme yet.
+- "Retomada nesta nota" compares the origin day with the note's creation day in the browser; the server has the final word and refuses with `invalid_note`.
+Plan adherence and follow-ups (F-14; chapter `documentation/34-plan-adherence.md`).
+
+- **No reminder of the plan review.** By decision, "Plano revisado em …, há N dias" only reports the date: no
+  deadline, no colour, no notification.
+- **A follow-up without a selection has no passage.** "Marcar para retomar" with no selected text creates the
+  item without an origin passage, because the note view has no section picker.
+- **No dashboard summary.** Plan adherence appears only on the "Análises" card and the note view.
+- **Review days are computed in the browser's time zone** from `reviewedAt`, not by the server.
+- **Not exercised in a browser;** the card, the objective form and the note-view block are type-checked and built
+  only (build and lint).
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

@@ -66,6 +66,7 @@ export default function ClinicalListCard<TItem extends { id: string }, TDraft>(p
       onDone?.();
     } catch (e) {
       if (e instanceof ApiError && e.errors) setErrors(e.errors);
+      else if (e instanceof ApiError && e.status === 409) setError(e.code === "archived" ? t("planAdherence.archived") : t("planAdherence.errors.conflict"));
       else setError(t("patients.detail.actionFailed"));
     } finally {
       setBusy(false);

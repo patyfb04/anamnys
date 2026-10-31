@@ -119,7 +119,7 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         (await PatientRecords.SetArchivedAsync(db, me, foreign, true, Now, Ct)).Should().BeFalse();
         (await PatientRecords.AddDiagnosisAsync(db, me, foreign, new DiagnosisInput("x", null, null), Now, Ct)).Should().BeNull();
         (await PatientRecords.AddMedicationAsync(db, me, foreign, new MedicationInput("x", null, null, today, null), Ct)).Should().BeNull();
-        (await PatientRecords.AddObjectiveAsync(db, me, foreign, new ObjectiveInput("x"), Now, Ct)).Should().BeNull();
+        (await PatientRecords.AddObjectiveAsync(db, me, foreign, new ObjectiveInput("x"), Now, Ct)).Outcome.Should().Be(RecordOutcome.NotFound);
     }
 
     [Fact]
@@ -137,7 +137,8 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         (await PatientRecords.UpdateDiagnosisAsync(db, me, foreign, foreignDetail.Diagnoses[0].Id, new DiagnosisInput("x", null, null), Ct)).Should().BeFalse();
         (await PatientRecords.RemoveDiagnosisAsync(db, me, foreign, foreignDetail.Diagnoses[0].Id, Ct)).Should().BeFalse();
         (await PatientRecords.RemoveMedicationAsync(db, me, foreign, foreignDetail.Medications[0].Id, Ct)).Should().BeFalse();
-        (await PatientRecords.RemoveObjectiveAsync(db, me, foreign, foreignDetail.Objectives[0].Id, Ct)).Should().BeFalse();
+        (await PatientRecords.RemoveObjectiveAsync(db, me, foreign, foreignDetail.Objectives[0].Id, Ct)).Should().Be(RecordOutcome.NotFound);
+        (await PatientRecords.UpdateObjectiveAsync(db, me, foreign, foreignDetail.Objectives[0].Id, new ObjectiveInput("x"), Ct)).Should().Be(RecordOutcome.NotFound);
         (await PatientRecords.GetAsync(db, otherProvider, foreign, Now, Ct))!.Diagnoses.Should().ContainSingle();
     }
 
@@ -278,13 +279,85 @@ public class PatientRecordsTests(SharedAppHostFixture fixture)
         // Act
         var first = await PatientRecords.AddObjectiveAsync(db, seed.ProviderId, id, new ObjectiveInput("Dormir melhor"), Now, Ct);
         var second = await PatientRecords.AddObjectiveAsync(db, seed.ProviderId, id, new ObjectiveInput("Retomar exercícios"), Now.AddMinutes(1), Ct);
-        var renamed = await PatientRecords.UpdateObjectiveAsync(db, seed.ProviderId, id, first!.Value, new ObjectiveInput("Dormir 7h por noite"), Ct);
+        var renamed = await PatientRecords.UpdateObjectiveAsync(db, seed.ProviderId, id, first.Id!.Value, new ObjectiveInput("Dormir 7h por noite"), Ct);
 
         // Assert
-        renamed.Should().BeTrue();
+        renamed.Should().Be(RecordOutcome.Ok);
         (await db.TreatmentPlans.CountAsync(t => t.PatientId == id, Ct)).Should().Be(1);
         (await GetAsync(seed, id))!.Objectives.Select(o => o.Description).Should().Equal("Dormir 7h por noite", "Retomar exercícios");
-        (await PatientRecords.RemoveObjectiveAsync(db, seed.ProviderId, id, second!.Value, Ct)).Should().BeTrue();
+        (await PatientRecords.RemoveObjectiveAsync(db, seed.ProviderId, id, second.Id!.Value, Ct)).Should().Be(RecordOutcome.Ok);
+    }
+
+    // F-14 fix round 1: an archived record is read-only for objectives too (409 at the endpoint).
+    [Fact]
+    public async Task Objective_OfAnArchivedPatient_CannotBeAddedChangedOrRemoved()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var id = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var existing = await PatientRecords.AddObjectiveAsync(db, seed.ProviderId, id, new ObjectiveInput("Dormir melhor"), Now, Ct);
+        (await PatientRecords.SetArchivedAsync(db, seed.ProviderId, id, true, Now, Ct)).Should().BeTrue();
+
+        // Act
+        var add = await PatientRecords.AddObjectiveAsync(db, seed.ProviderId, id, new ObjectiveInput("Outro"), Now, Ct);
+        var update = await PatientRecords.UpdateObjectiveAsync(db, seed.ProviderId, id, existing.Id!.Value, new ObjectiveInput("Mudado"), Ct);
+        var remove = await PatientRecords.RemoveObjectiveAsync(db, seed.ProviderId, id, existing.Id.Value, Ct);
+
+        // Assert
+        add.Outcome.Should().Be(RecordOutcome.Conflict);
+        update.Should().Be(RecordOutcome.Conflict);
+        remove.Should().Be(RecordOutcome.Conflict);
+        (await GetAsync(seed, id))!.Objectives.Should().ContainSingle().Which.Description.Should().Be("Dormir melhor");
+    }
+
+    // F-14 (design/specs/2026-10-30-plan-adherence-design.md §3): an objective may be linked to an active term of the
+    // active vocabulary; a term that is no longer active is refused, except the one the objective already has.
+    [Fact]
+    public async Task Objective_TermLink_AcceptsActiveTerms_RefusesOthers_KeepsTheCurrentOne()
+    {
+        // Arrange
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var id = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
+        await using var db = seed.CreateDbContext();
+        var active = await (
+            from t in db.ThemeTerms
+            join v in db.ThemeVocabularies on t.VocabularyId equals v.Id
+            where v.Active && t.Status == "active"
+            orderby t.Code
+            select new { t.Id, t.Label }).FirstAsync(Ct);
+        var vocabulary = new Anamnys.Server.Data.Entities.ThemeVocabulary { Id = Guid.NewGuid(), Version = $"test-{Guid.NewGuid():N}", Active = false };
+        var retired = new Anamnys.Server.Data.Entities.ThemeTerm
+        {
+            Id = Guid.NewGuid(), VocabularyId = vocabulary.Id, Code = $"t-{Guid.NewGuid():N}", Label = "Antigo", IntroducedOn = new DateOnly(2026, 1, 1),
+        };
+        db.ThemeVocabularies.Add(vocabulary);
+        db.ThemeTerms.Add(retired);
+        await db.SaveChangesAsync(Ct);
+
+        // Act
+        var linked = (await PatientRecords.AddObjectiveAsync(db, seed.ProviderId, id, new ObjectiveInput("Dormir melhor", active.Id), Now, Ct)).Id!.Value;
+        await db.PlanObjectives.Where(o => o.Id == linked).ExecuteUpdateAsync(u => u.SetProperty(o => o.TermId, retired.Id), Ct);
+        var otherProvider = await seed.AddProviderAsync(Ct);
+        var otherPatient = await seed.AddPatientAsync("Bia", "Souza", cancellationToken: Ct);
+        var me = seed.ProviderId;
+
+        // Assert
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, id, null, active.Id, Ct)).Should().BeTrue();
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, id, null, null, Ct)).Should().BeTrue();
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, id, null, retired.Id, Ct)).Should().BeFalse();
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, id, null, Guid.NewGuid(), Ct)).Should().BeFalse();
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, id, linked, retired.Id, Ct)).Should().BeTrue();
+        // The retired-term exception is scoped: another provider, or another patient's path, does not see it.
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, otherProvider, id, linked, retired.Id, Ct)).Should().BeFalse();
+        (await PatientRecords.ObjectiveTermAcceptedAsync(db, me, otherPatient, linked, retired.Id, Ct)).Should().BeFalse();
+        var objective = (await GetAsync(seed, id))!.Objectives.Should().ContainSingle().Subject;
+        objective.TermId.Should().Be(retired.Id);
+        objective.TermLabel.Should().Be("Antigo");
+        (await PatientRecords.UpdateObjectiveAsync(db, seed.ProviderId, id, linked, new ObjectiveInput("Dormir melhor", null), Ct)).Should().Be(RecordOutcome.Ok);
+        (await GetAsync(seed, id))!.Objectives.Single().TermId.Should().BeNull();
+        await db.ThemeTerms.Where(t => t.Id == retired.Id).ExecuteDeleteAsync(Ct);
+        await db.ThemeVocabularies.Where(v => v.Id == vocabulary.Id).ExecuteDeleteAsync(Ct);
     }
 
     private static async Task<PatientDetailResponse?> GetAsync(PatientSearchSeed seed, Guid id)

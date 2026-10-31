@@ -75,7 +75,8 @@ public static class ExportReadme
                                 ele continua sendo um documento histórico válido.
             documentos/documentos.json
                                 Todos os documentos, inclusive rascunhos e substituídos.
-            escalas.csv, diagnosticos.csv, medicacoes.csv, objetivos.csv, temas.csv
+            escalas.csv, diagnosticos.csv, medicacoes.csv, objetivos.csv, temas.csv,
+            pontos-para-retomar.csv
 
         Situação das notas e documentos
         -------------------------------
@@ -210,13 +211,20 @@ public static class ExportReadme
 
         objetivos.csv
         -------------
-        plano_id; plano_criado_em; plano_revisado_em; plano_encerrado_em; objetivo_id; objetivo; criado_em
-        (um plano sem objetivos aparece em uma linha com as colunas do objetivo vazias)
+        plano_id; plano_criado_em; plano_revisado_em; plano_encerrado_em; objetivo_id; objetivo; criado_em; tema
+        (um plano sem objetivos aparece em uma linha com as colunas do objetivo vazias; tema é o tema
+        ligado ao objetivo, quando há)
 
         temas.csv
         ---------
         nota_id; data_nota; codigo; tema; tema_pai; origem; proposto; adicionado_em
         Uma linha por tema ativo em cada nota (temas removidos não aparecem). Em paciente.html, temas
         propostos pela IA e ainda não confirmados aparecem com "(proposta da IA)".
+
+        pontos-para-retomar.csv
+        -----------------------
+        descricao; criado_em; nota_origem_id; resolvido_em; nota_resolucao_id; trecho
+        Uma linha por ponto marcado para retomar. resolvido_em vazio: ponto em aberto. trecho é o texto
+        da nota de onde o ponto foi marcado, quando há.
         """.ReplaceLineEndings("\r\n");
 }

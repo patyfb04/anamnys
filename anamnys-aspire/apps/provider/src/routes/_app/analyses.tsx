@@ -11,6 +11,7 @@ import ThemeGridCard from "@/components/analysis/ThemeGridCard";
 import AbsenceCard from "@/components/analysis/AbsenceCard";
 import CooccurrenceCard from "@/components/analysis/CooccurrenceCard";
 import TrajectoryCard from "@/components/analysis/TrajectoryCard";
+import PlanCard from "@/components/analysis/PlanCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import { PERIODS, periodFrom, todayIso, type TimelinePeriod } from "@/components/timeline/timelineGeometry";
 
@@ -95,6 +96,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         <>
           <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
           <TrajectoryCard patientId={patientId} period={period} minimumSessions={data.minimumSessions} />
+          <PlanCard patientId={patientId} />
           <DetailCard title={t("analysis.themes.title")} icon={<BarChart3 size={20} />}>
             <p className="text-body-md text-onSurfaceVariant">
               {t("analysis.unavailable", { count: data.signedSessions, min: data.minimumSessions })}
@@ -105,6 +107,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         <>
           <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
           <TrajectoryCard patientId={patientId} period={period} />
+          <PlanCard patientId={patientId} />
           <ThemeGridCard sessions={data.sessions ?? []} themes={themes} absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} />
           <CooccurrenceCard pairs={data.cooccurrence ?? []} themes={themes} />
         </>

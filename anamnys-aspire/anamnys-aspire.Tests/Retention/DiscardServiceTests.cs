@@ -119,12 +119,13 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
             INSERT INTO "PlanObjectives" ("PlanId","Description") VALUES (@plan, @m);
             INSERT INTO "ScaleApplications" ("PatientId","InstrumentId","Score","AppliedAt")
             SELECT @pa, i."Id", 5, '2019-06-01' FROM "Instruments" i ORDER BY i."Code" LIMIT 1;
-            INSERT INTO "FollowUpItems" ("PatientId","NoteId","Description") VALUES (@pa, @n, @m);
+            INSERT INTO "ExcerptRefs" ("Id","ProviderId","SourceType","SourceId","SectionKey","Kind","DatedAt") VALUES (@fx, @p, 'note', @n, 'evolucao', 'section', now());
+            INSERT INTO "FollowUpItems" ("PatientId","ProviderId","NoteId","Description","ExcerptRefId") VALUES (@pa, @p, @n, @m, @fx);
             INSERT INTO "PatientInvitations" ("PatientId","Email","TokenHash","ExpiresAt") VALUES (@pa, 'ana@example.test', gen_random_uuid()::text::bytea, now() + interval '1 day');
             INSERT INTO "Notifications" ("ProviderId","Kind","SubjectType","SubjectId","Channel","ScheduledFor","DeliveryStatus","DedupeKey")
             VALUES (@p, 'retention_due', 'patient', @pa, 'in_app', now(), 'sent', 'retention:' || @pa || ':2025-01-01'),
                    (@p, 'unsigned_note', 'note', @draft, 'in_app', now(), 'sent', 'unsigned:' || @draft);
-            """, Ct, ("pa", patient), ("p", provider), ("m", Marker), ("plan", plan), ("n", signed), ("draft", draft));
+            """, Ct, ("pa", patient), ("p", provider), ("m", Marker), ("plan", plan), ("n", signed), ("draft", draft), ("fx", Guid.NewGuid()));
 
         foreach (var key in new[] { noteKey, documentKey, externalKey })
         {
@@ -186,7 +187,7 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         {
             ["notes"] = 2, ["clinicalDocuments"] = 1, ["externalDocuments"] = 1, ["sessions"] = 1, ["appointments"] = 2,
             ["transcripts"] = 1, ["scaleApplications"] = 1, ["medications"] = 1, ["diagnoses"] = 1, ["treatmentPlans"] = 1,
-            ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 2, ["invitations"] = 1,
+            ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 2, ["invitations"] = 1, ["followUpItems"] = 1,
         });
 
         // The patient row keeps only the name and the discard date.

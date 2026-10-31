@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
@@ -15,6 +15,7 @@ import NoteSections from "@/components/notes/NoteSections";
 import RestructureControl from "@/components/notes/RestructureControl";
 import SignCard from "@/components/notes/SignCard";
 import NoteThemes from "@/components/themes/NoteThemes";
+import NoteFollowUps from "@/components/notes/NoteFollowUps";
 import SessionScalesCard from "@/components/scales/SessionScalesCard";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -38,6 +39,7 @@ function NotePage() {
     setActiveExcerptId(excerpt ?? null);
   }, [excerpt]);
   const [selection, setSelection] = useState<ThemeSelection | null>(null);
+  const [followUpSelection, setFollowUpSelection] = useState<ThemeSelection | null>(null);
   const passage = useQuery({
     queryKey: ["excerpt", activeExcerptId],
     queryFn: () => excerptsApi.get(activeExcerptId!),
@@ -51,6 +53,7 @@ function NotePage() {
       q.state.data?.status === "Processing" || q.state.data?.structureStatus === "pending" ? 5000 : false,
   });
 
+  const queryClient = useQueryClient();
   const patientId = query.data?.patientId;
   const patient = useQuery({
     queryKey: ["patient", patientId],
@@ -112,6 +115,7 @@ function NotePage() {
                 onSaved={() => void query.refetch()}
                 highlight={passage.data && passage.data.id === activeExcerptId && passage.data.noteId === noteId ? passage.data : null}
                 onMark={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setSelection : undefined}
+                onMarkFollowUp={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setFollowUpSelection : undefined}
               />
             )}
             {!hasSections && editable && <WriteManually noteId={noteId} onCreated={() => void query.refetch()} />}
@@ -127,6 +131,16 @@ function NotePage() {
                 onSelectionDone={() => setSelection(null)}
               />
             )}
+            {(note.status === "ReadyForReview" || !!note.signedAt) && (
+              <NoteFollowUps
+                noteId={noteId}
+                patientId={note.patientId}
+                noteCreatedAt={note.createdAt}
+                sections={note.sections}
+                selection={followUpSelection}
+                onSelectionDone={() => setFollowUpSelection(null)}
+              />
+            )}
           </DetailCard>
           {note.rawTranscript && (
             <TranscriptCard
@@ -138,7 +152,7 @@ function NotePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => query.refetch()} />}
+          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => { void queryClient.invalidateQueries({ queryKey: ["plan-adherence", note.patientId] }); return query.refetch(); }} />}
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}

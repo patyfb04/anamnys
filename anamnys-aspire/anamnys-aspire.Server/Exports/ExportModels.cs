@@ -15,7 +15,7 @@ public sealed record PacienteJson(
     string? IdiomaPreferido, DateTimeOffset? UltimaConsulta, bool Arquivado, DateTimeOffset? ArquivadoEm,
     DateTimeOffset CadastradoEm, IReadOnlyList<DiagnosticoJson> Diagnosticos, IReadOnlyList<MedicacaoJson> Medicacoes,
     IReadOnlyList<PlanoJson> Planos, IReadOnlyList<EscalaJson> Escalas, IReadOnlyList<NotaJson> Notas,
-    IReadOnlyList<DocumentoJson> Documentos);
+    IReadOnlyList<DocumentoJson> Documentos, IReadOnlyList<PontoParaRetomarJson> PontosParaRetomar);
 
 public sealed record DiagnosticoJson(Guid Id, string Descricao, string? Cid, DateTimeOffset RegistradoEm, DateOnly? ResolvidoEm);
 
@@ -24,7 +24,10 @@ public sealed record MedicacaoJson(Guid Id, string Medicamento, string? Dose, st
 public sealed record PlanoJson(
     Guid Id, DateTimeOffset CriadoEm, DateTimeOffset? RevisadoEm, DateTimeOffset? EncerradoEm, IReadOnlyList<ObjetivoJson> Objetivos);
 
-public sealed record ObjetivoJson(Guid Id, string Descricao, DateTimeOffset CriadoEm);
+public sealed record ObjetivoJson(Guid Id, string Descricao, DateTimeOffset CriadoEm, string? Tema);
+
+public sealed record PontoParaRetomarJson(
+    Guid Id, string Descricao, DateTimeOffset CriadoEm, Guid? NotaOrigemId, DateTimeOffset? ResolvidoEm, Guid? NotaResolucaoId, string? Trecho);
 
 public sealed record EscalaJson(
     Guid Id, string Instrumento, string NomeInstrumento, int Pontuacao, int PontuacaoMinima, int PontuacaoMaxima,
@@ -121,7 +124,7 @@ public static class ExportViews
                 g.Key, ExportFormat.Local(g.First().PlanCreatedAt), ExportFormat.Local(g.First().PlanReviewedAt),
                 ExportFormat.Local(g.First().PlanClosedAt),
                 g.Where(o => o.ObjectiveId != null)
-                    .Select(o => new ObjetivoJson(o.ObjectiveId!.Value, o.Description!, ExportFormat.Local(o.CreatedAt!.Value)))
+                    .Select(o => new ObjetivoJson(o.ObjectiveId!.Value, o.Description!, ExportFormat.Local(o.CreatedAt!.Value), o.TermLabel))
                     .ToList()))
             .ToList();
 
@@ -151,7 +154,11 @@ public static class ExportViews
                     s.Id, s.Code, s.Name, s.Score, s.MinScore, s.MaxScore, ExportFormat.Local(s.AppliedAt), s.SessionId))
                 .ToList(),
             notes.Select(n => Note(data, n, notePdfById.GetValueOrDefault(n.Id))).ToList(),
-            documents.Select(d => Document(data, d, documentPdfById.GetValueOrDefault(d.Id))).ToList());
+            documents.Select(d => Document(data, d, documentPdfById.GetValueOrDefault(d.Id))).ToList(),
+            data.FollowUpsByPatient[patient.Id]
+                .Select(f => new PontoParaRetomarJson(
+                    f.Id, f.Description, ExportFormat.Local(f.CreatedAt), f.NoteId, ExportFormat.Local(f.ResolvedAt), f.ResolvedNoteId, f.Quote))
+                .ToList());
 
         return new PatientExport(entry, json, notePdfs, documentPdfs);
     }
