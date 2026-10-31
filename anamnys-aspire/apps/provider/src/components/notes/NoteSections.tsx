@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
 import { isAxiosError } from "axios";
 import { notesApi } from "@anamnys/shared/api/notes";
-import type { ExcerptPassage, NoteSectionView, ThemeSelection } from "@anamnys/shared/lib/types";
+import type { ExcerptPassage, NoteSectionView, QuoteSelection, ThemeSelection } from "@anamnys/shared/lib/types";
 
 interface Props {
   sections: NoteSectionView[];
@@ -15,6 +15,8 @@ interface Props {
   onMark?: (selection: ThemeSelection) => void;
   /** "Marcar para retomar" on the selected text (F-14); shown only with a selection. */
   onMarkFollowUp?: (selection: ThemeSelection) => void;
+  /** "Marcar como fala do paciente" on the selected text (F-15). */
+  onMarkQuote?: (selection: QuoteSelection) => void;
 }
 
 // Mirrors the server limit on a stored quote.
@@ -22,7 +24,7 @@ const MAX_QUOTE = 200;
 
 // The structured note: one tonal block per section, in format order. Empty sections stay visible
 // and say so — the AI never fills them in. When editable, each block can be edited in place.
-export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp }: Props) {
+export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote }: Props) {
   const ordered = [...sections].sort((a, b) => a.position - b.position);
 
   return (
@@ -37,13 +39,14 @@ export default function NoteSections({ sections, editable, noteId, onSaved, high
           highlight={highlight}
           onMark={onMark}
           onMarkFollowUp={onMarkFollowUp}
+          onMarkQuote={onMarkQuote}
         />
       ))}
     </div>
   );
 }
 
-function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp }: Omit<Props, "sections"> & { section: NoteSectionView }) {
+function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote }: Omit<Props, "sections"> & { section: NoteSectionView }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -250,6 +253,19 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, o
                       className="rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline"
                     >
                       {t("followUps.mark")}
+                    </button>
+                  )}
+                  {onMarkQuote && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        onMarkQuote({ sectionKey: section.key, start: range.start, end: range.end, quote: content.slice(range.start, range.end) });
+                        window.getSelection()?.removeAllRanges();
+                      }}
+                      className="rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline"
+                    >
+                      {t("patientQuotes.mark")}
                     </button>
                   )}
                 </>

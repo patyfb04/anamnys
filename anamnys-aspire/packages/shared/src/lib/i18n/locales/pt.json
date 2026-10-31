@@ -606,6 +606,39 @@
     },
     "help": "Pontos para retomar ficam abertos até você marcá-los como retomados."
   },
+  "patientQuotes": {
+    "mark": "Marcar como fala do paciente",
+    "title": "Falas do paciente que você registrou",
+    "noteTitle": "Falas que você registrou nesta nota",
+    "empty": "Nenhuma fala registrada nesta nota.",
+    "selectionHint": "O trecho selecionado será guardado como uma fala que você registrou.",
+    "termLabel": "Tema (opcional)",
+    "save": "Registrar fala",
+    "remove": "Remover",
+    "loadFailed": "Não foi possível carregar as falas registradas.",
+    "actionFailed": "Não foi possível concluir a ação. Tente novamente.",
+    "archivedReadOnly": "Paciente arquivado: desarquive para alterar as falas registradas.",
+    "errors": {
+      "invalid_selection": "O trecho selecionado não foi encontrado na nota. Selecione-o novamente.",
+      "term_inactive": "Este tema não está mais ativo. Escolha outro ou deixe sem tema.",
+      "note_not_ready": "Só é possível registrar falas em notas em revisão ou assinadas.",
+      "archived": "Paciente arquivado: o prontuário é somente leitura."
+    },
+    "card": {
+      "sentence": "Estas são as falas do paciente que você registrou nas notas.",
+      "empty": "Nenhuma fala registrada em notas assinadas neste período.",
+      "openNote": "Abrir a nota",
+      "withoutTerm": "sem tema",
+      "previousPage": "Anteriores",
+      "nextPage": "Próximas",
+      "pageRange": "{{from}}–{{to}} de {{total}} falas",
+      "count_one": "{{count}} fala registrada",
+      "count_other": "{{count}} falas registradas"
+    },
+    "cell": {
+      "title": "Falas que você registrou nesta sessão"
+    }
+  },
   "themes": {
     "title": "Temas",
     "empty": "Nenhum tema nesta nota.",

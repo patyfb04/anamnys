@@ -74,24 +74,21 @@ public class ThemeAbsenceQueryTests(SharedAppHostFixture fixture)
     private static async Task<ExcerptRef> TagAsync(
         Scenario s, Note note, ThemeTerm term, string? quote = null, string createdBy = "human", bool removed = false, bool addedBy = true)
     {
-        ExcerptRef? excerpt = null;
-        if (quote != null)
+        // Every counted tag points back to the text (F-03): an exact passage, or the section without a quote.
+        var excerpt = new ExcerptRef
         {
-            excerpt = new ExcerptRef
-            {
-                Id = Guid.NewGuid(), ProviderId = s.ProviderId, SourceType = "note", SourceId = note.Id, SectionKey = "data",
-                Kind = "exact", OffsetStart = 0, OffsetEnd = quote.Length, Quote = quote, DatedAt = Day0,
-            };
-            s.Db.ExcerptRefs.Add(excerpt);
-            await s.Db.SaveChangesAsync(Ct);
-        }
+            Id = Guid.NewGuid(), ProviderId = s.ProviderId, SourceType = "note", SourceId = note.Id, SectionKey = "data",
+            Kind = quote is null ? "section" : "exact", OffsetStart = quote is null ? null : 0, OffsetEnd = quote?.Length, Quote = quote, DatedAt = Day0,
+        };
+        s.Db.ExcerptRefs.Add(excerpt);
+        await s.Db.SaveChangesAsync(Ct);
         s.Db.ThemeTags.Add(new ThemeTag
         {
-            Id = Guid.NewGuid(), NoteId = note.Id, TermId = term.Id, ExcerptRefId = excerpt?.Id, CreatedBy = createdBy, CreatedAt = Day0,
+            Id = Guid.NewGuid(), NoteId = note.Id, TermId = term.Id, ExcerptRefId = excerpt.Id, CreatedBy = createdBy, CreatedAt = Day0,
             AddedById = addedBy ? s.ProviderId : null, RemovedAt = removed ? Day0 : null, RemovedById = removed ? s.ProviderId : null,
         });
         await s.Db.SaveChangesAsync(Ct);
-        return excerpt!;
+        return excerpt;
     }
 
     // Twelve weekly notes shaped like dev-seed/analysis-samples.sql: Sono in 1-8, Ansiedade in 5-12.

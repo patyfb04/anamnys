@@ -87,6 +87,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 32. Theme Absence (F-12)
 33. Scale Trajectory with Events (F-13)
 34. Plan Adherence and Follow-ups (F-14)
+35. Patient Quotes (F-15)
 
 ## Building a single PDF from these files
 

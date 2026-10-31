@@ -495,6 +495,18 @@ Plan adherence and follow-ups (F-14; chapter `documentation/34-plan-adherence.md
 - **Review days are computed in the browser's time zone** from `reviewedAt`, not by the server.
 - **Not exercised in a browser;** the card, the objective form and the note-view block are type-checked and built
   only (build and lint).
+## Falas do paciente
+
+- Document facts (`DocumentFacts/FactService`) probably have the same race with a discard that quotes, follow-ups and theme tags had: an ExcerptRef written while the discard commits could survive. Not changed in F-15.
+- A rare three-way lock cycle between signing, a discard and a quote is possible; Postgres aborts one of them.
+Patient quotes (F-15; chapter `documentation/35-patient-quotes.md`).
+
+- **Duplicates are not prevented.** The same selection recorded twice creates two quotes; the server does not check. The button is disabled only while the request is in flight.
+- **The theme filter lists the whole vocabulary,** including terms the patient has no quotes for; choosing one shows the empty state.
+- **No quotes when the cell detail opens from the absence card.** `AbsenceCard` passes no patient id to `OccurrenceModal`, so the quotes appear only when it opens from the grid.
+- **Audit actions have no labels.** `quote_recorded` and `quote_removed` (like the F-14 actions) have no frontend labels; no audit view exists yet.
+- **Not exercised in a browser;** build and lint only.
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

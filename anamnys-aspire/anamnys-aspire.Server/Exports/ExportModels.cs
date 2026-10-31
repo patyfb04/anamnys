@@ -15,7 +15,8 @@ public sealed record PacienteJson(
     string? IdiomaPreferido, DateTimeOffset? UltimaConsulta, bool Arquivado, DateTimeOffset? ArquivadoEm,
     DateTimeOffset CadastradoEm, IReadOnlyList<DiagnosticoJson> Diagnosticos, IReadOnlyList<MedicacaoJson> Medicacoes,
     IReadOnlyList<PlanoJson> Planos, IReadOnlyList<EscalaJson> Escalas, IReadOnlyList<NotaJson> Notas,
-    IReadOnlyList<DocumentoJson> Documentos, IReadOnlyList<PontoParaRetomarJson> PontosParaRetomar);
+    IReadOnlyList<DocumentoJson> Documentos, IReadOnlyList<PontoParaRetomarJson> PontosParaRetomar,
+    IReadOnlyList<FalaRegistradaJson> FalasRegistradas);
 
 public sealed record DiagnosticoJson(Guid Id, string Descricao, string? Cid, DateTimeOffset RegistradoEm, DateOnly? ResolvidoEm);
 
@@ -28,6 +29,9 @@ public sealed record ObjetivoJson(Guid Id, string Descricao, DateTimeOffset Cria
 
 public sealed record PontoParaRetomarJson(
     Guid Id, string Descricao, DateTimeOffset CriadoEm, Guid? NotaOrigemId, DateTimeOffset? ResolvidoEm, Guid? NotaResolucaoId, string? Trecho);
+
+public sealed record FalaRegistradaJson(
+    Guid Id, string Fala, Guid NotaId, DateTimeOffset DataNota, string? Secao, string? Tema, DateTimeOffset RegistradaEm);
 
 public sealed record EscalaJson(
     Guid Id, string Instrumento, string NomeInstrumento, int Pontuacao, int PontuacaoMinima, int PontuacaoMaxima,
@@ -128,6 +132,7 @@ public static class ExportViews
                     .ToList()))
             .ToList();
 
+        var noteById = notes.ToDictionary(n => n.Id);
         var json = new PacienteJson(
             entry.Folder,
             patient.FirstName,
@@ -158,6 +163,14 @@ public static class ExportViews
             data.FollowUpsByPatient[patient.Id]
                 .Select(f => new PontoParaRetomarJson(
                     f.Id, f.Description, ExportFormat.Local(f.CreatedAt), f.NoteId, ExportFormat.Local(f.ResolvedAt), f.ResolvedNoteId, f.Quote))
+                .ToList(),
+            data.QuotesByPatient[patient.Id]
+                .Where(q => noteById.ContainsKey(q.NoteId))
+                .Select(q => (Quote: q, NoteDate: NoteDate(data, noteById[q.NoteId])))
+                .OrderBy(x => x.NoteDate)
+                .Select(x => new FalaRegistradaJson(
+                    x.Quote.Id, x.Quote.Text, x.Quote.NoteId, ExportFormat.Local(x.NoteDate), x.Quote.SectionKey, x.Quote.TermLabel,
+                    ExportFormat.Local(x.Quote.RecordedAt)))
                 .ToList());
 
         return new PatientExport(entry, json, notePdfs, documentPdfs);

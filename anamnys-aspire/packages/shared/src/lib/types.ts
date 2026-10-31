@@ -94,6 +94,34 @@ export interface PlanAdherence {
   followUps: FollowUp[];
 }
 
+// Patient quotes (F-15): passages the provider marked; the text is the note's own passage.
+export interface PatientQuote {
+  id: string;
+  text: string;
+  /** Session date (practice-local, yyyy-MM-dd). */
+  on: string;
+  noteId: string;
+  excerptId: string;
+  /** Section key, not the title; null when the reference has no section. */
+  section: string | null;
+  term: { termId: string; label: string } | null;
+}
+
+export interface PatientQuotePage {
+  items: PatientQuote[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface RecordQuoteRequest {
+  sectionKey: string;
+  offsetStart: number;
+  offsetEnd: number;
+  quote: string;
+  termId?: string;
+}
+
 export interface FollowUpRequest {
   description: string;
   sectionKey?: string;
@@ -512,6 +540,11 @@ export interface ThemeSelection {
   sectionKey: string;
   start?: number;
   end?: number;
+}
+
+/** A selection with the text it covered when marking started (F-15). */
+export interface QuoteSelection extends ThemeSelection {
+  quote: string;
 }
 
 export interface ExcerptPassage {

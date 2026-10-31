@@ -76,6 +76,7 @@ public static class NoteThemeService
         DateTimeOffset now, CancellationToken ct) =>
         InTransactionAsync(db, async () =>
         {
+            await NoteLocks.LockPatientAsync(db, providerId, noteId, ct);
             await NoteLocks.LockAsync(db, noteId, ct);
             var archived = await PatientArchivedAsync(db, providerId, noteId, ct);
             if (archived is null)
@@ -249,6 +250,7 @@ public static class NoteThemeService
         {
             db.ChangeTracker.Clear();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await NoteLocks.LockPatientAsync(db, providerId, noteId, ct);
             await NoteLocks.LockAsync(db, noteId, ct);
             var archived = await PatientArchivedAsync(db, providerId, noteId, ct);
             if (archived is not false)

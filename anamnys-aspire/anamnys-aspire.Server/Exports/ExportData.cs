@@ -27,6 +27,10 @@ public sealed record ExportFollowUp(
     Guid PatientId, Guid Id, string Description, DateTimeOffset CreatedAt, Guid? NoteId,
     DateTimeOffset? ResolvedAt, Guid? ResolvedNoteId, string? Quote);
 
+// A patient quote the provider recorded and did not remove (F-15).
+public sealed record ExportQuote(
+    Guid PatientId, Guid Id, string Text, Guid NoteId, DateTimeOffset RecordedAt, string? SectionKey, string? TermLabel);
+
 // Previous/new values are never selected (spec 2026-10-23 §1).
 public sealed record ExportAudit(DateTimeOffset At, string Action, string? Field, Guid? NoteId, Guid? DocumentId);
 
@@ -46,6 +50,7 @@ public sealed record AccountData(
     ILookup<Guid, MedicationEntry> MedicationsByPatient,
     ILookup<Guid, ExportObjective> ObjectivesByPatient,
     ILookup<Guid, ExportFollowUp> FollowUpsByPatient,
+    ILookup<Guid, ExportQuote> QuotesByPatient,
     ILookup<Guid, ExportScale> ScalesByPatient,
     IReadOnlyList<Appointment> Appointments,
     IReadOnlyList<ExportAudit> Audit,
@@ -148,6 +153,22 @@ public static class ExportData
             select new ExportFollowUp(f.PatientId, f.Id, f.Description, f.CreatedAt, f.NoteId, f.ResolvedAt, f.ResolvedNoteId, r == null ? null : r.Quote))
             .ToListAsync(ct);
 
+        // Every recorded quote is the provider's data: also those without a reference and those of notes still in review.
+        // A signed note is never misquoted: there, only while its exact text is in a section of the note.
+        var quotes = await (
+            from q in db.PatientQuotes.AsNoTracking()
+            join n in db.Notes on q.NoteId equals n.Id
+            join p in db.Patients on n.PatientId equals p.Id
+            join r in db.ExcerptRefs.AsNoTracking().Where(r => r.ProviderId == providerId) on q.ExcerptRefId equals (Guid?)r.Id into refs
+            from r in refs.DefaultIfEmpty()
+            join t in db.ThemeTerms.AsNoTracking() on q.TermId equals (Guid?)t.Id into linked
+            from t in linked.DefaultIfEmpty()
+            where n.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null && q.RemovedAt == null
+                  && (n.SignedAt == null || db.NoteSections.Any(s => s.NoteId == q.NoteId && s.Content.Contains(q.Text)))
+            orderby q.RecordedAt, q.Id
+            select new ExportQuote(n.PatientId, q.Id, q.Text, q.NoteId, q.RecordedAt, r == null ? null : r.SectionKey, t == null ? null : t.Label))
+            .ToListAsync(ct);
+
         var scales = await (
             from a in db.ScaleApplications.AsNoTracking()
             join p in db.Patients on a.PatientId equals p.Id
@@ -192,6 +213,7 @@ public static class ExportData
             medications.ToLookup(m => m.PatientId),
             planRows,
             followUps.ToLookup(f => f.PatientId),
+            quotes.ToLookup(q => q.PatientId),
             scales.ToLookup(s => s.PatientId),
             appointments,
             audit,

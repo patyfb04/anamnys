@@ -7,7 +7,7 @@ import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, PenLine, Scroll
 import { notesApi } from "@anamnys/shared/api/notes";
 import { excerptsApi } from "@anamnys/shared/api/excerpts";
 import { patientsApi } from "@anamnys/shared/api/patients";
-import type { LiveNoteFormat, NoteDetail, ThemeSelection } from "@anamnys/shared/lib/types";
+import type { LiveNoteFormat, NoteDetail, QuoteSelection, ThemeSelection } from "@anamnys/shared/lib/types";
 import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
@@ -16,6 +16,7 @@ import RestructureControl from "@/components/notes/RestructureControl";
 import SignCard from "@/components/notes/SignCard";
 import NoteThemes from "@/components/themes/NoteThemes";
 import NoteFollowUps from "@/components/notes/NoteFollowUps";
+import NoteQuotes from "@/components/notes/NoteQuotes";
 import SessionScalesCard from "@/components/scales/SessionScalesCard";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -40,6 +41,7 @@ function NotePage() {
   }, [excerpt]);
   const [selection, setSelection] = useState<ThemeSelection | null>(null);
   const [followUpSelection, setFollowUpSelection] = useState<ThemeSelection | null>(null);
+  const [quoteSelection, setQuoteSelection] = useState<QuoteSelection | null>(null);
   const passage = useQuery({
     queryKey: ["excerpt", activeExcerptId],
     queryFn: () => excerptsApi.get(activeExcerptId!),
@@ -116,6 +118,7 @@ function NotePage() {
                 highlight={passage.data && passage.data.id === activeExcerptId && passage.data.noteId === noteId ? passage.data : null}
                 onMark={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setSelection : undefined}
                 onMarkFollowUp={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setFollowUpSelection : undefined}
+                onMarkQuote={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setQuoteSelection : undefined}
               />
             )}
             {!hasSections && editable && <WriteManually noteId={noteId} onCreated={() => void query.refetch()} />}
@@ -129,6 +132,14 @@ function NotePage() {
                 onActivate={setActiveExcerptId}
                 selection={selection}
                 onSelectionDone={() => setSelection(null)}
+              />
+            )}
+            {(note.status === "ReadyForReview" || !!note.signedAt) && (
+              <NoteQuotes
+                noteId={noteId}
+                patientId={note.patientId}
+                selection={quoteSelection}
+                onSelectionDone={() => setQuoteSelection(null)}
               />
             )}
             {(note.status === "ReadyForReview" || !!note.signedAt) && (

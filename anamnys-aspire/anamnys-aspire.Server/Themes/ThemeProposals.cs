@@ -84,6 +84,7 @@ public static class ThemeProposals
         {
             db.ChangeTracker.Clear();
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            await NoteLocks.LockPatientAsync(db, providerId, noteId, ct);
             await NoteLocks.LockAsync(db, noteId, ct);
             // Re-checked under the lock: the note may have been signed, or the patient archived, while the model ran.
             var current = await (

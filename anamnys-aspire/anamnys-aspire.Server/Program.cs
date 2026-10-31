@@ -166,6 +166,7 @@ phi.MapMedicationEndpoints();
 phi.MapAttendanceEndpoints();
 phi.MapCaseAnalysisEndpoints();
 phi.MapPlanAdherenceEndpoints();
+phi.MapPatientQuotesEndpoints();
 phi.MapRetentionEndpoints();
 phi.MapDiscardEndpoints();
 phi.MapProviderNotificationEndpoints();

@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 namespace Anamnys.Server.Excerpts;
 
 // The hard rule of F-03: analysis queries only return items that point back to the text that produced
-// them. Every query over ThemeTags, PatientQuotes or ExtractedFacts in Anamnys.Server.Analyses must go
+// them. Every query over ThemeTags, PatientQuotes or ExtractedFacts in Anamnys.Server.Analysis must go
 // through this helper (enforced by ExcerptRequireArchitectureTests).
 public static class ExcerptQueries
 {

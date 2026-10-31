@@ -2,30 +2,29 @@ using FluentAssertions;
 
 namespace Anamnys.Tests.Excerpts;
 
-// Hard rule of F-03: classes of Anamnys.Server.Analyses (created by F-10) that query ThemeTags,
-// PatientQuotes or ExtractedFacts must use the RequireExcerpt helper. A source scan, so it holds
-// before the namespace exists and fails as soon as a class skips the helper.
+// Hard rule of F-03: classes of Anamnys.Server.Analysis (created by F-10) that query ThemeTags,
+// PatientQuotes or ExtractedFacts must use the RequireExcerpt helper. A source scan: a query is the set
+// accessed on the context (".Name") or the table in SQL ("\"Name\""), so a class merely named after a
+// table does not count.
 public class ExcerptRequireArchitectureTests
 {
     private static readonly string[] Guarded = ["ThemeTags", "PatientQuotes", "ExtractedFacts"];
 
     private static IReadOnlyList<string> Violations(IEnumerable<(string Name, string Source)> files) =>
         files
-            .Where(f => Guarded.Any(g => f.Source.Contains(g, StringComparison.Ordinal))
+            .Where(f => Guarded.Any(g => f.Source.Contains($".{g}", StringComparison.Ordinal) || f.Source.Contains($"\"{g}\"", StringComparison.Ordinal))
                         && !f.Source.Contains(".RequireExcerpt(", StringComparison.Ordinal))
             .Select(f => f.Name)
             .ToList();
 
     [Fact]
-    public void AnalysesNamespace_EveryClassQueryingDerivedItems_UsesRequireExcerpt()
+    public void AnalysisNamespace_EveryClassQueryingDerivedItems_UsesRequireExcerpt()
     {
         // Arrange
         var directory = ServerDirectory();
-        var analyses = Path.Combine(directory, "Analyses");
-        var files = Directory.Exists(analyses)
-            ? Directory.EnumerateFiles(analyses, "*.cs", SearchOption.AllDirectories)
-                .Select(f => (Path.GetRelativePath(directory, f), File.ReadAllText(f))).ToList()
-            : [];
+        var files = Directory.EnumerateFiles(Path.Combine(directory, "Analysis"), "*.cs", SearchOption.AllDirectories)
+            .Select(f => (Path.GetRelativePath(directory, f), File.ReadAllText(f)))
+            .ToList();
 
         // Act
         var violations = Violations(files);
@@ -51,6 +50,7 @@ public class ExcerptRequireArchitectureTests
         var violations = Violations([
             ("Analyses/Good.cs", "db.PatientQuotes.RequireExcerpt(q => q.ExcerptRefId)"),
             ("Analyses/Other.cs", "db.Notes.Where(n => n.Id == id)"),
+            ("Analyses/Named.cs", "PatientQuotesQuery.ListAsync(db)"),
         ]);
 
         // Assert

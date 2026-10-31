@@ -70,6 +70,7 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
             await TextAsync(archive, $"{folder}/objetivos.csv", ObjectivesCsv(j), ct);
             await TextAsync(archive, $"{folder}/temas.csv", ThemesCsv(j), ct);
             await TextAsync(archive, $"{folder}/pontos-para-retomar.csv", FollowUpsCsv(j), ct);
+            await TextAsync(archive, $"{folder}/falas-registradas.csv", QuotesCsv(j), ct);
         }
 
         // Disposal terms (F-06): the stored PDF, or the same term rendered again from its row when the object is gone.
@@ -184,6 +185,11 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
         ExportFormat.Csv(
             ["descricao", "criado_em", "nota_origem_id", "resolvido_em", "nota_resolucao_id", "trecho"],
             j.PontosParaRetomar.Select(f => new object?[] { f.Descricao, f.CriadoEm, f.NotaOrigemId, f.ResolvidoEm, f.NotaResolucaoId, f.Trecho }));
+
+    private static string QuotesCsv(PacienteJson j) =>
+        ExportFormat.Csv(
+            ["id", "fala", "nota_id", "data_nota", "secao", "tema", "registrada_em"],
+            j.FalasRegistradas.Select(f => new object?[] { f.Id, f.Fala, f.NotaId, f.DataNota, f.Secao, f.Tema, f.RegistradaEm }));
 
     private static string ThemesCsv(PacienteJson j) =>
         ExportFormat.Csv(
