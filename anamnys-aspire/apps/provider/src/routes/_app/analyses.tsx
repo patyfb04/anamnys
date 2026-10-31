@@ -6,6 +6,9 @@ import { BarChart3 } from "lucide-react";
 import { analysisApi } from "@anamnys/shared/api/analysis";
 import { patientsApi } from "@anamnys/shared/api/patients";
 import DetailCard from "@/components/patients/detail/DetailCard";
+import { CardFooterContext } from "@/components/patients/detail/cardAnchors";
+import AnalysisNav from "@/components/analysis/AnalysisNav";
+import BackToTop, { ANALYSIS_TOP_ID } from "@/components/analysis/BackToTop";
 import PatientPicker from "@/components/analysis/PatientPicker";
 import ThemeGridCard from "@/components/analysis/ThemeGridCard";
 import AbsenceCard from "@/components/analysis/AbsenceCard";
@@ -71,11 +74,11 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div id={ANALYSIS_TOP_ID} className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <p className="break-words text-title-md text-onSurface">
+          <h2 className="break-words text-headline-md font-bold text-onSurface">
             {patient.data ? `${patient.data.firstName} ${patient.data.lastName}` : ""}
-          </p>
+          </h2>
           <button type="button" onClick={onChange} className="text-label-lg text-primary hover:underline">
             {t("analysis.changePatient")}
           </button>
@@ -89,6 +92,9 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         </div>
       </div>
 
+      {data && <AnalysisNav available={data.available} />}
+
+      <CardFooterContext.Provider value={<BackToTop />}>
       {query.isPending ? null : query.isError || !data ? (
         <p role="alert" className="text-body-md text-error">
           {t("analysis.loadFailed")}
@@ -98,7 +104,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
           <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
           <TrajectoryCard patientId={patientId} period={period} minimumSessions={data.minimumSessions} />
           <PlanCard patientId={patientId} />
-          <DetailCard title={t("analysis.themes.title")} icon={<BarChart3 size={20} />}>
+          <DetailCard collapsibleId="analysis-themes" title={t("analysis.themes.title")} icon={<BarChart3 size={20} />}>
             <p className="text-body-md text-onSurfaceVariant">
               {t("analysis.unavailable", { count: data.signedSessions, min: data.minimumSessions })}
             </p>
@@ -116,6 +122,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         </>
       )}
       <TimelineCard patientId={patientId} period={period} />
+      </CardFooterContext.Provider>
     </>
   );
 }

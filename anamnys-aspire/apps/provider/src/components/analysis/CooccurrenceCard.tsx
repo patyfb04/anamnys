@@ -11,7 +11,7 @@ export default function CooccurrenceCard({ pairs, themes }: { pairs: AnalysisPai
   const label = (id: string) => themes.find((x) => x.termId === id)?.label ?? id;
   const top = pairs.slice(0, TOP);
   return (
-    <DetailCard title={t("analysis.cooccurrence.title")} icon={<Link2 size={20} />}>
+    <DetailCard collapsibleId="analysis-cooccurrence" title={t("analysis.cooccurrence.title")} icon={<Link2 size={20} />}>
       {top.length === 0 ? (
         <p className="text-body-md text-onSurfaceVariant">{t("analysis.cooccurrence.empty")}</p>
       ) : (

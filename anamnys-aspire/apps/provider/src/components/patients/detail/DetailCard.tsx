@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
+import { CardFooterContext, OPEN_CARD_EVENT } from "./cardAnchors";
 
 interface Props {
   title: string;
@@ -25,10 +26,10 @@ function readOpen(id: string | undefined): boolean {
 
 export default function DetailCard({ title, icon, action, children, className, collapsibleId }: Props) {
   const { t } = useTranslation();
+  const footer = useContext(CardFooterContext);
   const [open, setOpen] = useState(() => readOpen(collapsibleId));
 
-  const toggle = () => {
-    const next = !open;
+  const remember = (next: boolean) => {
     setOpen(next);
     try {
       localStorage.setItem(storageKey(collapsibleId!), next ? "1" : "0");
@@ -36,6 +37,16 @@ export default function DetailCard({ title, icon, action, children, className, c
       // Remembering the state is a convenience only.
     }
   };
+  const toggle = () => remember(!open);
+
+  useEffect(() => {
+    if (!collapsibleId) return;
+    const onOpen = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === collapsibleId) setOpen(true);
+    };
+    window.addEventListener(OPEN_CARD_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_CARD_EVENT, onOpen);
+  }, [collapsibleId]);
 
   const heading = (
     <>
@@ -46,8 +57,9 @@ export default function DetailCard({ title, icon, action, children, className, c
 
   return (
     <section
+      id={collapsibleId ? `card-${collapsibleId}` : undefined}
       onClick={collapsibleId && !open ? toggle : undefined}
-      className={`bg-surfaceContainerLowest rounded-radii-xl border border-outlineVariant p-5 shadow-sm ${collapsibleId && !open ? "cursor-pointer hover:bg-pastelLavender" : ""} ${className ?? ""}`}
+      className={`bg-surfaceContainerLowest scroll-mt-24 rounded-radii-xl border border-outlineVariant p-5 shadow-sm ${collapsibleId && !open ? "cursor-pointer hover:bg-pastelLavender" : ""} ${className ?? ""}`}
     >
       <div
         onClick={collapsibleId && open ? toggle : undefined}
@@ -78,6 +90,7 @@ export default function DetailCard({ title, icon, action, children, className, c
         {action && <div onClick={(e) => e.stopPropagation()}>{action}</div>}
       </div>
       {open && children}
+      {open && footer}
     </section>
   );
 }

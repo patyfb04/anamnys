@@ -84,7 +84,7 @@ export default function TrajectoryCard({
   };
 
   return (
-    <DetailCard title={t("analysis.trajectory.title")} icon={<LineChart size={20} />}>
+    <DetailCard collapsibleId="analysis-trajectory" title={t("analysis.trajectory.title")} icon={<LineChart size={20} />}>
       {timeline.isPending ? null : timeline.isError || !data ? (
         <p role="alert" className="text-body-md text-error">
           {t("analysis.trajectory.loadFailed")}

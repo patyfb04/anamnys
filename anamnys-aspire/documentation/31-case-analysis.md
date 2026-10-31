@@ -171,6 +171,10 @@ mapping mirrors the attendance endpoint). The provider app was checked with buil
 
 The picker spans the page width, shows patients as a responsive grid of cards (1 to 4 columns) and lists up to 100 active patients at once; with more, it says how many are shown and asks to type part of the name. Archived and discarded patients are not listed.
 
+## Page layout
+
+Every card on the page collapses like the patient record cards (closed by default, state remembered per browser). A row of anchors at the top opens the chosen card and scrolls to it. Each open card ends with a small "Voltar ao topo" link, right-aligned. The patient's name is the page's main heading after the title.
+
 ## Dev seed
 
 `dev-seed/analysis-samples.sql` adds 12 signed DAP notes (one every 30 days from about 11 months ago) to the first two active patients of every non-test provider, each tag with an exact passage: Sono in notes 1-8, Ansiedade 5-12, two Trabalho children (Sobrecarga e jornada, Conflito no trabalho), Família, Luto and Saudade e desenraizamento. It passes the 6-session minimum and gives lanes, a parent with children, co-occurrence and a theme that stops (useful for F-12). Never run outside a local database.

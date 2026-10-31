@@ -28,7 +28,7 @@ export default function AbsenceCard({
   const ordered = absences;
 
   return (
-    <DetailCard title={t("analysis.absence.title")} icon={<History size={20} />}>
+    <DetailCard collapsibleId="analysis-absence" title={t("analysis.absence.title")} icon={<History size={20} />}>
       {ordered.length === 0 ? (
         <p className="text-body-md text-onSurfaceVariant">{t("analysis.absence.empty", { count: absenceSessions })}</p>
       ) : (

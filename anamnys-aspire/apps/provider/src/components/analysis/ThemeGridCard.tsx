@@ -199,7 +199,7 @@ export default function ThemeGridCard({
   };
 
   return (
-    <DetailCard
+    <DetailCard collapsibleId="analysis-themes"
       title={t("analysis.themes.title")}
       icon={<Rows3 size={20} />}
       action={

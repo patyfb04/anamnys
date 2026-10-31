@@ -141,6 +141,8 @@
     "moreResults": "Mostrando {{shown}} de {{total}} pacientes. Digite parte do nome para encontrar os demais.",
     "searchFailed": "Não foi possível buscar pacientes.",
     "changePatient": "Trocar paciente",
+    "navLabel": "Ir para uma seção",
+    "backToTop": "Voltar ao topo",
     "loadFailed": "Não foi possível carregar a análise.",
     "unavailable_one": "Série indisponível: {{count}} sessão assinada no período (mínimo {{min}}).",
     "unavailable_other": "Série indisponível: {{count}} sessões assinadas no período (mínimo {{min}}).",
