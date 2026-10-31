@@ -158,7 +158,7 @@ public class AccountExportBuilderTests(SharedAppHostFixture fixture)
         // Assert
         var patient = $"{Root}/pacientes/002-AS";
         string[] perPatient = ["paciente.html", "paciente.json", "notas/notas.json", "notas/notas.csv", "documentos/documentos.json",
-            "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv"];
+            "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv"];
         var expected = new List<string>
         {
             $"{Root}/index.html", $"{Root}/LEIA-ME.txt", $"{Root}/conta/perfil.json", $"{Root}/conta/agenda.csv", $"{Root}/conta/auditoria.csv",
@@ -173,7 +173,7 @@ public class AccountExportBuilderTests(SharedAppHostFixture fixture)
         Text(entries[$"{Root}/index.html"]).Should().Contain("pacientes/002-AS/paciente.html").And.Contain("Ana Souza");
         var readme = Text(entries[$"{Root}/LEIA-ME.txt"]);
         foreach (var name in new[] { "index.html", "perfil.json", "agenda.csv", "auditoria.csv", "paciente.html", "paciente.json",
-                     "notas.json", "notas.csv", "documentos.json", "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv" })
+                     "notas.json", "notas.csv", "documentos.json", "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv" })
         {
             readme.Should().Contain(name);
         }
@@ -186,6 +186,56 @@ public class AccountExportBuilderTests(SharedAppHostFixture fixture)
             .GetProperty("temas").GetArrayLength().Should().Be(1);
         Text(entries[$"{patient}/temas.csv"]).Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Should().HaveCount(2);
         Text(entries[$"{Root}/conta/agenda.csv"]).Should().Contain("002-AS;").And.NotContain("Ana");
+    }
+
+    // F-14: follow-ups per patient, with the passage quote, and the objective's linked theme. A discarded record stays out.
+    [Fact]
+    public async Task BuildAsync_FollowUpsAndObjectiveTheme_AreExported_DiscardedPatientStaysOut()
+    {
+        // Arrange
+        await using var account = await SeedAccountAsync();
+        var provider = account.Seed.ProviderId;
+        var gone = await account.Seed.AddPatientAsync("Carla", "Dias", cancellationToken: Ct);
+        await account.Seed.ExecuteSqlAsync(
+            """
+            INSERT INTO "ExcerptRefs" ("Id","ProviderId","SourceType","SourceId","SectionKey","Kind","DatedAt","Quote")
+            VALUES (@x, @p, 'note', @n, 'data', 'section', now(), 'acorda de madrugada');
+            INSERT INTO "FollowUpItems" ("ProviderId","PatientId","NoteId","Description","ExcerptRefId","CreatedAt")
+            VALUES (@p, @a, @n, 'Retomar o sono', @x, @c);
+            INSERT INTO "FollowUpItems" ("ProviderId","PatientId","NoteId","Description","CreatedAt","ResolvedAt","ResolvedNoteId")
+            VALUES (@p, @a, @n, 'Retomar a mudança', @c2, @c3, @d);
+            UPDATE "PlanObjectives" o SET "TermId" = (
+                SELECT t."Id" FROM "ThemeTerms" t JOIN "ThemeVocabularies" v ON v."Id" = t."VocabularyId"
+                 WHERE v."Active" AND t."Status" = 'active' ORDER BY t."Code" LIMIT 1)
+             WHERE o."PlanId" IN (SELECT "Id" FROM "TreatmentPlans" WHERE "PatientId" = @a);
+            INSERT INTO "FollowUpItems" ("ProviderId","PatientId","Description") VALUES (@p, @g, 'Ponto do prontuario descartado');
+            UPDATE "Patients" SET "DiscardedAt" = now() WHERE "Id" = @g;
+            """,
+            Ct, ("x", Guid.NewGuid()), ("p", provider), ("a", account.AnaId), ("n", account.SignedNoteId), ("d", account.DraftNoteId),
+            ("g", gone), ("c", Now.AddDays(-6)), ("c2", Now.AddDays(-5)), ("c3", Now.AddDays(-1)));
+        await using var db = account.Seed.CreateDbContext();
+        var label = await (
+            from o in db.PlanObjectives
+            join plan in db.TreatmentPlans on o.PlanId equals plan.Id
+            join t in db.ThemeTerms on o.TermId equals (Guid?)t.Id
+            where plan.PatientId == account.AnaId
+            select t.Label).SingleAsync(Ct);
+
+        // Act
+        var entries = await BuildAsync(account);
+
+        // Assert
+        var patient = $"{Root}/pacientes/002-AS";
+        var csv = Text(entries[$"{patient}/pontos-para-retomar.csv"]).TrimStart('﻿').Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        csv.Should().HaveCount(3);
+        csv[0].Should().Be("descricao;criado_em;nota_origem_id;resolvido_em;nota_resolucao_id;trecho");
+        csv[1].Should().StartWith("Retomar o sono;").And.Contain(account.SignedNoteId.ToString()).And.EndWith(";acorda de madrugada");
+        csv[2].Should().StartWith("Retomar a mudança;").And.Contain(account.DraftNoteId.ToString());
+        Json(entries[$"{patient}/paciente.json"]).GetProperty("planos")[0].GetProperty("objetivos")[0].GetProperty("tema").GetString().Should().Be(label);
+        Text(entries[$"{patient}/objetivos.csv"]).Should().Contain(label);
+        Text(entries[$"{Root}/pacientes/001-AC/pontos-para-retomar.csv"]).TrimStart('﻿')
+            .Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Should().ContainSingle();
+        entries.Values.Select(Text).Should().NotContain(e => e.Contains("Ponto do prontuario descartado"));
     }
 
     [Fact]

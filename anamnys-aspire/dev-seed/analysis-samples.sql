@@ -7,7 +7,7 @@
 --   sobrecarga_jornada       1,2,4,5,7  conflito_no_trabalho      3,6     (children of Trabalho)
 --   familia                  2,6,9,11   luto                      10-12   saudade_desenraizamento 9,12
 -- Also monthly PHQ-9 scores (18 down to 7) and a fictitious treatment (Sertralina 50mg, dose change to 100mg,
--- stop) for F-13.
+-- stop) for F-13, and a treatment plan with three objectives and two follow-ups (one open, one resumed) for F-14.
 -- Every person and event is fictitious. Idempotent: a patient that already has these notes is skipped.
 -- Never run outside a local development database.
 --   docker exec -i <postgres-container> sh -c 'PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U postgres -d anamnysdb' < dev-seed/analysis-samples.sql
@@ -107,6 +107,61 @@ BEGIN
         INSERT INTO "ScaleApplications" ("PatientId","InstrumentId","Score","AppliedAt","AppliedBy")
         VALUES (t.patient_id, phq, scores[i], now() - make_interval(days => 350 - (i - 1) * 30), t.provider_id);
       END LOOP;
+    END IF;
+  END LOOP;
+END $$;
+
+-- F-14: a treatment plan with three objectives (two linked to a theme, one without) and two follow-ups, for the
+-- same patients. Skipped for a patient that already has the "Regularizar o sono (exemplo)" objective.
+--   Sono (notes 1-8) is silent since note 8; Ansiedade (notes 5-12) is recent; the third objective has no theme.
+--   Follow-up on note 9 stays open; the one on note 6 was resumed on note 8.
+DO $$
+DECLARE
+  t record;
+  plan_id uuid;
+  n6 record;
+  n8 record;
+  n9 record;
+BEGIN
+  FOR t IN
+    SELECT DISTINCT n."PatientId" AS patient_id, n."ProviderId" AS provider_id
+    FROM "Notes" n
+    WHERE n."RawTranscript" LIKE 'Seed de análise (exemplo)%'
+      AND NOT EXISTS (
+        SELECT 1 FROM "PlanObjectives" o JOIN "TreatmentPlans" tp ON tp."Id" = o."PlanId"
+        WHERE tp."PatientId" = n."PatientId" AND o."Description" = 'Regularizar o sono (exemplo)')
+  LOOP
+    SELECT "Id" INTO plan_id FROM "TreatmentPlans"
+      WHERE "PatientId" = t.patient_id AND "ClosedAt" IS NULL ORDER BY "CreatedAt" DESC LIMIT 1;
+    IF plan_id IS NULL THEN
+      plan_id := gen_random_uuid();
+      INSERT INTO "TreatmentPlans" ("Id","PatientId","CreatedAt") VALUES (plan_id, t.patient_id, now() - interval '340 days');
+    END IF;
+
+    INSERT INTO "PlanObjectives" ("PlanId","Description","TermId","CreatedAt")
+    SELECT plan_id, o.description,
+           (SELECT tt."Id" FROM "ThemeTerms" tt JOIN "ThemeVocabularies" v ON v."Id" = tt."VocabularyId" AND v."Active"
+            WHERE tt."Code" = o.code),
+           now() - interval '340 days'
+    FROM (VALUES ('Regularizar o sono (exemplo)', 'sono'),
+                 ('Reduzir a ansiedade antes de reuniões (exemplo)', 'ansiedade'),
+                 ('Fortalecer a rede de apoio (exemplo)', NULL)) AS o(description, code);
+
+    SELECT n."Id", n."SignedAt" INTO n6 FROM "Notes" n
+      WHERE n."PatientId" = t.patient_id AND n."RawTranscript" LIKE 'Seed de análise (exemplo) 6. %';
+    SELECT n."Id", n."SignedAt" INTO n8 FROM "Notes" n
+      WHERE n."PatientId" = t.patient_id AND n."RawTranscript" LIKE 'Seed de análise (exemplo) 8. %';
+    SELECT n."Id", n."SignedAt" INTO n9 FROM "Notes" n
+      WHERE n."PatientId" = t.patient_id AND n."RawTranscript" LIKE 'Seed de análise (exemplo) 9. %';
+
+    IF n9."Id" IS NOT NULL THEN
+      INSERT INTO "FollowUpItems" ("PatientId","ProviderId","NoteId","Description","CreatedAt")
+      VALUES (t.patient_id, t.provider_id, n9."Id", 'Retomar a conversa com a mãe (exemplo)', n9."SignedAt");
+    END IF;
+    IF n6."Id" IS NOT NULL AND n8."Id" IS NOT NULL THEN
+      INSERT INTO "FollowUpItems" ("PatientId","ProviderId","NoteId","Description","CreatedAt","ResolvedAt","ResolvedNoteId","ResolvedById")
+      VALUES (t.patient_id, t.provider_id, n6."Id", 'Retomar o conflito com o colega (exemplo)', n6."SignedAt",
+              n8."SignedAt", n8."Id", t.provider_id);
     END IF;
   END LOOP;
 END $$;

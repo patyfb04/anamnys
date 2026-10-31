@@ -47,34 +47,9 @@ public static class CaseAnalysisQuery
         }
         var absenceSessions = await AnalysisSettings.AbsenceSessionsAsync(db, providerId, ct);
 
-        var notes = await db.Notes.AsNoTracking()
-            .Where(n => n.ProviderId == providerId && n.PatientId == patientId && Signed.Contains(n.Status))
-            .Select(n => new { n.Id, n.SessionId, n.SignedAt, n.CreatedAt })
-            .ToListAsync(ct);
-        var sessionIds = notes.Where(n => n.SessionId != null).Select(n => n.SessionId!.Value).Distinct().ToList();
-        var actualStarts = await db.Sessions.AsNoTracking()
-            .Where(s => sessionIds.Contains(s.Id) && s.ActualStart != null)
-            .Select(s => new { s.Id, Start = s.ActualStart!.Value })
-            .ToDictionaryAsync(s => s.Id, s => s.Start, ct);
-        var appointmentRows = await db.Appointments.AsNoTracking()
-            .Where(a => a.ProviderId == providerId && a.PatientId == patientId && a.SessionId != null && sessionIds.Contains(a.SessionId.Value))
-            .Select(a => new { a.Id, SessionId = a.SessionId!.Value, a.StartsAt })
-            .ToListAsync(ct);
-        var appointments = appointmentRows
-            .GroupBy(a => a.SessionId)
-            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.StartsAt).ThenBy(a => a.Id).First());
-
         // The whole signed history, in order; the period only narrows what the page lists.
-        var history = notes
-            .Select(n =>
-            {
-                appointments.TryGetValue(n.SessionId ?? Guid.Empty, out var appointment);
-                var at = n.SessionId is { } sid && actualStarts.TryGetValue(sid, out var start) ? start
-                    : appointment?.StartsAt ?? n.SignedAt ?? n.CreatedAt;
-                return new { Row = new CaseAnalysisSession(n.Id, PatientSearchQuery.PracticeToday(at), n.SessionId, appointment?.Id), At = at };
-            })
-            .OrderBy(s => s.Row.On).ThenBy(s => s.At).ThenBy(s => s.Row.NoteId)
-            .Select(s => s.Row)
+        var history = (await DatedNotesAsync(db, providerId, patientId, signedOnly: true, ct))
+            .Select(n => new CaseAnalysisSession(n.NoteId, n.On, n.SessionId, n.AppointmentId))
             .ToList();
         var sessions = history.Where(s => (from == null || s.On >= from) && (to == null || s.On <= to)).ToList();
         if (history.Count < MinimumSessions)
@@ -85,11 +60,11 @@ public static class CaseAnalysisQuery
         var historyDayOf = history.ToDictionary(s => s.NoteId, s => s.On);
         var historyNoteIds = historyDayOf.Keys.ToList();
         var allTags = await (
-            from tag in db.ThemeTags.AsNoTracking()
+            from tag in CountedTags(db)
             join term in db.ThemeTerms.AsNoTracking() on tag.TermId equals term.Id
             join r in db.ExcerptRefs.AsNoTracking().Where(r => r.ProviderId == providerId && r.SourceType == "note") on new { Id = tag.ExcerptRefId, Note = tag.NoteId } equals new { Id = (Guid?)r.Id, Note = r.SourceId } into refs
             from r in refs.DefaultIfEmpty()
-            where historyNoteIds.Contains(tag.NoteId) && tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null)
+            where historyNoteIds.Contains(tag.NoteId)
             select new
             {
                 tag.NoteId, tag.CreatedAt, term.Id, term.Code, term.Label, term.ParentTermId, term.Status,
@@ -194,4 +169,44 @@ public static class CaseAnalysisQuery
 
         return new CaseAnalysis(true, sessions.Count, MinimumSessions, sessions, themes, cooccurrence, absences, absenceSessions);
     }
+
+    // Tags that count as a record: not removed and not an untouched AI proposal (CreatedBy 'ai' with no AddedById).
+    internal static IQueryable<ThemeTag> CountedTags(AnamnysDbContext db) =>
+        db.ThemeTags.AsNoTracking().Where(tag => tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null));
+
+    // The patient's notes (only the signed ones with signedOnly) dated by the session date rule: the session's actual
+    // start, else its appointment's start, else the signing day, else the creation; ordered by day, instant and id.
+    internal static async Task<List<DatedNote>> DatedNotesAsync(
+        AnamnysDbContext db, Guid providerId, Guid patientId, bool signedOnly, CancellationToken ct)
+    {
+        var notes = await db.Notes.AsNoTracking()
+            .Where(n => n.ProviderId == providerId && n.PatientId == patientId && (!signedOnly || Signed.Contains(n.Status)))
+            .Select(n => new { n.Id, n.SessionId, n.SignedAt, n.CreatedAt, n.Status })
+            .ToListAsync(ct);
+        var sessionIds = notes.Where(n => n.SessionId != null).Select(n => n.SessionId!.Value).Distinct().ToList();
+        var actualStarts = await db.Sessions.AsNoTracking()
+            .Where(s => sessionIds.Contains(s.Id) && s.ActualStart != null)
+            .Select(s => new { s.Id, Start = s.ActualStart!.Value })
+            .ToDictionaryAsync(s => s.Id, s => s.Start, ct);
+        var appointmentRows = await db.Appointments.AsNoTracking()
+            .Where(a => a.ProviderId == providerId && a.PatientId == patientId && a.SessionId != null && sessionIds.Contains(a.SessionId.Value))
+            .Select(a => new { a.Id, SessionId = a.SessionId!.Value, a.StartsAt })
+            .ToListAsync(ct);
+        var appointments = appointmentRows
+            .GroupBy(a => a.SessionId)
+            .ToDictionary(g => g.Key, g => g.OrderBy(a => a.StartsAt).ThenBy(a => a.Id).First());
+
+        return notes
+            .Select(n =>
+            {
+                appointments.TryGetValue(n.SessionId ?? Guid.Empty, out var appointment);
+                var at = n.SessionId is { } sid && actualStarts.TryGetValue(sid, out var start) ? start
+                    : appointment?.StartsAt ?? n.SignedAt ?? n.CreatedAt;
+                return new DatedNote(n.Id, PatientSearchQuery.PracticeToday(at), at, n.SessionId, appointment?.Id, Signed.Contains(n.Status));
+            })
+            .OrderBy(n => n.On).ThenBy(n => n.At).ThenBy(n => n.NoteId)
+            .ToList();
+    }
 }
+
+internal sealed record DatedNote(Guid NoteId, DateOnly On, DateTimeOffset At, Guid? SessionId, Guid? AppointmentId, bool Signed);

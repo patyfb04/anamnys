@@ -109,7 +109,9 @@ public sealed record MedicationInput(string? Drug, string? Dose, string? Posolog
     }
 }
 
-public sealed record ObjectiveInput(string? Description)
+// TermId (F-14): the theme the objective is followed by, an active term of the active vocabulary (checked by
+// PatientRecords.ObjectiveTermAcceptedAsync); null leaves the objective without a theme.
+public sealed record ObjectiveInput(string? Description, Guid? TermId = null)
 {
     public Dictionary<string, string[]> Validate()
     {
@@ -120,6 +122,9 @@ public sealed record ObjectiveInput(string? Description)
 }
 
 public sealed record CreatedResponse(Guid Id);
+
+// Conflict: the patient is archived (read-only record).
+public sealed record ObjectiveResult(RecordOutcome Outcome, Guid? Id = null);
 
 public sealed record PatientDetailResponse(
     Guid Id,
@@ -147,7 +152,7 @@ public sealed record DiagnosisItem(Guid Id, string Description, string? IcdCode,
 
 public sealed record MedicationItem(Guid Id, string Drug, string? Dose, string? Posology, DateOnly StartedOn, DateOnly? EndedOn);
 
-public sealed record ObjectiveItem(Guid Id, string Description, DateTimeOffset CreatedAt);
+public sealed record ObjectiveItem(Guid Id, string Description, DateTimeOffset CreatedAt, Guid? TermId = null, string? TermLabel = null);
 
 public sealed record NoteSummary(Guid Id, string Status, string Format, DateTimeOffset CreatedAt, DateTimeOffset? SignedAt);
 

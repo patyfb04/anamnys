@@ -20,7 +20,12 @@ public sealed record ExportScale(
 
 public sealed record ExportObjective(
     Guid PatientId, Guid PlanId, DateTimeOffset PlanCreatedAt, DateTimeOffset? PlanReviewedAt, DateTimeOffset? PlanClosedAt,
-    Guid? ObjectiveId, string? Description, DateTimeOffset? CreatedAt);
+    Guid? ObjectiveId, string? Description, DateTimeOffset? CreatedAt, string? TermLabel = null);
+
+// A point marked "para retomar" (F-14), with the stored quote of its passage when it has one.
+public sealed record ExportFollowUp(
+    Guid PatientId, Guid Id, string Description, DateTimeOffset CreatedAt, Guid? NoteId,
+    DateTimeOffset? ResolvedAt, Guid? ResolvedNoteId, string? Quote);
 
 // Previous/new values are never selected (spec 2026-10-23 §1).
 public sealed record ExportAudit(DateTimeOffset At, string Action, string? Field, Guid? NoteId, Guid? DocumentId);
@@ -40,6 +45,7 @@ public sealed record AccountData(
     ILookup<Guid, PatientDiagnosis> DiagnosesByPatient,
     ILookup<Guid, MedicationEntry> MedicationsByPatient,
     ILookup<Guid, ExportObjective> ObjectivesByPatient,
+    ILookup<Guid, ExportFollowUp> FollowUpsByPatient,
     ILookup<Guid, ExportScale> ScalesByPatient,
     IReadOnlyList<Appointment> Appointments,
     IReadOnlyList<ExportAudit> Audit,
@@ -119,13 +125,28 @@ public static class ExportData
             where p.ProviderId == providerId
             select o).ToListAsync(ct);
         var objectivesByPlan = objectives.ToLookup(o => o.PlanId);
+        var termIds = objectives.Where(o => o.TermId != null).Select(o => o.TermId!.Value).Distinct().ToList();
+        var termLabels = await db.ThemeTerms.AsNoTracking()
+            .Where(t => termIds.Contains(t.Id))
+            .ToDictionaryAsync(t => t.Id, t => t.Label, ct);
         var planRows = plans
             .OrderBy(plan => plan.CreatedAt)
             .SelectMany(plan => objectivesByPlan[plan.Id].Any()
                 ? objectivesByPlan[plan.Id].OrderBy(o => o.CreatedAt).Select(o => new ExportObjective(
-                    plan.PatientId, plan.Id, plan.CreatedAt, plan.ReviewedAt, plan.ClosedAt, o.Id, o.Description, o.CreatedAt))
+                    plan.PatientId, plan.Id, plan.CreatedAt, plan.ReviewedAt, plan.ClosedAt, o.Id, o.Description, o.CreatedAt,
+                    o.TermId is { } termId ? termLabels.GetValueOrDefault(termId) : null))
                 : new[] { new ExportObjective(plan.PatientId, plan.Id, plan.CreatedAt, plan.ReviewedAt, plan.ClosedAt, null, null, null) })
             .ToLookup(o => o.PatientId);
+
+        var followUps = await (
+            from f in db.FollowUpItems.AsNoTracking()
+            join p in db.Patients on f.PatientId equals p.Id
+            join r in db.ExcerptRefs.AsNoTracking().Where(r => r.ProviderId == providerId) on f.ExcerptRefId equals (Guid?)r.Id into refs
+            from r in refs.DefaultIfEmpty()
+            where f.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
+            orderby f.CreatedAt, f.Id
+            select new ExportFollowUp(f.PatientId, f.Id, f.Description, f.CreatedAt, f.NoteId, f.ResolvedAt, f.ResolvedNoteId, r == null ? null : r.Quote))
+            .ToListAsync(ct);
 
         var scales = await (
             from a in db.ScaleApplications.AsNoTracking()
@@ -170,6 +191,7 @@ public static class ExportData
             diagnoses.ToLookup(d => d.PatientId),
             medications.ToLookup(m => m.PatientId),
             planRows,
+            followUps.ToLookup(f => f.PatientId),
             scales.ToLookup(s => s.PatientId),
             appointments,
             audit,

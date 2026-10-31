@@ -9,6 +9,8 @@ namespace Anamnys.Server.Patients;
 // patient another provider owns is 404, exactly like one that does not exist.
 public static class PatientRecordEndpoints
 {
+    private const string InactiveTerm = "Escolha um tema ativo do vocabulário.";
+
     public static void MapPatientRecordEndpoints(this RouteGroupBuilder phi)
     {
         var patients = phi.MapGroup("providers/me/patients");
@@ -148,11 +150,16 @@ public static class PatientRecordEndpoints
                 return Results.Unauthorized();
             }
             var errors = input.Validate();
+            if (errors.Count == 0 && !await PatientRecords.ObjectiveTermAcceptedAsync(db, providerId, patientId, null, input.TermId, ct))
+            {
+                errors["termId"] = [InactiveTerm];
+            }
             if (errors.Count > 0)
             {
                 return Results.ValidationProblem(errors);
             }
-            return Created(await PatientRecords.AddObjectiveAsync(db, providerId, patientId, input, DateTimeOffset.UtcNow, ct));
+            var added = await PatientRecords.AddObjectiveAsync(db, providerId, patientId, input, DateTimeOffset.UtcNow, ct);
+            return added.Outcome == RecordOutcome.Ok ? Created(added.Id) : ObjectiveResultOf(added.Outcome);
         });
         patients.MapPut("{patientId:guid}/objectives/{itemId:guid}", async (Guid patientId, Guid itemId, ObjectiveInput input, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
         {
@@ -161,17 +168,28 @@ public static class PatientRecordEndpoints
                 return Results.Unauthorized();
             }
             var errors = input.Validate();
+            if (errors.Count == 0 && !await PatientRecords.ObjectiveTermAcceptedAsync(db, providerId, patientId, itemId, input.TermId, ct))
+            {
+                errors["termId"] = [InactiveTerm];
+            }
             if (errors.Count > 0)
             {
                 return Results.ValidationProblem(errors);
             }
-            return NoContentOrNotFound(await PatientRecords.UpdateObjectiveAsync(db, providerId, patientId, itemId, input, ct));
+            return ObjectiveResultOf(await PatientRecords.UpdateObjectiveAsync(db, providerId, patientId, itemId, input, ct));
         });
         patients.MapDelete("{patientId:guid}/objectives/{itemId:guid}", async (Guid patientId, Guid itemId, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
             await ProviderIdAsync(http) is { } providerId
-                ? NoContentOrNotFound(await PatientRecords.RemoveObjectiveAsync(db, providerId, patientId, itemId, ct))
+                ? ObjectiveResultOf(await PatientRecords.RemoveObjectiveAsync(db, providerId, patientId, itemId, ct))
                 : Results.Unauthorized());
     }
+
+    private static IResult ObjectiveResultOf(RecordOutcome outcome) => outcome switch
+    {
+        RecordOutcome.Ok => Results.NoContent(),
+        RecordOutcome.Conflict => Results.Conflict(new { message = "Paciente arquivado: o prontuário é somente leitura.", code = "archived" }),
+        _ => Results.NotFound(),
+    };
 
     private static async Task<IResult> SetArchivedAsync(Guid patientId, bool archived, HttpContext http, AnamnysDbContext db, CancellationToken ct)
     {

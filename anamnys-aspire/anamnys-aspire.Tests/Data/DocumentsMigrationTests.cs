@@ -47,6 +47,7 @@ public class DocumentsMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-10-27-medication-timeline.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-10-28-retention-panel.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-10-29-theme-absence.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-10-30-plan-adherence.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

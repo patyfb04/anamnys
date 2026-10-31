@@ -104,7 +104,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text, 'plan_reviewed'::text, 'follow_up_created'::text, 'follow_up_resolved'::text, 'follow_up_reopened'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -439,7 +439,10 @@ CREATE TABLE "FollowUpItems" (
 	"Description" text NOT NULL,
 	"ResolvedAt" timestamp with time zone,
 	"ResolvedNoteId" uuid,
-	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL
+	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"ExcerptRefId" uuid,
+	"ResolvedById" uuid
 );
 CREATE TABLE "Instruments" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1037,6 +1040,7 @@ CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientI
 CREATE INDEX "ExternalDocuments_Provider_Uploaded_idx" ON "ExternalDocuments" ("ProviderId","UploadedAt" DESC);
 CREATE INDEX "ExtractedFacts_DocumentId_idx" ON "ExtractedFacts" ("ExternalDocumentId");
 CREATE INDEX "FollowUpItems_PatientId_idx" ON "FollowUpItems" ("PatientId");
+CREATE INDEX "FollowUpItems_Patient_Resolved_idx" ON "FollowUpItems" ("PatientId", "ResolvedAt");
 CREATE INDEX "InsurerAuthorizations_ValidUntil_idx" ON "InsurerAuthorizations" ("ValidUntil");
 CREATE INDEX "IntakeResponses_PatientId_idx" ON "IntakeResponses" ("PatientId");
 CREATE INDEX "MedicationEntries_Patient_Started_idx" ON "MedicationEntries" ("PatientId","StartedOn");
@@ -1134,6 +1138,8 @@ ALTER TABLE "FocusAreas" ADD CONSTRAINT "FocusAreas_ParentId_fkey" FOREIGN KEY (
 ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_NoteId_fkey" FOREIGN KEY ("NoteId") REFERENCES "Notes"("Id") ON DELETE SET NULL;
 ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_ResolvedNoteId_fkey" FOREIGN KEY ("ResolvedNoteId") REFERENCES "Notes"("Id") ON DELETE SET NULL;
+ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE CASCADE;
+ALTER TABLE "FollowUpItems" ADD CONSTRAINT "FollowUpItems_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;
 ALTER TABLE "InsurerAuthorizations" ADD CONSTRAINT "InsurerAuthorizations_InsurerId_fkey" FOREIGN KEY ("InsurerId") REFERENCES "Insurers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "InsurerAuthorizations" ADD CONSTRAINT "InsurerAuthorizations_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE CASCADE;
 ALTER TABLE "Insurers" ADD CONSTRAINT "Insurers_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;

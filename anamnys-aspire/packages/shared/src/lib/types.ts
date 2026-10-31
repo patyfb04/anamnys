@@ -18,6 +18,7 @@ export interface MedicationInput {
 
 export interface ObjectiveInput {
   description: string;
+  termId?: string | null;
 }
 
 export interface CreatePatientRequest {
@@ -58,6 +59,47 @@ export interface ObjectiveItem {
   id: string;
   description: string;
   createdAt: string;
+  termId: string | null;
+  termLabel: string | null;
+}
+
+// Plan adherence and follow-ups (F-14). Days are yyyy-MM-dd, instants are ISO.
+export interface PlanAdherenceObjective {
+  objectiveId: string;
+  description: string;
+  createdAt: string;
+  term: { termId: string; label: string } | null;
+  firstOn: string | null;
+  lastOn: string | null;
+  lastNoteId: string | null;
+  sessionsSince: number | null;
+  daysSince: number | null;
+}
+
+export interface FollowUp {
+  id: string;
+  description: string;
+  createdAt: string;
+  noteId: string | null;
+  excerpt: { excerptId: string; section: string; quote: string | null } | null;
+  resolvedAt: string | null;
+  resolvedNoteId: string | null;
+  sessionsSince: number;
+  originOn: string | null;
+}
+
+export interface PlanAdherence {
+  plan: { planId: string | null; reviewedAt: string | null };
+  objectives: PlanAdherenceObjective[];
+  followUps: FollowUp[];
+}
+
+export interface FollowUpRequest {
+  description: string;
+  sectionKey?: string;
+  offsetStart?: number;
+  offsetEnd?: number;
+  quote?: string;
 }
 
 export interface NoteSummary {

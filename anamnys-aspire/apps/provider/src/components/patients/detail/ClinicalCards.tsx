@@ -1,4 +1,6 @@
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import TermSelect from "@/components/themes/TermSelect";
 import { Pill, Stethoscope, Target } from "lucide-react";
 import { patientsApi } from "@anamnys/shared/api/patients";
 import type { DiagnosisItem, MedicationItem, ObjectiveItem } from "@anamnys/shared/lib/types";
@@ -205,38 +207,63 @@ export function MedicationsCard({ patientId, items, readOnly, onChanged }: CardP
 
 export function ObjectivesCard({ patientId, items, readOnly, onChanged }: CardProps<ObjectiveItem>) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const api = patientsApi.objectives;
+  // The plan card on "Análises" shows the objectives too.
+  const changed = async () => {
+    await queryClient.invalidateQueries({ queryKey: ["plan-adherence", patientId] });
+    await onChanged();
+  };
+  type Draft = { description: string; termId: string | null };
   return (
-    <ClinicalListCard<ObjectiveItem, { description: string }>
+    <ClinicalListCard<ObjectiveItem, Draft>
       title={t("patients.detail.objectives")}
       icon={<Target size={20} />}
       emptyLabel={t("patients.detail.noObjectives")}
       addLabel={t("patients.detail.add")}
       items={items}
       readOnly={readOnly}
-      renderItem={(o) => <p className="text-body-md text-onSurface">{o.description}</p>}
-      emptyDraft={() => ({ description: "" })}
-      toDraft={(o) => ({ description: o.description })}
+      renderItem={(o) => (
+        <>
+          <p className="text-body-md text-onSurface">{o.description}</p>
+          <p className="text-label-md text-outline">
+            {o.termLabel ? t("planAdherence.linkedTerm", { label: o.termLabel }) : t("planAdherence.noTerm")}
+          </p>
+        </>
+      )}
+      emptyDraft={() => ({ description: "", termId: null })}
+      toDraft={(o) => ({ description: o.description, termId: o.termId })}
       renderFields={(draft, setDraft, errors) => (
-        <FormField
-          label={t("patients.form.objective")}
-          value={draft.description}
-          onChange={(e) => setDraft({ description: e.target.value })}
-          error={errors.description}
-          autoFocus
-        />
+        <div className="flex flex-col gap-2">
+          <FormField
+            label={t("patients.form.objective")}
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            error={errors.description}
+            autoFocus
+          />
+          <TermSelect
+            label={t("planAdherence.termLabel")}
+            value={draft.termId}
+            currentLabel={items.find((o) => o.termId === draft.termId)?.termLabel}
+            onChange={(termId) => setDraft({ ...draft, termId })}
+            error={errors.termId?.[0]}
+            className="sm:max-w-xs"
+          />
+        </div>
       )}
       onAdd={async (draft) => {
         await api.add(patientId, draft);
-        await onChanged();
+        await changed();
       }}
       onUpdate={async (o, draft) => {
+        // PUT replaces the objective: the term is always sent back.
         await api.update(patientId, o.id, draft);
-        await onChanged();
+        await changed();
       }}
       onRemove={async (o) => {
         await api.remove(patientId, o.id);
-        await onChanged();
+        await changed();
       }}
     />
   );

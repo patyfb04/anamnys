@@ -13,6 +13,8 @@ interface Props {
   onSaved: () => void;
   highlight?: ExcerptPassage | null;
   onMark?: (selection: ThemeSelection) => void;
+  /** "Marcar para retomar" on the selected text (F-14); shown only with a selection. */
+  onMarkFollowUp?: (selection: ThemeSelection) => void;
 }
 
 // Mirrors the server limit on a stored quote.
@@ -20,7 +22,7 @@ const MAX_QUOTE = 200;
 
 // The structured note: one tonal block per section, in format order. Empty sections stay visible
 // and say so — the AI never fills them in. When editable, each block can be edited in place.
-export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark }: Props) {
+export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp }: Props) {
   const ordered = [...sections].sort((a, b) => a.position - b.position);
 
   return (
@@ -34,13 +36,14 @@ export default function NoteSections({ sections, editable, noteId, onSaved, high
           onSaved={onSaved}
           highlight={highlight}
           onMark={onMark}
+          onMarkFollowUp={onMarkFollowUp}
         />
       ))}
     </div>
   );
 }
 
-function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark }: Omit<Props, "sections"> & { section: NoteSectionView }) {
+function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp }: Omit<Props, "sections"> & { section: NoteSectionView }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
@@ -218,23 +221,38 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark }:
             )}
           </p>
           {range && onMark && (
-            <div className="mt-2" role="status">
+            <div className="mt-2 flex flex-wrap items-center gap-2" role="status">
               {range.end - range.start > MAX_QUOTE ? (
                 <p className="text-body-sm text-onSurfaceVariant">
                   {t("noteView.markTooLong", { max: MAX_QUOTE, count: range.end - range.start })}
                 </p>
               ) : (
-                <button
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    onMark({ sectionKey: section.key, start: range.start, end: range.end });
-                    window.getSelection()?.removeAllRanges();
-                  }}
-                  className="rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline"
-                >
-                  {t("noteView.markTheme")}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      onMark({ sectionKey: section.key, start: range.start, end: range.end });
+                      window.getSelection()?.removeAllRanges();
+                    }}
+                    className="rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline"
+                  >
+                    {t("noteView.markTheme")}
+                  </button>
+                  {onMarkFollowUp && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        onMarkFollowUp({ sectionKey: section.key, start: range.start, end: range.end });
+                        window.getSelection()?.removeAllRanges();
+                      }}
+                      className="rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline"
+                    >
+                      {t("followUps.mark")}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
