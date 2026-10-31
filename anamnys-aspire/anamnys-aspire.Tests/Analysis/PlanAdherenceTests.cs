@@ -75,9 +75,16 @@ public class PlanAdherenceTests(SharedAppHostFixture fixture)
 
     private static async Task TagAsync(Scenario s, Guid noteId, ThemeTerm term, string createdBy = "human", bool removed = false, bool addedBy = true)
     {
+        // Every counted tag points back to the text (F-03).
+        var reference = new ExcerptRef
+        {
+            Id = Guid.NewGuid(), ProviderId = s.ProviderId, SourceType = "note", SourceId = noteId, SectionKey = "evolucao", Kind = "section", DatedAt = Day0,
+        };
+        s.Db.ExcerptRefs.Add(reference);
+        await s.Db.SaveChangesAsync(Ct);
         s.Db.ThemeTags.Add(new ThemeTag
         {
-            Id = Guid.NewGuid(), NoteId = noteId, TermId = term.Id, CreatedBy = createdBy, CreatedAt = Day0,
+            Id = Guid.NewGuid(), NoteId = noteId, TermId = term.Id, ExcerptRefId = reference.Id, CreatedBy = createdBy, CreatedAt = Day0,
             AddedById = addedBy ? s.ProviderId : null, RemovedAt = removed ? Day0 : null, RemovedById = removed ? s.ProviderId : null,
         });
         await s.Db.SaveChangesAsync(Ct);

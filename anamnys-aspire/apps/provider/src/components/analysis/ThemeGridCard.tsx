@@ -14,6 +14,8 @@ interface Open {
   on: string;
   noteId: string;
   items: CellItem[];
+  /** Every term the cell stands for, also those with no occurrence in this session. */
+  termIds: string[];
   sameSession: string[];
 }
 
@@ -21,11 +23,13 @@ interface Open {
 // their parent; a collapsed parent marks a session when the parent or any child was recorded in it.
 // One neutral mark colour; the orders offered are observation orders only.
 export default function ThemeGridCard({
+  patientId,
   sessions,
   themes,
   absences = [],
   absenceSessions = 4,
 }: {
+  patientId: string;
   sessions: AnalysisSession[];
   themes: AnalysisTheme[];
   absences?: AnalysisAbsence[];
@@ -148,6 +152,7 @@ export default function ThemeGridCard({
               on: s.on,
               noteId: s.noteId,
               items,
+              termIds: members.map((m) => m.termId),
               sameSession: sameSessionLabels(themes, s.noteId, relatives(themes, theme)),
             });
           const onKeyDown = (e: React.KeyboardEvent) => {
@@ -234,7 +239,7 @@ export default function ThemeGridCard({
           )}
         </div>
       )}
-      {open && <OccurrenceModal {...open} onClose={() => setOpen(null)} />}
+      {open && <OccurrenceModal {...open} patientId={patientId} onClose={() => setOpen(null)} />}
     </DetailCard>
   );
 }

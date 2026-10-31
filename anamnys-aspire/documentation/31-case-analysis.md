@@ -5,8 +5,8 @@ How the longitudinal aggregation of a patient's themes is computed (one query, o
 Last checked against the code on 2026-10-28 (branch `feature/case-analysis`).
 Design: `design/specs/2026-10-28-case-analysis-design.md`.
 
-What a future change has to respect: only signed notes count and a tag removed or still an untouched AI
-proposal never counts (section 2), a retired or split term keeps its old sessions and nothing migrates to
+What a future change has to respect: only signed notes count and a tag removed, still an untouched AI
+proposal or without an excerpt reference never counts (section 2), a retired or split term keeps its old sessions and nothing migrates to
 the successor (section 3, D-01), the language is observation only, with no evaluative wording, one neutral
 colour and no ordering by "requires attention" (section 8), and the URL carries the patient id only
 (section 6).
@@ -36,6 +36,9 @@ No migration. Sources: `Notes`, `Sessions`, `Appointments`, `ThemeTags`, `ThemeT
   linked to that session; else the signing day (creation day when there is no signing time).
 - **A tag counts** when it is not removed (`RemovedAt` is null) and is not an untouched AI proposal
   (created by `ai` with no `AddedById`). An AI proposal the provider accepted has an `AddedById` and counts.
+  A tag must also point back to the text: one with no excerpt reference (`ExcerptRefId` null) is not counted,
+  by the hard rule of F-03 (`RequireExcerpt`, enforced by `ExcerptRequireArchitectureTests`). The same tags
+  feed theme absences (F-12) and plan adherence (F-14). The tag stays on the note and in the export.
 - **Period.** The optional `from` and `to` filter the sessions by practice-local day. The minimum of
   section 5 counts the signed notes in the period.
 - **Scope.** Provider scoping: another provider's patient and a discarded patient (F-06) answer 404.
@@ -52,9 +55,9 @@ No migration. Sources: `Notes`, `Sessions`, `Appointments`, `ThemeTags`, `ThemeT
 - **Succession (D-01).** A retired or split term stays on the page with the label it had then
   (`active: false`) and `supersededBy` lists the successor terms (`ThemeTermSuccessions`, with their
   labels). Old sessions stay on the old lane; nothing migrates to the successor.
-- **Origin.** Each occurrence carries the note, the day and, when the tag has an excerpt reference, its
-  `excerptId`, `section` and the stored `quote` (restricted to this provider's note excerpts). The quote is
-  clinical text in the response only and is never logged.
+- **Origin.** Each occurrence carries the note, the day and its `excerptId`, `section` and the stored `quote`
+  (restricted to this provider's note excerpts; a section reference has no quote). The quote is clinical text
+  in the response only and is never logged.
 
 ---
 
@@ -138,7 +141,7 @@ recency or alphabet, never by severity or "requires attention". No value colours
 
 | Class | Covers |
 |---|---|
-| `Analysis/CaseAnalysisQueryTests` (real DB, 9) | unavailable below 6 (count only, drafts out); signed and exported listed in date order; date rule (session over appointment over signing day, with the UTC-3 boundary); removed tags and pending AI proposals excluded, accepted ones kept; origin (excerpt id, section, quote), `parentId` with the untagged parent listed, succession, inactive lane; co-occurrence counts and ordering; period filter and minimum; another provider and a discarded patient give null; 200 notes and 800 tags answer in under 2 s |
+| `Analysis/CaseAnalysisQueryTests` (real DB, 10) | unavailable below 6 (count only, drafts out); signed and exported listed in date order; date rule (session over appointment over signing day, with the UTC-3 boundary); removed tags and pending AI proposals excluded, accepted ones kept; tags without an excerpt reference not counted; origin (excerpt id, section, quote), `parentId` with the untagged parent listed, succession, inactive lane; co-occurrence counts and ordering; period filter and minimum; another provider and a discarded patient give null; 200 notes and 800 tags answer in under 2 s |
 
 Task 1 reported 9/9 passing against the real database. The endpoint has no HTTP-level test (the 400/401/404
 mapping mirrors the attendance endpoint). The provider app was checked with build and lint only.

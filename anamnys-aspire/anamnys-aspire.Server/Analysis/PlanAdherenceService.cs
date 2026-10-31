@@ -112,6 +112,7 @@ public static class PlanAdherenceService
         var result = new FollowUpResult(FollowUpOutcome.NotFound);
         await InTransactionAsync(db, async () =>
         {
+            await NoteLocks.LockPatientAsync(db, providerId, noteId, ct);
             // The note lock keeps the passage valid against a concurrent section save (ExcerptService contract).
             await NoteLocks.LockAsync(db, noteId, ct);
             var note = await NoteAsync(db, providerId, noteId, ct);
@@ -248,11 +249,11 @@ public static class PlanAdherenceService
         return outcome;
     }
 
-    private static readonly string[] MarkableStatuses = ["ReadyForReview", "Signed", "Exported"];
+    internal static readonly string[] MarkableStatuses = ["ReadyForReview", "Signed", "Exported"];
 
-    private sealed record NoteRow(Guid PatientId, bool Archived, string Status);
+    internal sealed record NoteRow(Guid PatientId, bool Archived, string Status);
 
-    private static Task<NoteRow?> NoteAsync(AnamnysDbContext db, Guid providerId, Guid noteId, CancellationToken ct) =>
+    internal static Task<NoteRow?> NoteAsync(AnamnysDbContext db, Guid providerId, Guid noteId, CancellationToken ct) =>
         (from n in db.Notes.AsNoTracking()
          join p in db.Patients.AsNoTracking() on n.PatientId equals p.Id
          where n.Id == noteId && n.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
@@ -277,7 +278,7 @@ public static class PlanAdherenceService
         return patient is null ? (null, false) : (item, patient.ArchivedAt is not null);
     }
 
-    private static void Audit(AnamnysDbContext db, Guid? noteId, Guid providerId, string action, string field, string ids, DateTimeOffset at) =>
+    internal static void Audit(AnamnysDbContext db, Guid? noteId, Guid providerId, string action, string field, string ids, DateTimeOffset at) =>
         db.AuditEntries.Add(new AuditEntry
         {
             Id = Guid.NewGuid(),
@@ -290,7 +291,7 @@ public static class PlanAdherenceService
         });
 
     // Commits only when the body says so: refusals and no-ops leave no trace.
-    private static async Task InTransactionAsync(AnamnysDbContext db, Func<Task<bool>> body, CancellationToken ct)
+    internal static async Task InTransactionAsync(AnamnysDbContext db, Func<Task<bool>> body, CancellationToken ct)
     {
         var strategy = db.Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>

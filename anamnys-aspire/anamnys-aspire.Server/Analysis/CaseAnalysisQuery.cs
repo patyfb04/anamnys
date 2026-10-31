@@ -1,3 +1,4 @@
+using Anamnys.Server.Excerpts;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Patients;
@@ -172,7 +173,8 @@ public static class CaseAnalysisQuery
 
     // Tags that count as a record: not removed and not an untouched AI proposal (CreatedBy 'ai' with no AddedById).
     internal static IQueryable<ThemeTag> CountedTags(AnamnysDbContext db) =>
-        db.ThemeTags.AsNoTracking().Where(tag => tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null));
+        db.ThemeTags.AsNoTracking().RequireExcerpt(tag => tag.ExcerptRefId)
+            .Where(tag => tag.RemovedAt == null && !(tag.CreatedBy == "ai" && tag.AddedById == null));
 
     // The patient's notes (only the signed ones with signedOnly) dated by the session date rule: the session's actual
     // start, else its appointment's start, else the signing day, else the creation; ordered by day, instant and id.

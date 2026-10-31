@@ -28,7 +28,7 @@ public static class ExportReadme
         - Áudio das sessões (não é guardado pelo Anamnys).
         - Os valores antigos e novos do histórico de auditoria (apenas data, ação, campo e nota/documento).
         - Dados de outros profissionais.
-        - Escalas removidas por você.
+        - Escalas e falas do paciente removidas por você.
 
         Formatos
         --------
@@ -76,7 +76,7 @@ public static class ExportReadme
             documentos/documentos.json
                                 Todos os documentos, inclusive rascunhos e substituídos.
             escalas.csv, diagnosticos.csv, medicacoes.csv, objetivos.csv, temas.csv,
-            pontos-para-retomar.csv
+            pontos-para-retomar.csv, falas-registradas.csv
 
         Situação das notas e documentos
         -------------------------------
@@ -159,6 +159,9 @@ public static class ExportReadme
                                        pontuacao, pontuacaoMinima, pontuacaoMaxima, aplicadaEm, sessaoId.
         notas                          Como em notas.json.
         documentos                     Como em documentos.json.
+        pontosParaRetomar              Como em pontos-para-retomar.csv.
+        falasRegistradas               Falas do paciente que você registrou: id, fala, notaId, dataNota,
+                                       secao, tema, registradaEm (como em falas-registradas.csv).
 
         notas/notas.json (e "notas" em paciente.json)
         ---------------------------------------------
@@ -226,5 +229,13 @@ public static class ExportReadme
         descricao; criado_em; nota_origem_id; resolvido_em; nota_resolucao_id; trecho
         Uma linha por ponto marcado para retomar. resolvido_em vazio: ponto em aberto. trecho é o texto
         da nota de onde o ponto foi marcado, quando há.
+
+        falas-registradas.csv
+        ---------------------
+        id; fala; nota_id; data_nota; secao; tema; registrada_em
+        Uma linha por fala do paciente que você registrou (falas removidas não aparecem), inclusive em
+        notas ainda não assinadas. Em nota assinada, só aparece a fala cujo texto exato está na nota.
+        fala é o trecho que você marcou na nota; secao é a chave da seção; tema é o tema escolhido,
+        quando há.
         """.ReplaceLineEndings("\r\n");
 }

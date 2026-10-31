@@ -188,6 +188,7 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
             ["notes"] = 2, ["clinicalDocuments"] = 1, ["externalDocuments"] = 1, ["sessions"] = 1, ["appointments"] = 2,
             ["transcripts"] = 1, ["scaleApplications"] = 1, ["medications"] = 1, ["diagnoses"] = 1, ["treatmentPlans"] = 1,
             ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 2, ["invitations"] = 1, ["followUpItems"] = 1,
+            ["patientQuotes"] = 1,
         });
 
         // The patient row keeps only the name and the discard date.

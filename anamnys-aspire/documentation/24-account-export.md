@@ -89,10 +89,11 @@ anamnys-exportacao-AAAA-MM-DD/
     documentos/documentos.json
     escalas.csv, diagnosticos.csv, medicacoes.csv, objetivos.csv, temas.csv
     pontos-para-retomar.csv  follow-ups (F-14): description, created, origin note, resolved, resolving note, quote
+    falas-registradas.csv    patient quotes (F-15): id, quote, note, note date, section key, theme, recorded
 ```
 
 - **Included:** note sections (signed notes, and drafts marked "rascunho"), psychological documents
-  (superseded ones marked), scales, diagnoses, medications, plan objectives (with the linked theme), follow-ups, themes, appointments
+  (superseded ones marked), scales, diagnoses, medications, plan objectives (with the linked theme), follow-ups, patient quotes (`falas-registradas.csv` and `falasRegistradas` in `paciente.json`), themes, appointments
   (with the cancellation reason: it is provider-created data), patient registration data, archived
   patients too.
 - **HTML:** static, inline CSS, no JavaScript, no external resources, `lang="pt-BR"`, readable printed.
@@ -117,7 +118,8 @@ builder when a field changes.
   more than the provider chose to record, and is not what they signed. Audio is never kept anyway.
 - **Audit previous/new values.** The audit CSV has date, action, field and note/document id only; the
   values may be clinical text.
-- **Other providers' data**, and scales removed by the provider.
+- **Other providers' data**, and scales and patient quotes removed by the provider. A quote of a signed note whose
+  exact text is no longer in a section of that note is left out too, so a signed note is never misquoted.
 
 `AccountData` (`ExportData.cs`) is the only source the builder reads, and it never loads
 `RawTranscript` or audit values, so the exclusion does not depend on a filter further down. The builder

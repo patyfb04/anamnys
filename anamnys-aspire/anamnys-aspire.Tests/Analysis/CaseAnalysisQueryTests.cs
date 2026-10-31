@@ -74,8 +74,15 @@ public class CaseAnalysisQueryTests(SharedAppHostFixture fixture)
     }
 
     private static async Task<ThemeTag> TagAsync(
-        Scenario s, Guid noteId, Guid termId, string createdBy = "human", bool removed = false, Guid? excerptId = null, bool addedBy = true)
+        Scenario s, Guid noteId, Guid termId, string createdBy = "human", bool removed = false, Guid? excerptId = null, bool addedBy = true, bool withExcerpt = true)
     {
+        if (excerptId is null && withExcerpt)
+        {
+            var reference = SectionReference(s, noteId);
+            s.Db.ExcerptRefs.Add(reference);
+            await s.Db.SaveChangesAsync(Ct);
+            excerptId = reference.Id;
+        }
         var tag = new ThemeTag
         {
             Id = Guid.NewGuid(), NoteId = noteId, TermId = termId, ExcerptRefId = excerptId, CreatedBy = createdBy, CreatedAt = Day0,
@@ -85,6 +92,11 @@ public class CaseAnalysisQueryTests(SharedAppHostFixture fixture)
         await s.Db.SaveChangesAsync(Ct);
         return tag;
     }
+
+    private static ExcerptRef SectionReference(Scenario s, Guid noteId) => new()
+    {
+        Id = Guid.NewGuid(), ProviderId = s.ProviderId, SourceType = "note", SourceId = noteId, SectionKey = "data", Kind = "section", DatedAt = Day0,
+    };
 
     // Six signed notes, one per week, none of them tagged.
     private static async Task<List<Note>> SixNotesAsync(Scenario s)
@@ -263,11 +275,34 @@ public class CaseAnalysisQueryTests(SharedAppHostFixture fixture)
         var oldTheme = result.Themes!.Single(t => t.TermId == old.Id);
         oldTheme.Active.Should().BeFalse();
         oldTheme.SupersededBy.Should().Equal(new CaseAnalysisSuperseded(successor.Id, "Ansiedade"), new CaseAnalysisSuperseded(second.Id, "Aflição"));
-        oldTheme.Occurrences.Single().ExcerptId.Should().BeNull();
+        oldTheme.Occurrences.Single().Quote.Should().BeNull();
         result.Themes!.Should().NotContain(t => t.TermId == successor.Id);
         var parentTheme = result.Themes!.Single(t => t.TermId == parent.Id);
         parentTheme.Occurrences.Should().BeEmpty();
         parentTheme.ParentId.Should().BeNull();
+    }
+
+    // The hard rule of F-03: what does not point back to the text is not a record.
+    [Fact]
+    public async Task ExecuteAsync_TagWithoutAReference_IsNotCounted()
+    {
+        // Arrange
+        var (s, cleanup) = await StartAsync();
+        await using var _ = cleanup;
+        var notes = await SixNotesAsync(s);
+        var sono = await TermAsync(s, "Sono");
+        var luto = await TermAsync(s, "Luto");
+        await TagAsync(s, notes[0].Id, sono.Id);
+        await TagAsync(s, notes[0].Id, luto.Id, withExcerpt: false);
+        await TagAsync(s, notes[1].Id, sono.Id, withExcerpt: false);
+
+        // Act
+        var result = await CaseAnalysisQuery.ExecuteAsync(s.Db, s.ProviderId, s.PatientId, null, null, Ct);
+
+        // Assert
+        result!.Themes!.Should().ContainSingle().Which.TermId.Should().Be(sono.Id);
+        result.Themes![0].Occurrences.Should().ContainSingle().Which.NoteId.Should().Be(notes[0].Id);
+        result.Cooccurrence.Should().BeEmpty();
     }
 
     [Fact]
@@ -378,10 +413,12 @@ public class CaseAnalysisQueryTests(SharedAppHostFixture fixture)
         {
             for (var k = 0; k < 4; k++)
             {
+                var reference = SectionReference(s, notes[i].Id);
+                s.Db.ExcerptRefs.Add(reference);
                 s.Db.ThemeTags.Add(new ThemeTag
                 {
                     Id = Guid.NewGuid(), NoteId = notes[i].Id, TermId = terms[(i + k * 3) % terms.Count].Id, CreatedBy = "human",
-                    CreatedAt = Day0, AddedById = s.ProviderId,
+                    CreatedAt = Day0, AddedById = s.ProviderId, ExcerptRefId = reference.Id,
                 });
             }
         }

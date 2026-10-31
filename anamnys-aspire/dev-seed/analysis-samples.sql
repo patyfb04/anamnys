@@ -7,7 +7,8 @@
 --   sobrecarga_jornada       1,2,4,5,7  conflito_no_trabalho      3,6     (children of Trabalho)
 --   familia                  2,6,9,11   luto                      10-12   saudade_desenraizamento 9,12
 -- Also monthly PHQ-9 scores (18 down to 7) and a fictitious treatment (Sertralina 50mg, dose change to 100mg,
--- stop) for F-13, and a treatment plan with three objectives and two follow-ups (one open, one resumed) for F-14.
+-- stop) for F-13, a treatment plan with three objectives and two follow-ups (one open, one resumed) for F-14, and
+-- four recorded patient quotes (notes 2, 4, 6 and 11, each with an exact passage and its theme) for F-15.
 -- Every person and event is fictitious. Idempotent: a patient that already has these notes is skipped.
 -- Never run outside a local development database.
 --   docker exec -i <postgres-container> sh -c 'PGPASSWORD=$POSTGRES_PASSWORD psql -v ON_ERROR_STOP=1 -U postgres -d anamnysdb' < dev-seed/analysis-samples.sql
@@ -163,6 +164,50 @@ BEGIN
       VALUES (t.patient_id, t.provider_id, n6."Id", 'Retomar o conflito com o colega (exemplo)', n6."SignedAt",
               n8."SignedAt", n8."Id", t.provider_id);
     END IF;
+  END LOOP;
+END $$;
+
+-- F-15: four recorded patient quotes per seeded patient, each a phrase that is literally in the "data" section of the
+-- note, with an exact ExcerptRef and the matching theme. Skipped for a patient that already has a quote on these notes.
+--   note 2 familia, note 4 sobrecarga_jornada, note 6 conflito_no_trabalho, note 11 luto.
+DO $$
+DECLARE
+  t record;
+  q record;
+  nt record;
+  sec text;
+  ref_id uuid;
+  pos int;
+BEGIN
+  FOR t IN
+    SELECT DISTINCT n."PatientId" AS patient_id, n."ProviderId" AS provider_id
+    FROM "Notes" n
+    WHERE n."RawTranscript" LIKE 'Seed de análise (exemplo)%'
+      AND NOT EXISTS (
+        SELECT 1 FROM "PatientQuotes" pq JOIN "Notes" n2 ON n2."Id" = pq."NoteId"
+        WHERE n2."PatientId" = n."PatientId" AND n2."RawTranscript" LIKE 'Seed de análise (exemplo)%')
+  LOOP
+    FOR q IN
+      SELECT * FROM (VALUES
+        (2, 'conversa difícil com a mãe', 'familia'),
+        (4, 'jornada de trabalho longa', 'sobrecarga_jornada'),
+        (6, 'discussão com o colega de equipe', 'conflito_no_trabalho'),
+        (11, 'falecimento da tia', 'luto')) AS v(note_no, phrase, code)
+    LOOP
+      SELECT n."Id", n."SignedAt" INTO nt FROM "Notes" n
+        WHERE n."PatientId" = t.patient_id AND n."RawTranscript" LIKE 'Seed de análise (exemplo) ' || q.note_no || '. %';
+      CONTINUE WHEN nt."Id" IS NULL;
+      SELECT s."Content" INTO sec FROM "NoteSections" s WHERE s."NoteId" = nt."Id" AND s."Key" = 'data';
+      pos := strpos(sec, q.phrase) - 1;
+      CONTINUE WHEN pos < 0;
+      INSERT INTO "ExcerptRefs" ("SourceType","SourceId","OffsetStart","OffsetEnd","DatedAt","ProviderId","SectionKey","Quote","Kind")
+      VALUES ('note', nt."Id", pos, pos + length(q.phrase), nt."SignedAt", t.provider_id, 'data', q.phrase, 'exact')
+      RETURNING "Id" INTO ref_id;
+      INSERT INTO "PatientQuotes" ("NoteId","TermId","Text","ExcerptRefId","RecordedAt","AddedById")
+      SELECT nt."Id", tt."Id", q.phrase, ref_id, nt."SignedAt", t.provider_id
+      FROM "ThemeTerms" tt JOIN "ThemeVocabularies" v ON v."Id" = tt."VocabularyId" AND v."Active"
+      WHERE tt."Code" = q.code;
+    END LOOP;
   END LOOP;
 END $$;
 

@@ -158,7 +158,7 @@ public class AccountExportBuilderTests(SharedAppHostFixture fixture)
         // Assert
         var patient = $"{Root}/pacientes/002-AS";
         string[] perPatient = ["paciente.html", "paciente.json", "notas/notas.json", "notas/notas.csv", "documentos/documentos.json",
-            "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv"];
+            "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv", "falas-registradas.csv"];
         var expected = new List<string>
         {
             $"{Root}/index.html", $"{Root}/LEIA-ME.txt", $"{Root}/conta/perfil.json", $"{Root}/conta/agenda.csv", $"{Root}/conta/auditoria.csv",
@@ -173,7 +173,7 @@ public class AccountExportBuilderTests(SharedAppHostFixture fixture)
         Text(entries[$"{Root}/index.html"]).Should().Contain("pacientes/002-AS/paciente.html").And.Contain("Ana Souza");
         var readme = Text(entries[$"{Root}/LEIA-ME.txt"]);
         foreach (var name in new[] { "index.html", "perfil.json", "agenda.csv", "auditoria.csv", "paciente.html", "paciente.json",
-                     "notas.json", "notas.csv", "documentos.json", "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv" })
+                     "notas.json", "notas.csv", "documentos.json", "escalas.csv", "diagnosticos.csv", "medicacoes.csv", "objetivos.csv", "temas.csv", "pontos-para-retomar.csv", "falas-registradas.csv" })
         {
             readme.Should().Contain(name);
         }
