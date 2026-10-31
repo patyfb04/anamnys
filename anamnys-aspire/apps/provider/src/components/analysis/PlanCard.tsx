@@ -46,7 +46,7 @@ export default function PlanCard({ patientId }: { patientId: string }) {
   const linkClass = "rounded-radii-md px-2 py-1 text-label-md text-primary hover:underline disabled:opacity-60";
 
   return (
-    <DetailCard
+    <DetailCard collapsibleId="analysis-plan"
       title={t("planAdherence.title")}
       icon={<ClipboardList size={20} />}
       action={

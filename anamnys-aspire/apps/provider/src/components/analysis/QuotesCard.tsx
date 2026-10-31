@@ -39,7 +39,7 @@ export default function QuotesCard({ patientId, period }: { patientId: string; p
   }
 
   return (
-    <DetailCard title={t("patientQuotes.title")} icon={<Quote size={20} />}>
+    <DetailCard collapsibleId="analysis-quotes" title={t("patientQuotes.title")} icon={<Quote size={20} />}>
       <div className="flex flex-col gap-4">
         <p className="text-body-md text-onSurfaceVariant">{t("patientQuotes.card.sentence")}</p>
         <ThemeFilter value={termId} onChange={setTermId} />
