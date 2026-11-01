@@ -1036,3 +1036,30 @@ export interface AnalysisAbsence {
 export interface AnalysisSettings {
   absenceSessions: number;
 }
+
+export interface RecordSearchRequest {
+  question: string;
+  from?: string;
+  to?: string;
+  page?: number;
+}
+
+export interface RecordSearchPassage {
+  noteId: string;
+  on: string;
+  section: string;
+  snippet: string;
+  // UTF-16 offsets into snippet, end exclusive. Always empty on theme passages.
+  highlights: { start: number; end: number }[];
+  excerptId: string | null;
+  matchedBy: "text" | "theme";
+  term: { termId: string; label: string } | null;
+}
+
+export interface RecordSearchResult {
+  passages: RecordSearchPassage[];
+  total: number;
+  order: "chronological" | "earliest" | "latest";
+  page: number;
+  pageSize: number;
+}

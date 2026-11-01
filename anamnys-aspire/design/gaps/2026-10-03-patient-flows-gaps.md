@@ -507,6 +507,17 @@ Patient quotes (F-15; chapter `documentation/35-patient-quotes.md`).
 - **Audit actions have no labels.** `quote_recorded` and `quote_removed` (like the F-14 actions) have no frontend labels; no audit view exists yet.
 - **Not exercised in a browser;** build and lint only.
 
+## Busca no prontuário
+
+- "Ver na nota" on a passage found by word opens the note, not the section: the note route has no section parameter.
+Record search (F-16; chapter `documentation/36-record-search.md`).
+
+- **No synonyms outside the vocabulary.** Only the stemmer and the theme labels and codes widen a word.
+- **No practice-wide search.** The search works on one patient at a time.
+- **No HTTP happy-path test.** The JSON shape relies on default camelCase serialisation; the query is tested on a scratch database and the HTTP test covers 400 and 404 only.
+- **The -ães plural is not covered.** The stemmer does not join pão and pães, and the -ão/-ões workaround does not include it.
+- **Not exercised in a browser;** build and lint only.
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

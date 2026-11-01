@@ -7,6 +7,8 @@ import type {
   PatientQuotePage,
   PlanAdherence,
   RecordQuoteRequest,
+  RecordSearchRequest,
+  RecordSearchResult,
 } from "@anamnys/shared/lib/types";
 
 // Case analysis (F-10). Only the patient id and dates travel in the URL; themes and quotes stay in the body.
@@ -76,5 +78,13 @@ export const patientQuotesApi = {
       all.push(...data.items);
       if (data.items.length === 0 || data.page * data.pageSize >= data.total) return all;
     }
+  },
+};
+
+// Record search (F-16). The question travels in the POST body only, never in a URL.
+export const recordSearchApi = {
+  search: async (patientId: string, request: RecordSearchRequest): Promise<RecordSearchResult> => {
+    const { data } = await api.post<RecordSearchResult>(`/phi/providers/me/patients/${patientId}/record-search`, request);
+    return data;
   },
 };
