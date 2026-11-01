@@ -1,4 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE TEXT SEARCH CONFIGURATION anamnys_pt (COPY = portuguese);
+ALTER TEXT SEARCH CONFIGURATION anamnys_pt ALTER MAPPING FOR hword, hword_part, word WITH unaccent, portuguese_stem;
 CREATE TABLE "AccessLogs" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"ProviderId" uuid NOT NULL,
@@ -1056,6 +1059,7 @@ CREATE INDEX "Notes_ProviderId_idx" ON "Notes" ("ProviderId");
 CREATE INDEX "Notes_Status_idx" ON "Notes" ("Status");
 CREATE UNIQUE INDEX "Notes_RecordingId_key" ON "Notes" ("RecordingId");
 CREATE INDEX "NoteSections_NoteId_idx" ON "NoteSections" ("NoteId");
+CREATE INDEX "NoteSections_Content_fts_idx" ON "NoteSections" USING gin (to_tsvector('anamnys_pt', "Content"));
 CREATE INDEX "Notifications_due_idx" ON "Notifications" ("ScheduledFor");
 CREATE INDEX "Notifications_Provider_Scheduled_idx" ON "Notifications" ("ProviderId", "ScheduledFor" DESC);
 CREATE UNIQUE INDEX "Notifications_Provider_DedupeKey_key" ON "Notifications" ("ProviderId", "DedupeKey") WHERE "DedupeKey" IS NOT NULL;

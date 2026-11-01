@@ -36,6 +36,7 @@ public class PlanAdherenceMigrationTests(SharedAppHostFixture fixture)
             // An earlier file re-run after this one keeps the action list (its guard sees its own action).
             await RunMigrationAsync(db, "2026-10-28-retention-panel.sql");
             await RunMigrationAsync(db, "2026-10-30-patient-quotes.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-10-31-record-search.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

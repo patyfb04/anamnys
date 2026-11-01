@@ -16,6 +16,7 @@ import CooccurrenceCard from "@/components/analysis/CooccurrenceCard";
 import TrajectoryCard from "@/components/analysis/TrajectoryCard";
 import PlanCard from "@/components/analysis/PlanCard";
 import QuotesCard from "@/components/analysis/QuotesCard";
+import RecordSearchCard from "@/components/analysis/RecordSearchCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import { PERIODS, periodFrom, todayIso, type TimelinePeriod } from "@/components/timeline/timelineGeometry";
 
@@ -101,6 +102,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         </p>
       ) : !data.available ? (
         <>
+          <RecordSearchCard patientId={patientId} />
           <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
           <TrajectoryCard patientId={patientId} period={period} minimumSessions={data.minimumSessions} />
           <PlanCard patientId={patientId} />
@@ -113,6 +115,7 @@ function PatientAnalysis({ patientId, onChange }: { patientId: string; onChange:
         </>
       ) : (
         <>
+          <RecordSearchCard patientId={patientId} />
           <AbsenceCard absences={data.absences ?? []} absenceSessions={data.absenceSessions ?? 4} themes={themes} />
           <TrajectoryCard patientId={patientId} period={period} />
           <PlanCard patientId={patientId} />

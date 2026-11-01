@@ -558,3 +558,12 @@ GET {{Server_HostAddress}}/api/phi/providers/me/notes/00000000-0000-0000-0000-00
 ### The patient's quotes in signed notes, chronological (F-10 session date), only those whose exact text is still in a section of the note. from, to (inclusive), termId (with its descendants) and page are optional.
 ### 200 { items: [item], total, page, pageSize: 12 }; 400 { from } when from is after to; 404.
 GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/quotes?from=2026-01-01&to=2026-12-31&page=1
+
+###
+### Record search (F-16, design/specs/2026-10-31-record-search-design.md §3). The question goes in the body only: never in a URL, log or audit value. from and to (inclusive) are optional.
+### Passages of signed notes, at most 20; nothing found is 200 with an empty list. Passage: { noteId, on, section, snippet, highlights: [{ start, end }], excerptId, matchedBy: "text" | "theme", term: { termId, label } | null }.
+### snippet is plain text; highlights are offsets into it (UTF-16). 200 { passages, total, order: "chronological" | "earliest" | "latest" }; 400 { question } (3 to 300 characters) or { from }; 404.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/record-search
+Content-Type: application/json
+
+{ "question": "quando falamos de sono pela primeira vez?", "from": "2026-01-01", "to": "2026-12-31" }

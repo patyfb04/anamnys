@@ -608,6 +608,33 @@
     },
     "help": "Pontos para retomar ficam abertos até você marcá-los como retomados."
   },
+  "recordSearch": {
+    "title": "Perguntar ao prontuário",
+    "sentence": "Esta busca devolve trechos das suas notas assinadas. Ela não resume nem interpreta.",
+    "inputLabel": "Pergunta",
+    "placeholder": "Ex.: quando falamos de sono pela primeira vez?",
+    "examples": "Exemplos: quando falamos de sono pela primeira vez? · o que foi dito sobre o trabalho? · última vez que falamos de ansiedade",
+    "submit": "Buscar",
+    "searching": "Buscando…",
+    "tooShort": "Escreva pelo menos {{min}} caracteres.",
+    "tooLong": "A pergunta pode ter no máximo {{max}} caracteres.",
+    "empty": "Nenhum trecho encontrado nas notas assinadas.",
+    "failed": "Não foi possível fazer a busca. Tente novamente.",
+    "count_one": "{{count}} trecho encontrado",
+    "count_other": "{{count}} trechos encontrados",
+    "previousPage": "Anteriores",
+    "nextPage": "Próximos",
+    "pageRange": "{{from}}–{{to}} de {{total}} trechos",
+    "order": {
+      "chronological": "Em ordem de data",
+      "earliest": "Do mais antigo para o mais recente",
+      "latest": "Do mais recente para o mais antigo"
+    },
+    "matchedText": "palavra",
+    "matchedTheme": "tema {{label}}",
+    "matchedBy": "Encontrado por: {{how}}",
+    "openNote": "ver na nota"
+  },
   "patientQuotes": {
     "mark": "Marcar como fala do paciente",
     "title": "Falas do paciente que você registrou",
