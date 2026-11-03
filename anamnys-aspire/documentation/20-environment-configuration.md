@@ -63,6 +63,7 @@ start without it.
 | `keycloak-admin-username` | optional (default `admin`) | |
 | `storage-access-key`, `storage-secret-key` | new random hex values | SeaweedFS identity + server S3 client. |
 | `storage-public-url` | `https://<storage host>` (see 2.4) | Gate: outside Development the server refuses to start unless it is an absolute https URL. Publish mode requires it. |
+| `patient-portal-url` | `https://<host>/patient`, absolute https (env `PatientPortal__BaseUrl`) | Required outside Development. Gate: the server refuses to start unless `PatientPortal:BaseUrl` is an absolute https URL. Protected-sharing links (chapter 37) are built from it. Same shape as `storage-public-url`. |
 
 ### 2.2 Server settings
 
@@ -137,9 +138,21 @@ start without it.
 ### 2.6 Network, TLS and capacity
 
 - TLS-terminating ingress for the server (all four SPAs are served by it, same origin).
-- **`ForwardedHeaders`** must be configured before production: the confirmation endpoints'
-  rate limiter keys on `RemoteIpAddress`, so behind a proxy every client would share one
-  bucket.
+- **`ForwardedHeaders:KnownProxies`** must be set before production (string array of the
+  proxies' IP addresses, default empty in `appsettings.json`). Empty: the middleware is not
+  mounted and `X-Forwarded-For` is ignored. Set: only those proxies are trusted, and only for the
+  client address (not scheme or host); an invalid value stops startup. The rate limiters
+  (confirmation endpoints, public share routes) key on the client address, so behind a proxy
+  without it every client would share one bucket. Not tested with a real proxy yet.
+- **Scrub the `/s/` path from reverse-proxy and static-file access logs.** The recipient's link
+  is `/patient/s/{token}`, so the token sits in the path of the page GET (the API takes it in
+  POST bodies only). The application excludes that path from its own traces and logs; the proxy
+  must do the same (chapter 37, section 14).
+- **Deep links:** `Program.cs` falls back to `provider/index.html`, `patient/index.html` and
+  `admin/index.html` for paths under each app, so a direct GET of `/patient/s/{token}`,
+  `/patient/convite/...` or a provider route after a reload reaches the SPA. API routes are
+  matched first. Not yet exercised in a published build: confirm once at publish. Protected
+  sharing depends on it.
 - Memory: Whisper `medium` + Qwen2.5 7B Q4_K_M (≈ 6 GB) + live-recording buffers (≈ 600 MB per
   concurrent 90-minute recording). Size the server container accordingly or cap concurrency.
   Theme suggestion also holds its own small LLM context (≈ 0.6 GB with
@@ -180,7 +193,9 @@ start without it.
 - [ ] Model directories on a persistent volume; Whisper SHA-256 verified
 - [ ] Migrations applied in order (through `2026-10-26-document-facts.sql`)
 - [ ] Tesseract data reachable (or pre-placed) and a Linux container OCR smoke test
-- [ ] `ForwardedHeaders` configured
+- [ ] `ForwardedHeaders:KnownProxies` configured; `/s/` path scrubbed from proxy logs
+- [ ] `patient-portal-url` (https); `/patient/s/{token}` deep link confirmed in a published build
+- [ ] `2026-11-01-protected-sharing.sql` applied (re-run if an earlier version was applied)
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore
 - [ ] Processor agreements; QuestPDF licence condition

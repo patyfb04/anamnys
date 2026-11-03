@@ -222,6 +222,8 @@ server.WithReference(keycloak).WaitFor(keycloak);
 if (builder.ExecutionContext.IsPublishMode)
 {
     server.WithEnvironment("Storage__PublicUrl", builder.AddParameter("storage-public-url"));
+    // The patient app's public https address, for share links; the server refuses to start without it.
+    server.WithEnvironment("PatientPortal__BaseUrl", builder.AddParameter("patient-portal-url"));
 }
 else if (!string.IsNullOrEmpty(storagePublicUrl))
 {

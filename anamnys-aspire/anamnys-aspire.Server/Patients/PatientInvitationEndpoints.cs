@@ -77,7 +77,7 @@ public static class PatientInvitationEndpoints
 
     // PatientPortal:BaseUrl in dev (the patient app's own Vite origin); otherwise the
     // patient app is served same-origin under /patient.
-    private static Uri PortalBaseUrl(HttpContext http, IConfiguration configuration) =>
+    internal static Uri PortalBaseUrl(HttpContext http, IConfiguration configuration) =>
         configuration["PatientPortal:BaseUrl"] is { Length: > 0 } configured
             ? new Uri(configured)
             : new Uri($"{http.Request.Scheme}://{http.Request.Host}/patient");

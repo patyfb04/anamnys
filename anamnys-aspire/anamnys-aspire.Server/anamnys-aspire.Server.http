@@ -567,3 +567,71 @@ POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-000
 Content-Type: application/json
 
 { "question": "quando falamos de sono pela primeira vez?", "from": "2026-01-01", "to": "2026-12-31" }
+
+###
+### Protected sharing (F-17 + F-18, design/specs/2026-11-01-protected-sharing-design.md §3).
+### The document's authorizations with their links, status (active, revoked, blocked, expired, capped) and accesses. 200 { documentId, canShare, blockedReason, supersededBy, authorizations: [...] }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/shares
+
+###
+### Record the patient's authorization, multipart/form-data: recipientName, recipientRole, purpose, authorizedAt, obtainedVia (verbal_session | signed_term | in_writing), confirmed=true, term (optional file: PDF, JPG or PNG, 20 MB).
+### 201 { id }; 400 field errors or { code: "invalid_form" | "empty" | "too_large" | "type_mismatch" | "unsupported_type" | "infected" }; 404; 409 { code: "not_signed" | "document_superseded" | "archived" | "authorization_exists", id? }; 503 { code: "scanner_unavailable" | "storage_unavailable" }. Audited disclosure_authorized.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/disclosure-authorizations
+Content-Type: multipart/form-data; boundary=b
+
+--b
+Content-Disposition: form-data; name="recipientName"
+
+Dr. Pedro Lima
+--b
+Content-Disposition: form-data; name="recipientRole"
+
+Psiquiatra
+--b
+Content-Disposition: form-data; name="purpose"
+
+Continuidade do cuidado
+--b
+Content-Disposition: form-data; name="authorizedAt"
+
+2026-11-01
+--b
+Content-Disposition: form-data; name="obtainedVia"
+
+verbal_session
+--b
+Content-Disposition: form-data; name="confirmed"
+
+true
+--b--
+
+###
+### Create a link. expiresInDays 1 to 30, default 7; viewCap optional; downloadEnabled default false. url and password appear only in this response.
+### 201 { id, url, password, expiresAt, viewCap, downloadEnabled }; 400 { expiresInDays } or { viewCap }; 404; 409 { code: "authorization_required" | "not_signed" | "document_superseded" | "archived" }. Audited share_link_created.
+POST {{Server_HostAddress}}/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000000/share-links
+Content-Type: application/json
+
+{ "authorizationId": "00000000-0000-0000-0000-000000000000", "expiresInDays": 7, "viewCap": 3, "downloadEnabled": false }
+
+###
+### The attached term, streamed inline with no-store. 200 the file; 401; 404 (none attached, or another provider's); 503 { code: "storage_unavailable" }. Audited disclosure_term_opened.
+POST {{Server_HostAddress}}/api/phi/providers/me/disclosure-authorizations/00000000-0000-0000-0000-000000000000/term/open
+
+###
+### Revoke, at once. 204 (also when already revoked); 404. Audited share_link_revoked.
+POST {{Server_HostAddress}}/api/phi/providers/me/share-links/00000000-0000-0000-0000-000000000000/revoke
+
+###
+### Public and anonymous. The token goes in the body, never in an API URL. 200 { available: true }; 404 { message, code: "share_unavailable" } for unknown, expired, revoked, capped and blocked. Limit: 30 per minute per IP.
+POST {{Server_HostAddress}}/api/public/shares/check
+Content-Type: application/json
+
+{ "token": "token-da-url" }
+
+###
+### Open with the password. Each opening renders the watermarked PDF and counts one view. 10 attempts per minute per IP, five wrong passwords block the link.
+### 200 application/pdf, Content-Disposition "attachment; filename=..." only when download is enabled, otherwise "inline"; 403 { code: "wrong_password" }; 404 as above; 429 with no body (rate limit) or { code: "busy" } and Retry-After (all password slots taken). Always Cache-Control: no-store, X-Robots-Tag: noindex.
+POST {{Server_HostAddress}}/api/public/shares/open
+Content-Type: application/json
+
+{ "token": "token-da-url", "password": "senha-gerada" }

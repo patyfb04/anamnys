@@ -9,12 +9,34 @@ public static class DocumentPdf
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
     private static readonly TimeZoneInfo Practice = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
-    public static byte[] Render(DocumentPdfModel m) =>
+    private const float WatermarkAngle = -45;
+    private const float WatermarkWidth = 560;
+    private const float WatermarkHeight = 240;
+    private const string WatermarkColor = "#4D808080";
+
+    public static byte[] Render(DocumentPdfModel m) => Render(m, null);
+
+    public static byte[] Render(DocumentPdfModel m, DocumentWatermark? watermark) =>
         Document.Create(container => container.Page(page =>
         {
             page.Size(PageSizes.A4);
             page.Margin(2, QuestPDF.Infrastructure.Unit.Centimetre);
             page.DefaultTextStyle(t => t.FontSize(11));
+
+            if (watermark is not null)
+            {
+                // The page's foreground repeats on every page. Moved to the page's centre, rotated there, and the text
+                // block centred on that point; Unconstrained lets the rotated block pass the page's width.
+                page.Foreground().TranslateX(PageSizes.A4.Width / 2).TranslateY(PageSizes.A4.Height / 2).Rotate(WatermarkAngle)
+                    .TranslateX(-WatermarkWidth / 2).TranslateY(-WatermarkHeight / 2).Unconstrained().Width(WatermarkWidth).Height(WatermarkHeight)
+                    .AlignMiddle().Text(t =>
+                    {
+                        t.AlignCenter();
+                        t.DefaultTextStyle(s => s.FontSize(20).FontColor(WatermarkColor));
+                        t.Line($"Compartilhado com {watermark.RecipientName}");
+                        t.Span(Local(watermark.OpenedAt).ToString("dd/MM/yyyy HH:mm", PtBr));
+                    });
+            }
 
             page.Content().PaddingVertical(12).Column(col =>
             {

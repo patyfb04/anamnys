@@ -182,7 +182,8 @@ public static class DiscardService
         return sb.ToString().Normalize(NormalizationForm.FormC).ToLowerInvariant();
     }
 
-    // Stored objects of the rows about to be deleted: note and document PDFs, external documents, dossiers.
+    // Stored objects of the rows about to be deleted: note and document PDFs, external documents, dossiers, attached
+    // disclosure terms.
     private static Task<List<string>> ObjectKeysAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken ct) =>
         db.Database.SqlQuery<string>($"""
             SELECT "PdfObjectKey" AS "Value" FROM "Notes" WHERE "PatientId" = {patientId} AND "ProviderId" = {providerId} AND "PdfObjectKey" IS NOT NULL
@@ -192,6 +193,8 @@ public static class DiscardService
             SELECT "ObjectKey" FROM "ExternalDocuments" WHERE "PatientId" = {patientId} AND "ProviderId" = {providerId} AND "ObjectKey" IS NOT NULL
             UNION
             SELECT "ObjectKey" FROM "Dossiers" WHERE "PatientId" = {patientId} AND "ObjectKey" IS NOT NULL
+            UNION
+            SELECT "TermObjectKey" FROM "DisclosureAuthorizations" WHERE "PatientId" = {patientId} AND "ProviderId" = {providerId} AND "TermObjectKey" IS NOT NULL
             """).ToListAsync(ct);
 
     // Children first, so no RESTRICT foreign key stops a parent; each count goes into the term. Rows that only

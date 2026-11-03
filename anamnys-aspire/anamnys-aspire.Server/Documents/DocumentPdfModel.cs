@@ -8,6 +8,9 @@ public sealed record DocumentPdfSection(string? Heading, string Text);
 // The identification block depends on the kind (spec 2026-10-20, section 6).
 public sealed record DocumentPdfLine(string Label, string Value);
 
+// Drawn on every page of a shared opening (design/specs/2026-11-01-protected-sharing-design.md §1). Never on an export.
+public sealed record DocumentWatermark(string RecipientName, DateTimeOffset OpenedAt);
+
 public sealed record DocumentPdfModel(
     string Title, string ProviderName, string Crp, string PatientName,
     string? IdentificationHeading, IReadOnlyList<DocumentPdfLine> Identification,

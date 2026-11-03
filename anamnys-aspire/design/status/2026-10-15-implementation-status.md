@@ -76,7 +76,8 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-17, F-18 | schema only | `DisclosureAuthorizations`, `ShareLinks`, `ShareAccesses` |
+| F-17 Autorização de divulgação | done | The provider records, for a signed issued document, the recipient (name, role), purpose, authorization date, how it was obtained (verbal in session, signed term, in writing), an optional attached term (PDF/JPG/PNG, ClamAV-scanned before storing, readable again, audited) and an explicit confirmation. One authorization per document, recipient and purpose. No link without it. Migration `2026-11-01-protected-sharing.sql` must be applied to any persistent environment (re-run where an earlier version was applied: it added `disclosure_term_opened`). `Sharing/`, `documentation/37-protected-sharing.md`. Build and lint only for the UI; see the gaps file. |
+| F-18 Link protegido | done | Signed issued documents only. Opaque 256-bit token (stored as SHA-256), system password shown once (Argon2id 19 MiB, t=2, p=1), expiry 7 days by default and 30 at most, optional view cap, download off by default. Public page `/patient/s/{token}`, `noindex`, no login. Unknown, expired, revoked, capped and blocked links answer the same 404; five wrong passwords block the link; rate limits per client and global, at most 4 Argon2 derivations at once (429 `busy`). Watermark with recipient name and time on every page. A corrected document keeps the shared version and gets no new link. Access log with time, outcome and user agent (no geolocation, no IP). Revocation is immediate; discard removes everything. New settings: AppHost `patient-portal-url` (required outside Development), `ForwardedHeaders:KnownProxies`; proxy logs must scrub `/s/`. Build and lint only for the UI; see the gaps file. |
 
 ### F · Convênios
 
@@ -148,7 +149,7 @@ the schema still carries every table, but only the features below have code.
 | 14 Lembrete | partial (e-mail, not WhatsApp) |
 | 15, 16 | not started |
 | 17 Sala própria | not started (D-06) |
-| 18 | not started |
+| 18 Compartilhamento protegido | built (F-17, F-18): authorization record, tokenized link with separate password, watermarked PDF, access log, revocation |
 | 19 Guarda e descarte | built (F-06) |
 | 20 … 22 | not started |
 | 23 Exportar conta | done for active accounts (F-60); the 60-day window after cancellation and the deletion wait for F-57 |
@@ -170,8 +171,8 @@ Everything that does not depend on subscription and billing comes first; billing
 1. **Close groups A and B first (user, 2026-10-27):** ~~F-04 (attendance statistics)~~ done, ~~F-06 (retention panel)~~ done; groups A and B are closed.
    **Analyses (group D) closed:** ~~F-10 (aggregation layer)~~, ~~F-11 (theme timeline)~~, ~~F-12 (absence
    detection)~~, ~~F-13 (scale trajectory with events)~~ and ~~F-14 (plan adherence and follow-ups)~~ and ~~F-15 (patient quotes)~~ done.
-2. ~~F-16 (natural-language search)~~ done; F-17/F-18
-   (protected sharing); F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
+2. ~~F-16 (natural-language search)~~ done; ~~F-17/F-18 (protected sharing)~~ done;
+   F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
    month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
 3. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
 4. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
@@ -199,3 +200,4 @@ Verified 2026-10-30 (F-14): full suite 1591 total, 0 failed, 3 skipped, after th
 Verified 2026-10-31 (F-15): full suite 1623 total, 0 failed, 3 skipped; provider build and lint clean after the review fixes. `2026-10-30-patient-quotes.sql` must be applied to any persistent environment. From this delivery the analysis queries ignore theme tags with no reference (F-03 rule), and writes that create a reference take the patient row before the note lock so a discard cannot leave one behind. Merged into develop on 2026-10-31 (commit ed0560d).
 2026-10-31 (Análises page polish, frontend only): every card collapses, boxed anchors at the top open and scroll to a card, each open card ends with "Voltar ao topo", the patient name is a bold heading smaller than the page title. Provider build and lint clean; no server or test change.
 Verified 2026-10-31 (F-16): full suite 1691 total, 0 failed, 3 skipped; provider build and lint clean after the final review fixes. `2026-10-31-record-search.sql` must be applied to any persistent environment (it needs the `unaccent` extension). Search results page 5 at a time on the server; the anchors on the Análises page share one row on wide screens. Suite re-run after this: 1691 total, 0 failed, 3 skipped. Merged into develop on 2026-11-01 (commit 7552df3).
+Verified 2026-11-02 (F-17 + F-18): full suite 1779 total, 0 failed, 3 skipped, after the security and final review fixes; provider and patient build and lint clean. `2026-11-01-protected-sharing.sql` must be applied to any persistent environment (re-run where an earlier version was applied). Publishing now needs the AppHost parameter `patient-portal-url`; see chapter 20 for `ForwardedHeaders:KnownProxies`, proxy log scrubbing and the SPA deep-link fallback. Merged into develop on 2026-11-02 (commit 96f9bda).

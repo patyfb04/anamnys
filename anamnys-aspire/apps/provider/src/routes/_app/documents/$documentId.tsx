@@ -13,6 +13,7 @@ import ConformityPanel from "@/components/documents/ConformityPanel";
 import DocumentHelpPanel from "@/components/documents/DocumentHelpPanel";
 import DocumentStatusBadge from "@/components/documents/DocumentStatusBadge";
 import TeamEditor from "@/components/documents/TeamEditor";
+import SharesCard from "@/components/sharing/SharesCard";
 
 export const Route = createFileRoute("/_app/documents/$documentId")({
   component: DocumentPage,
@@ -265,6 +266,7 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
               }}
             />
           )}
+          <SharesCard documentId={detail.id} />
         </div>
       </div>
 

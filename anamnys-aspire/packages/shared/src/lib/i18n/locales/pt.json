@@ -426,6 +426,118 @@
     "leave": "Sair",
     "correctFailed": "Não foi possível criar a versão corrigida."
   },
+  "sharing": {
+    "title": "Compartilhamento",
+    "share": "Compartilhar",
+    "blocked": {
+      "not_signed": "Só documentos assinados podem ser compartilhados.",
+      "document_superseded": "Este documento foi substituído por uma versão mais nova; não é possível criar novos compartilhamentos a partir dele.",
+      "archived": "Paciente arquivado: não é possível criar novos compartilhamentos. Os links existentes continuam valendo até expirar."
+    },
+    "obtainedVia": {
+      "verbal_session": "Verbalmente, em sessão",
+      "signed_term": "Termo assinado",
+      "in_writing": "Por escrito"
+    },
+    "status": {
+      "active": "Ativo",
+      "revoked": "Revogado",
+      "blocked": "Bloqueado por senha incorreta",
+      "expired": "Expirado",
+      "capped": "Limite de visualizações atingido"
+    },
+    "outcome": {
+      "opened": "Aberto",
+      "bad_password": "Senha incorreta",
+      "expired": "Tentativa após expirar",
+      "revoked": "Tentativa após revogação",
+      "cap_reached": "Tentativa após o limite de visualizações",
+      "blocked": "Tentativa com o link bloqueado"
+    },
+    "authorization": {
+      "title": "Compartilhar: autorização do paciente (passo 1 de 3)",
+      "intro": "Registre a autorização do paciente antes de compartilhar este documento. Sem esse registro não é possível criar um link.",
+      "recipientName": "Nome do destinatário",
+      "recipientRole": "Função do destinatário",
+      "purpose": "Finalidade do compartilhamento",
+      "authorizedAt": "Data da autorização",
+      "obtainedVia": "Como a autorização foi obtida",
+      "choose": "Selecione",
+      "term": "Termo de autorização (opcional)",
+      "termHint": "PDF, JPG ou PNG, até 20 MB.",
+      "confirm": "Confirmo que o paciente autorizou o compartilhamento deste documento com este destinatário, para esta finalidade.",
+      "submit": "Registrar autorização",
+      "failed": "Não foi possível registrar a autorização."
+    },
+    "link": {
+      "title": "Compartilhar: opções do link (passo 2 de 3)",
+      "recipient": "Destinatário:",
+      "reused": "Já havia uma autorização registrada para este destinatário e esta finalidade. Ela foi mantida; os dados e o termo informados agora não foram guardados.",
+      "expiresInDays": "Validade (dias)",
+      "expiresInvalid": "Informe de 1 a {{max}} dias.",
+      "viewCap": "Limite de visualizações (opcional)",
+      "viewCapNone": "Sem limite",
+      "viewCapInvalid": "Informe um número a partir de 1.",
+      "download": "Permitir o download do PDF",
+      "watermarkHint": "Cada abertura gera o PDF com o nome do destinatário, a data e a hora em todas as páginas.",
+      "submit": "Criar link",
+      "busy": "Não foi possível criar o link agora. Tente de novo em instantes.",
+      "failed": "Não foi possível criar o link."
+    },
+    "result": {
+      "title": "Compartilhar: link criado (passo 3 de 3)",
+      "link": "Link",
+      "password": "Senha",
+      "copy": "Copiar",
+      "linkCopied": "Link copiado.",
+      "passwordCopied": "Senha copiada.",
+      "copyFailed": "Não foi possível copiar. Selecione o texto e copie manualmente.",
+      "expires": "Válido até {{date}}.",
+      "channels": "Envie o link e a senha por canais diferentes: por exemplo, o link por e-mail e a senha por telefone.",
+      "once": "A senha não será mostrada de novo. Se ela se perder, revogue este link e crie outro.",
+      "closeWarning": "Ao fechar, a senha não poderá mais ser vista. Copie-a antes; para fechar assim mesmo, tente de novo.",
+      "done": "Concluir"
+    },
+    "list": {
+      "empty": "Este documento ainda não foi compartilhado.",
+      "loadFailed": "Não foi possível carregar os compartilhamentos.",
+      "newerVersion": "Existe uma versão mais nova deste documento. Os links abaixo continuam mostrando esta versão.",
+      "authorized": "Autorizado em {{date}} · {{via}}",
+      "openTerm": "Abrir termo anexado",
+      "termFailed": "Não foi possível abrir o termo.",
+      "newLink": "Novo link",
+      "expires": "Expira em {{date}}",
+      "views_one": "{{count}} visualização",
+      "views_other": "{{count}} visualizações",
+      "viewsCapped": "{{used}} de {{cap}} visualizações",
+      "downloadOn": "Download permitido",
+      "downloadOff": "Sem download",
+      "accesses_one": "{{count}} acesso",
+      "accesses_other": "{{count}} acessos",
+      "accessesNewest": "Últimos {{shown}} de {{total}}.",
+      "noAccesses": "Nenhum acesso registrado.",
+      "revoke": "Revogar",
+      "revokeTitle": "Revogar este link?",
+      "revokeBody": "O link deixa de funcionar imediatamente. Esta ação não pode ser desfeita.",
+      "revoked": "Link revogado.",
+      "revokeFailed": "Não foi possível revogar o link."
+    },
+    "public": {
+      "title": "Documento compartilhado",
+      "checking": "Verificando o link…",
+      "intro": "Informe a senha recebida separadamente para abrir o documento.",
+      "password": "Senha",
+      "open": "Abrir documento",
+      "opening": "Abrindo…",
+      "failed": "Link indisponível ou senha incorreta.",
+      "failedHint": "Confira o link e a senha recebidos ou fale com quem enviou.",
+      "transient": "Não foi possível abrir agora. Tente de novo em instantes.",
+      "viewerHint": "Documento confidencial. Recarregar a página pede a senha de novo e conta como nova visualização.",
+      "download": "Baixar PDF",
+      "noViewer": "Este navegador não consegue exibir o PDF nesta página. Tente em um computador ou em outro navegador.",
+      "noViewerDownload": "Este navegador não consegue exibir o PDF nesta página. Use o botão Baixar PDF."
+    }
+  },
   "scales": {
     "title": "Escalas",
     "sessionTitle": "Escalas desta sessão",

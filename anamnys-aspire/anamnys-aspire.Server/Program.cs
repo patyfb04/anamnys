@@ -22,6 +22,7 @@ using Anamnys.Server.Analysis;
 using Anamnys.Server.Attendance;
 using Anamnys.Server.Medications;
 using Anamnys.Server.Scales;
+using Anamnys.Server.Sharing;
 using Anamnys.Server.Storage;
 using Anamnys.Server.Themes;
 using Microsoft.AspNetCore.Authentication;
@@ -62,9 +63,11 @@ builder.Services.AddRateLimiter(o =>
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy(ConfirmationEndpoints.RateLimitPolicy, http =>
         RateLimitPartition.GetFixedWindowLimiter(
-            http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            ShareNetwork.PartitionKey(http.Connection.RemoteIpAddress),
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+    o.AddShareRateLimits();
 });
+builder.Services.AddSingleton(new ShareAttemptLimiter());
 
 // Add services to the container.
 builder.Services.AddExceptionHandler<DiscardedPatientExceptionHandler>();
@@ -84,6 +87,10 @@ if (app.Services.GetService<IEmailSender>() is not null
         "PatientPortal:BaseUrl must be set when an e-mail sender is configured (Email:Provider).");
 }
 
+// Share links are handed to providers built from this value, never from a request's Host header.
+ShareNetwork.RequirePortalUrl(app.Environment.IsDevelopment(), app.Configuration["PatientPortal:BaseUrl"]);
+await ShareSecrets.WarmAsync();
+
 // Fails closed outside Development if either dev-only Keycloak service-account
 // client (anamnys-test-provider, anamnys-test-owner) still exists in its realm.
 // Those clients carry a literal, publicly-known secret because the real BFF
@@ -102,6 +109,7 @@ using (var gateTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
 }
 
 // Configure the HTTP request pipeline.
+app.UseForwardedClientAddress();
 app.UseExceptionHandler();
 
 app.UseAuthentication();
@@ -171,7 +179,9 @@ phi.MapRecordSearchEndpoints();
 phi.MapRetentionEndpoints();
 phi.MapDiscardEndpoints();
 phi.MapProviderNotificationEndpoints();
+phi.MapShareEndpoints();
 app.MapConfirmationEndpoints(phi);
+app.MapPublicShareEndpoints();
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401
@@ -191,5 +201,12 @@ app.MapLiveSessionHubs();
 app.MapDefaultEndpoints();
 
 app.UseFileServer();
+
+// Published builds serve each SPA from wwwroot/<app>; a deep link (/patient/s/{token}, /patient/convite/..., a provider
+// route after a reload) has no file, so it falls back to that app's index.html. API routes are matched before the fallback
+// and keep their 404s. In development the apps are Vite dev servers and these files don't exist, so the fallback is inert.
+app.MapFallbackToFile("provider/{**path}", "provider/index.html");
+app.MapFallbackToFile("patient/{**path}", "patient/index.html");
+app.MapFallbackToFile("admin/{**path}", "admin/index.html");
 
 app.Run();
