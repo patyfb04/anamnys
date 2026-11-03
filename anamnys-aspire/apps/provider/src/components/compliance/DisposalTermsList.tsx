@@ -1,6 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { complianceApi } from "@anamnys/shared/api/compliance";
+import { Pager } from "@/components/compliance/Pager";
+import { usePaged } from "@/components/compliance/usePaged";
 import { toast } from "@anamnys/shared/ui/Toaster";
 
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -31,6 +33,8 @@ export default function DisposalTermsList() {
     onError: () => toast.error(t("compliance.terms.openFailed")),
   });
 
+  const paged = usePaged(data ?? []);
+
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-title-md text-onSurface">{t("compliance.terms.title")}</h2>
@@ -39,8 +43,9 @@ export default function DisposalTermsList() {
       ) : data.length === 0 ? (
         <p className="text-body-md text-onSurfaceVariant">{t("compliance.terms.empty")}</p>
       ) : (
+        <>
         <ul className="flex flex-col divide-y divide-outlineVariant rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest">
-          {data.map((term) => (
+          {paged.shown.map((term) => (
             <li key={term.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-body-md text-onSurface">
               <span>
                 {t("compliance.terms.item", {
@@ -59,6 +64,8 @@ export default function DisposalTermsList() {
             </li>
           ))}
         </ul>
+        <Pager paged={paged} />
+        </>
       )}
     </section>
   );

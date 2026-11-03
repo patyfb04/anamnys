@@ -7,6 +7,8 @@ import { documentsApi } from "@anamnys/shared/api/documents";
 import type { RetentionItem } from "@anamnys/shared/lib/types";
 import DiscardDialog from "@/components/compliance/DiscardDialog";
 import DisposalTermsList from "@/components/compliance/DisposalTermsList";
+import { Pager } from "@/components/compliance/Pager";
+import { usePaged } from "@/components/compliance/usePaged";
 
 export const Route = createFileRoute("/_app/compliance")({
   component: CompliancePage,
@@ -16,14 +18,21 @@ const instantFormat = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: 
 // yyyy-MM-dd calendar dates are shown as written, without a time zone shift.
 const day = (iso: string) => iso.split("-").reverse().join("/");
 
-function Block({ title, empty, isEmpty, children }: { title: string; empty: string; isEmpty: boolean; children: ReactNode }) {
+// One block of the panel, five rows per page.
+function Block<T>({ title, empty, items, row }: { title: string; empty: string; items: T[]; row: (item: T) => ReactNode }) {
+  const paged = usePaged(items);
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-title-md text-onSurface">{title}</h2>
-      {isEmpty ? (
+      {items.length === 0 ? (
         <p className="text-body-md text-onSurfaceVariant">{empty}</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-outlineVariant rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest">{children}</ul>
+        <>
+          <ul className="flex flex-col divide-y divide-outlineVariant rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest">
+            {paged.shown.map(row)}
+          </ul>
+          <Pager paged={paged} />
+        </>
       )}
     </section>
   );
@@ -55,8 +64,7 @@ function CompliancePage() {
         </p>
       ) : (
         <>
-          <Block title={t("compliance.unsigned.title")} empty={t("compliance.unsigned.empty")} isEmpty={data.unsignedNotes.length === 0}>
-            {data.unsignedNotes.map((n) => (
+          <Block title={t("compliance.unsigned.title")} empty={t("compliance.unsigned.empty")} items={data.unsignedNotes} row={(n) => (
               <li key={n.noteId} className={rowClass}>
                 <span>
                   <Link to="/patients/$patientId" params={{ patientId: n.patientId }} className="hover:underline">
@@ -69,11 +77,9 @@ function CompliancePage() {
                   {t("compliance.unsigned.open")}
                 </Link>
               </li>
-            ))}
-          </Block>
+            )} />
 
-          <Block title={t("compliance.retention.title")} empty={t("compliance.retention.empty")} isEmpty={data.retention.length === 0}>
-            {data.retention.map((r) => (
+          <Block title={t("compliance.retention.title")} empty={t("compliance.retention.empty")} items={data.retention} row={(r) => (
               <li key={r.patientId} className={rowClass}>
                 <span className="flex flex-col">
                   <Link to="/patients/$patientId" params={{ patientId: r.patientId }} className="self-start hover:underline">
@@ -101,12 +107,10 @@ function CompliancePage() {
                   </span>
                 )}
               </li>
-            ))}
-          </Block>
+            )} />
 
-          <Block title={t("compliance.documents.title")} empty={t("compliance.documents.empty")} isEmpty={data.documents.length === 0}>
-            {data.documents.map((d) => (
-              <li key={d.documentId} className={rowClass}>
+          <Block title={t("compliance.documents.title")} empty={t("compliance.documents.empty")} items={data.documents} row={(d) => (
+              <li key={d.documentId} className="flex flex-col items-start gap-2 px-4 py-3 text-body-md text-onSurface">
                 <span className="flex flex-col">
                   <span>
                     <Link to="/patients/$patientId" params={{ patientId: d.patientId }} className="hover:underline">
@@ -125,8 +129,7 @@ function CompliancePage() {
                   {t("compliance.documents.open")}
                 </Link>
               </li>
-            ))}
-          </Block>
+            )} />
         </>
       )}
 

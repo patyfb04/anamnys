@@ -524,7 +524,6 @@ Protected sharing (F-17 + F-18; chapter `documentation/37-protected-sharing.md`)
 
 - **No geolocation, by decision.** The access log keeps time, outcome and user agent; no IP is stored. Sending an IP to a third party would be a new disclosure, and a local database needs a licence and updates. `ShareAccesses.CoarseGeo` stays unused.
 - **Download off does not prevent copying.** The PDF bytes reach the browser either way; the watermark is the real deterrent, and `#toolbar=0` is cosmetic.
-- **Android Chrome does not render the PDF in `<object>` with download off** (iOS may show only the first page). The recipient sees a fallback message and that opening already used a view. Decision pending: a pdf.js viewer (new dependency).
 - **The SPA deep-link fallback is not exercised in a published build.** `Program.cs` now falls back to each app's `index.html` (provider, patient, admin); no automated test serves a published wwwroot. Confirm once at publish.
 - **Forwarded headers were not tested with a real proxy.** `ForwardedHeaders:KnownProxies` and the startup checks are unit-tested only.
 - **Wrong passwords accumulate with no reset, by decision.** Five over the life of the link block it, even if a right password came in between.

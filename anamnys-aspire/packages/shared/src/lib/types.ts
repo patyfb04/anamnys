@@ -1111,6 +1111,36 @@ export interface DocumentShares {
   authorizations: DisclosureAuthorizationItem[];
 }
 
+/** One link in the provider's overview across documents (GET providers/me/shares). */
+export interface ShareOverviewItem {
+  linkId: string;
+  documentId: string;
+  documentKind: string;
+  signedAt: string;
+  patientId: string;
+  patientName: string;
+  recipientName: string;
+  recipientRole: string;
+  purpose: string;
+  createdAt: string;
+  expiresAt: string;
+  status: ShareLinkStatus;
+  viewsUsed: number;
+  viewCap: number | null;
+  downloadEnabled: boolean;
+  accessCount: number;
+  lastAccessAt: string | null;
+  /** The document has been corrected since: the link still shows this version. */
+  newerVersionExists: boolean;
+}
+
+export interface ShareOverviewPage {
+  items: ShareOverviewItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export interface DisclosureAuthorizationInput {
   recipientName: string;
   recipientRole: string;

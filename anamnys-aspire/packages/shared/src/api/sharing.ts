@@ -4,6 +4,7 @@ import type {
   CreateShareLinkRequest,
   DisclosureAuthorizationInput,
   DocumentShares,
+  ShareOverviewPage,
   SharedDocument,
 } from "@anamnys/shared/lib/types";
 
@@ -16,6 +17,11 @@ const UPLOAD_TIMEOUT_MS = 180_000;
 export const sharesApi = {
   list: async (documentId: string): Promise<DocumentShares> => {
     const { data } = await api.get<DocumentShares>(`${BASE}/documents/${documentId}/shares`);
+    return data;
+  },
+  /** Every link of the provider, newest first, 20 per page. Only status and page travel in the URL. */
+  overview: async (status: "active" | "all", page: number): Promise<ShareOverviewPage> => {
+    const { data } = await api.get<ShareOverviewPage>(`${BASE}/shares`, { params: { status, page } });
     return data;
   },
   // `existing` means this recipient and purpose already had an authorization: its id comes back

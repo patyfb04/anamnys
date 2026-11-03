@@ -13,6 +13,7 @@ public class ShareEndpointTests
 
     [Theory]
     [InlineData("GET", "/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000001/shares")]
+    [InlineData("GET", "/api/phi/providers/me/shares?status=all&page=1")]
     [InlineData("POST", "/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000001/disclosure-authorizations")]
     [InlineData("POST", "/api/phi/providers/me/documents/00000000-0000-0000-0000-000000000001/share-links")]
     [InlineData("POST", "/api/phi/providers/me/share-links/00000000-0000-0000-0000-000000000001/revoke")]

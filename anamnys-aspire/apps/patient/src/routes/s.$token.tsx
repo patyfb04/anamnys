@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Download } from "lucide-react";
 import { ApiError } from "@anamnys/shared/api/client";
 import { publicSharesApi } from "@anamnys/shared/api/sharing";
+import PdfPages from "@/components/sharing/PdfPages";
 import type { SharedDocument } from "@anamnys/shared/lib/types";
 
 // Public page outside the authenticated `_app` layout, for a recipient with no account. Plain
@@ -121,10 +122,11 @@ function SharedDocumentViewer({ shared }: { shared: SharedDocument }) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!shared.downloadName) return;
     const objectUrl = URL.createObjectURL(shared.blob);
     setUrl(objectUrl);
     return () => URL.revokeObjectURL(objectUrl);
-  }, [shared.blob]);
+  }, [shared.blob, shared.downloadName]);
 
   return (
     <div className="flex min-h-screen flex-col gap-3 bg-surfaceContainerLow p-4">
@@ -144,18 +146,7 @@ function SharedDocumentViewer({ shared }: { shared: SharedDocument }) {
           </a>
         )}
       </header>
-      {url && (
-        <object
-          data={shared.downloadName ? url : `${url}#toolbar=0`}
-          type="application/pdf"
-          aria-label={t("sharing.public.title")}
-          className="min-h-[80vh] w-full flex-1 rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest"
-        >
-          <p className="p-4 text-body-md text-onSurfaceVariant">
-            {t(shared.downloadName ? "sharing.public.noViewerDownload" : "sharing.public.noViewer")}
-          </p>
-        </object>
-      )}
+      <PdfPages blob={shared.blob} label={t("sharing.public.title")} />
     </div>
   );
 }
