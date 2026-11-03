@@ -124,7 +124,7 @@ function SecureSharingPage() {
                     {t(`sharing.status.${item.status}`)}
                   </span>
                   {active && (
-                    <button type="button" onClick={() => setRevoking(item.linkId)} className="text-label-lg text-error hover:underline">
+                    <button type="button" onClick={() => setRevoking(item.linkId)} className="inline-flex items-center gap-2 rounded-radii-md border border-error px-4 py-2 text-label-lg text-error hover:bg-pastelLavender">
                       {t("sharing.list.revoke")}
                     </button>
                   )}
