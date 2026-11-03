@@ -96,6 +96,21 @@ public static class ShareEndpoints
                 : Results.NotFound();
         });
 
+        // Query: status (active, the default, or all) and page. No patient or document data in the URL.
+        group.MapGet("shares", async (string? status, int? page, HttpContext http, AnamnysDbContext db, TimeProvider clock, CancellationToken ct) =>
+        {
+            if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
+            {
+                return Results.Unauthorized();
+            }
+            if (status is not (null or "active" or "all"))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Use active ou all."] });
+            }
+            http.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(await ShareService.ListOverviewAsync(db, providerId, status != "all", page ?? 1, clock.GetUtcNow(), ct));
+        });
+
         group.MapPost("documents/{documentId:guid}/disclosure-authorizations", async (
             Guid documentId, HttpContext http, AnamnysDbContext db, INoteFileStore store, IVirusScanner scanner, TimeProvider clock, CancellationToken ct) =>
         {

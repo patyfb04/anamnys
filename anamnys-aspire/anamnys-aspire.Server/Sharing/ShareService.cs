@@ -19,6 +19,8 @@ public static class ShareService
 
     public const int MaxWrongPasswords = 5;
     public const int MaxAccessesListed = 100;
+    public const int OverviewPageSize = 20;
+    public const int MaxOverviewPage = 10_000;
 
     public static string TermKeyFor(Guid providerId, Guid authorizationId) => $"disclosure-terms/{providerId}/{authorizationId}";
 
@@ -248,6 +250,52 @@ public static class ShareService
                 .ToList()))
             .ToList();
         return new DocumentShares(documentId, state == ShareOutcome.Ok, ReasonOf(state), document.SupersededBy, items);
+    }
+
+    // Every link of the provider across documents, newest first. "active" keeps the links that open now (the same rule as
+    // DeniedOutcome, written as a query). Discarded patients are left out. Counts come from one grouped query over this page only.
+    public static async Task<ShareOverviewPage> ListOverviewAsync(
+        AnamnysDbContext db, Guid providerId, bool activeOnly, int page, DateTimeOffset now, CancellationToken ct)
+    {
+        page = Math.Clamp(page, 1, MaxOverviewPage);
+        var query =
+            from l in db.ShareLinks.AsNoTracking()
+            join d in db.ClinicalDocuments.AsNoTracking() on l.DocumentId equals d.Id
+            join p in db.Patients.AsNoTracking() on d.PatientId equals p.Id
+            where d.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
+            select new { l, d, p };
+        if (activeOnly)
+        {
+            query = query.Where(x => x.l.RevokedAt == null && x.l.BlockedAt == null && x.l.ExpiresAt > now
+                && (x.l.ViewCap == null || x.l.ViewsUsed < x.l.ViewCap));
+        }
+        var total = await query.CountAsync(ct);
+        var rows = await (
+            from x in query
+            join a in db.DisclosureAuthorizations.AsNoTracking() on x.l.AuthorizationId equals a.Id
+            orderby x.l.CreatedAt descending, x.l.Id
+            select new
+            {
+                x.l, x.d.Kind, x.d.SignedAt, x.d.PatientId, x.p.FirstName, x.p.LastName, x.d.SupersededBy,
+                a.RecipientName, a.RecipientRole, a.Purpose,
+            }).Skip((page - 1) * OverviewPageSize).Take(OverviewPageSize).ToListAsync(ct);
+
+        var ids = rows.Select(r => r.l.Id).ToList();
+        var stats = await db.ShareAccesses.AsNoTracking()
+            .Where(a => ids.Contains(a.ShareLinkId))
+            .GroupBy(a => a.ShareLinkId)
+            .Select(g => new { LinkId = g.Key, Count = g.Count(), Last = g.Max(a => a.At) })
+            .ToDictionaryAsync(x => x.LinkId, ct);
+
+        var items = rows.Select(r =>
+        {
+            var seen = stats.GetValueOrDefault(r.l.Id);
+            return new ShareOverviewItem(
+                r.l.Id, r.l.DocumentId, r.Kind, r.SignedAt ?? r.l.CreatedAt, r.PatientId, $"{r.FirstName} {r.LastName}".Trim(),
+                r.RecipientName, r.RecipientRole, r.Purpose, r.l.CreatedAt, r.l.ExpiresAt, StatusOf(r.l, now),
+                r.l.ViewsUsed, r.l.ViewCap, r.l.DownloadEnabled, seen?.Count ?? 0, seen?.Last, r.SupersededBy is not null);
+        }).ToList();
+        return new ShareOverviewPage(items, total, page, OverviewPageSize);
     }
 
     // Readable while the record exists, also for an archived patient. The audit entry commits before the file leaves.

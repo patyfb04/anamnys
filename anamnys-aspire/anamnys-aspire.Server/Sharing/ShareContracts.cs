@@ -102,6 +102,15 @@ public sealed record AuthorizationItem(
 public sealed record DocumentShares(
     Guid DocumentId, bool CanShare, string? BlockedReason, Guid? SupersededBy, IReadOnlyList<AuthorizationItem> Authorizations);
 
+// One link in the provider's overview: the document and the patient it belongs to, the recipient it was authorized for,
+// and the counts. NewerVersionExists means the link keeps showing a document that has since been superseded.
+public sealed record ShareOverviewItem(
+    Guid LinkId, Guid DocumentId, string DocumentKind, DateTimeOffset SignedAt, Guid PatientId, string PatientName,
+    string RecipientName, string RecipientRole, string Purpose, DateTimeOffset CreatedAt, DateTimeOffset ExpiresAt, string Status,
+    int ViewsUsed, int? ViewCap, bool DownloadEnabled, int AccessCount, DateTimeOffset? LastAccessAt, bool NewerVersionExists);
+
+public sealed record ShareOverviewPage(IReadOnlyList<ShareOverviewItem> Items, int Total, int Page, int PageSize);
+
 public sealed record PublicShareCheckRequest(string? Token);
 
 public sealed record PublicShareOpenRequest(string? Token, string? Password);

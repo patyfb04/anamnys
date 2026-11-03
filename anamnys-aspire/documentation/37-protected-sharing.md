@@ -184,6 +184,7 @@ only):
 | Method and path | Body | Success | Errors |
 |---|---|---|---|
 | `GET documents/{documentId}/shares` | | 200 list | 401, 404 |
+| `GET shares?status=active|all&page=n` | | 200 overview page (section 13a) | 400, 401 |
 | `POST documents/{documentId}/disclosure-authorizations` | multipart: `recipientName`, `recipientRole`, `purpose`, `authorizedAt`, `obtainedVia`, `confirmed`, optional `term` | 201 `{ "id" }` | 400, 404, 409, 503 |
 | `POST documents/{documentId}/share-links` | `{ "authorizationId", "expiresInDays", "viewCap", "downloadEnabled" }` | 201 | 400, 404, 409, 429 |
 | `POST share-links/{linkId}/revoke` | | 204 (also when already revoked, audited once) | 404 |
@@ -249,13 +250,39 @@ purpose, date and how obtained, term mark), each link (status, expiry, views, do
 sends a plain date.
 
 Patient app, public route `/s/$token`: password form (an empty password is blocked in the form, because it counts as
-an attempt), `<object>` PDF viewer on an object URL revoked on cleanup, a download button only for `attachment`,
+an attempt), pdf.js viewer (`pdfjs-dist` 6.4.299) that draws every page on canvases with no text layer, so it works on any device including Android Chrome; an object URL exists only for the download button and is revoked on cleanup, a download button only for `attachment`,
 `noindex, nofollow` and `no-referrer` meta tags. It uses plain state, no query cache and no browser storage, and the
 password state is cleared before every request. A wrong password (403) and any dead link (404) show the same "Link indisponível ou senha incorreta."; a
 429, a network failure or a 5xx shows "Não foi possível abrir agora. Tente de novo em instantes." and keeps the form,
 which reveals nothing about the link. The download is built from the blob already in memory; `open` is never called a
-second time, because each call counts a view. With download off the viewer URL ends in `#toolbar=0` (a deterrent
-only). Copy is in `pt.json`.
+second time, because each call counts a view. Copy is in `pt.json`.
+
+### 13a. The overview page "Compartilhamento"
+
+Provider route `/secure-sharing` (the sidebar entry, feature flag `secureSharing`) lists every link the provider has
+created, across documents. Links are still created only from a signed document's page; the page says so and links
+back to the document.
+
+- Endpoint `GET /api/phi/providers/me/shares?status=active|all&page=n` (`ShareService.ListOverviewAsync`). `status`
+  defaults to `active` (any other value is a 400); `page` starts at 1 and is clamped to 1..10000. Page size is 20,
+  ordered by `createdAt` descending. Response: `{ items, total, page, pageSize }`.
+- Each item: `linkId`, `documentId`, `documentKind`, `signedAt`, `patientId`, `patientName`, `recipientName`,
+  `recipientRole`, `purpose`, `createdAt`, `expiresAt`, `status` (`active`, `expired`, `revoked`, `blocked`,
+  `capped`, from the same rule as the document page), `viewsUsed`, `viewCap`, `downloadEnabled`, `accessCount`,
+  `lastAccessAt` (the newest access of any outcome, null when none) and `newerVersionExists`.
+- Scoping: only documents and patients of the signed-in provider; links of discarded patients are left out (the discard
+  deletes them anyway). The `active` filter is a query over the same fields `DeniedOutcome` reads, so it agrees with
+  what the public route does. Queries are bounded: one count, one page (join of link, document, patient and
+  authorization) and one grouped count over the 20 links of the page.
+- Like the other listings it writes no audit entry and logs no names; the response is `no-store`. The URL carries
+  only `status` and `page`, never a patient, document or recipient.
+- Page: filter Ativos/Todos, one card per link (status badge, patient, document kind and date linking to
+  `/documents/$documentId`, recipient and role, purpose, created, expires, views, last access, a note when a newer
+  version exists), "Revogar" with the same confirmation as the document card on active links (it also refreshes the
+  document page's list), empty state and Anterior/Próxima paging. Filter and page live in the URL search
+  (`?status=all&page=2`). Copy is in `pt.json` under `sharing.overview`.
+- Tests: `ShareOverviewTests` (scoping and discarded patients, status filter, paging, counts and newer version) and
+  the 401 case in `ShareEndpointTests`.
 
 ---
 
@@ -294,12 +321,10 @@ The apps were checked with build and lint only, 0 errors and 0 warnings.
 
 - **Download off does not prevent copying.** The PDF bytes reach the browser either way; the watermark is the real
   deterrent.
-- **Android Chrome does not render a PDF in `<object>`** with download off, and iOS may show only the first page. The
-  recipient sees a fallback message and that opening already used a view. A pdf.js viewer would fix it; the decision
-  is pending.
-- **The deep-link fallback is unverified in a published build.** `Program.cs` serves the SPAs with `UseFileServer`
-  and has no explicit fallback, so a direct GET of `/patient/s/{token}` may answer 404. The sharing depends on it:
-  confirm at publish.
+- **The viewer is pdf.js (since 2026-11-02).** It replaced an `<object>` viewer that Android Chrome could not render with
+  download off. Pages are images on canvases; a recipient on a very large document may wait while all pages draw.
+- **The deep-link fallback is not exercised in a published build.** `Program.cs` falls back to each app's
+  `index.html`; confirm once at publish. The sharing depends on it.
 - **Forwarded headers were not tested with a real proxy.** The startup checks are unit-tested; `ForwardedHeaders`
   with `KnownProxies` is not exercised with a real header.
 - **Wrong passwords accumulate with no reset,** by decision; five over the life of the link block it.

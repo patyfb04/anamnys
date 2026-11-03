@@ -522,6 +522,29 @@
       "revoked": "Link revogado.",
       "revokeFailed": "Não foi possível revogar o link."
     },
+    "overview": {
+      "subtitle": "Os links são criados na página de um documento assinado. Aqui você acompanha todos eles e pode revogar os que não deseja mais.",
+      "filterLabel": "Filtrar links",
+      "filterActive": "Ativos",
+      "filterAll": "Todos",
+      "empty": "Nenhum link ativo. Para compartilhar, abra um documento assinado.",
+      "emptyAll": "Nenhum documento foi compartilhado ainda. Para compartilhar, abra um documento assinado.",
+      "loadFailed": "Não foi possível carregar os compartilhamentos.",
+      "patient": "Paciente",
+      "document": "Documento",
+      "recipient": "Destinatário",
+      "purpose": "Finalidade",
+      "created": "Criado em",
+      "expires": "Expira em",
+      "status": "Situação",
+      "views": "Visualizações",
+      "lastAccess": "Último acesso",
+      "noAccess": "Nenhum acesso",
+      "newerVersion": "Existe uma versão mais nova",
+      "previous": "Anterior",
+      "next": "Próxima",
+      "pageOf": "Página {{page}} de {{total}}"
+    },
     "public": {
       "title": "Documento compartilhado",
       "checking": "Verificando o link…",
@@ -534,6 +557,7 @@
       "transient": "Não foi possível abrir agora. Tente de novo em instantes.",
       "viewerHint": "Documento confidencial. Recarregar a página pede a senha de novo e conta como nova visualização.",
       "download": "Baixar PDF",
+      "pageLabel": "Página {{page}} de {{total}}",
       "noViewer": "Este navegador não consegue exibir o PDF nesta página. Tente em um computador ou em outro navegador.",
       "noViewerDownload": "Este navegador não consegue exibir o PDF nesta página. Use o botão Baixar PDF."
     }
@@ -1162,6 +1186,7 @@
     }
   },
   "compliance": {
+    "pager": { "previous": "Anteriores", "next": "Próximos", "range": "{{from}}–{{to}} de {{total}}" },
     "title": "Conformidade",
     "subtitle": "Notas sem assinatura, prazos de guarda e documentos com conformidade pendente, em ordem de data.",
     "loadFailed": "Não foi possível carregar o painel de conformidade.",
