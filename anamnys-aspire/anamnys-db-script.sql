@@ -107,7 +107,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text, 'plan_reviewed'::text, 'follow_up_created'::text, 'follow_up_resolved'::text, 'follow_up_reopened'::text, 'quote_recorded'::text, 'quote_removed'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text, 'plan_reviewed'::text, 'follow_up_created'::text, 'follow_up_resolved'::text, 'follow_up_reopened'::text, 'quote_recorded'::text, 'quote_removed'::text, 'disclosure_authorized'::text, 'share_link_created'::text, 'share_link_revoked'::text, 'disclosure_term_opened'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -301,7 +301,12 @@ CREATE TABLE "DisclosureAuthorizations" (
 	"RecipientRole" text NOT NULL,
 	"Purpose" text NOT NULL,
 	"AuthorizedAt" timestamp with time zone NOT NULL,
-	"RecordedBy" uuid NOT NULL
+	"RecordedBy" uuid NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"ObtainedVia" text NOT NULL,
+	"TermObjectKey" text,
+	"ConfirmedAt" timestamp with time zone NOT NULL,
+	CONSTRAINT "DisclosureAuthorizations_ObtainedVia_ck" CHECK (("ObtainedVia" = ANY (ARRAY['verbal_session'::text, 'signed_term'::text, 'in_writing'::text])))
 );
 CREATE TABLE "DisposalRecords" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -848,7 +853,7 @@ CREATE TABLE "ShareAccesses" (
 	"Outcome" text NOT NULL,
 	"CoarseGeo" text,
 	"UserAgent" text,
-	CONSTRAINT "ShareAccesses_Outcome_ck" CHECK (("Outcome" = ANY (ARRAY['opened'::text, 'bad_password'::text, 'expired'::text, 'revoked'::text, 'cap_reached'::text])))
+	CONSTRAINT "ShareAccesses_Outcome_ck" CHECK (("Outcome" = ANY (ARRAY['opened'::text, 'bad_password'::text, 'expired'::text, 'revoked'::text, 'cap_reached'::text, 'blocked'::text])))
 );
 CREATE TABLE "ShareLinks" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -862,8 +867,12 @@ CREATE TABLE "ShareLinks" (
 	"DownloadEnabled" boolean DEFAULT false NOT NULL,
 	"RevokedAt" timestamp with time zone,
 	"CreatedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"WrongPasswordCount" integer DEFAULT 0 NOT NULL,
+	"BlockedAt" timestamp with time zone,
 	CONSTRAINT "ShareLinks_Expiry_ck" CHECK ((("ExpiresAt" > "CreatedAt") AND ("ExpiresAt" <= ("CreatedAt" + '30 days'::interval)))),
-	CONSTRAINT "ShareLinks_ViewCap_ck" CHECK ((("ViewCap" IS NULL) OR ("ViewCap" > 0)))
+	CONSTRAINT "ShareLinks_ViewCap_ck" CHECK ((("ViewCap" IS NULL) OR ("ViewCap" > 0))),
+	CONSTRAINT "ShareLinks_ViewsUsed_ck" CHECK ((("ViewsUsed" >= 0) AND (("ViewCap" IS NULL) OR ("ViewsUsed" <= "ViewCap")))),
+	CONSTRAINT "ShareLinks_WrongPasswordCount_ck" CHECK ((("WrongPasswordCount" >= 0) AND ("WrongPasswordCount" <= 5)))
 );
 CREATE TABLE "SpecialistTitles" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1039,6 +1048,7 @@ CREATE INDEX "ContactMessages_CreatedAt_idx" ON "ContactMessages" ("CreatedAt");
 CREATE INDEX "DenialFlags_GuideId_idx" ON "DenialFlags" ("GuideId");
 CREATE INDEX "Denials_ReasonCode_idx" ON "Denials" ("ReasonCode");
 CREATE INDEX "DisclosureAuthorizations_DocumentId_idx" ON "DisclosureAuthorizations" ("DocumentId");
+CREATE UNIQUE INDEX "DisclosureAuthorizations_Recipient_key" ON "DisclosureAuthorizations" ("DocumentId", lower("RecipientName"), lower("RecipientRole"), lower("Purpose"));
 CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
 CREATE INDEX "DisposalTerms_Provider_Created_idx" ON "DisposalTerms" ("ProviderId", "CreatedAt" DESC);
 CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
@@ -1130,6 +1140,7 @@ ALTER TABLE "DenialFlags" ADD CONSTRAINT "DenialFlags_GuideId_fkey" FOREIGN KEY 
 ALTER TABLE "Denials" ADD CONSTRAINT "Denials_GuideId_fkey" FOREIGN KEY ("GuideId") REFERENCES "TissGuides"("Id") ON DELETE CASCADE;
 ALTER TABLE "DisclosureAuthorizations" ADD CONSTRAINT "DisclosureAuthorizations_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE CASCADE;
 ALTER TABLE "DisclosureAuthorizations" ADD CONSTRAINT "DisclosureAuthorizations_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
+ALTER TABLE "DisclosureAuthorizations" ADD CONSTRAINT "DisclosureAuthorizations_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "DisposalRecords" ADD CONSTRAINT "DisposalRecords_DocumentId_fkey" FOREIGN KEY ("DocumentId") REFERENCES "ClinicalDocuments"("Id") ON DELETE SET NULL;
 ALTER TABLE "DisposalRecords" ADD CONSTRAINT "DisposalRecords_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
 ALTER TABLE "DisposalTerms" ADD CONSTRAINT "DisposalTerms_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;

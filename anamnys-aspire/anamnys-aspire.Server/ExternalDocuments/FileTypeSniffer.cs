@@ -12,6 +12,12 @@ public static class FileTypeSniffer
     private static readonly byte[] Jpeg = [0xFF, 0xD8, 0xFF];
     private static readonly byte[] Png = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
+    public static string? MimeTypeOf(ReadOnlySpan<byte> content) =>
+        content.StartsWith(Pdf) ? "application/pdf"
+        : content.StartsWith(Jpeg) ? "image/jpeg"
+        : content.StartsWith(Png) ? "image/png"
+        : null;
+
     public static SniffResult Sniff(string fileName, ReadOnlySpan<byte> content)
     {
         if (content.IsEmpty)

@@ -1063,3 +1063,83 @@ export interface RecordSearchResult {
   page: number;
   pageSize: number;
 }
+
+export type ShareBlockedReason = "not_signed" | "document_superseded" | "archived";
+export type DisclosureObtainedVia = "verbal_session" | "signed_term" | "in_writing";
+export type ShareLinkStatus = "active" | "revoked" | "blocked" | "expired" | "capped";
+export type ShareAccessOutcome = "opened" | "bad_password" | "expired" | "revoked" | "cap_reached" | "blocked";
+
+export interface ShareAccessItem {
+  at: string;
+  outcome: ShareAccessOutcome;
+  userAgent: string | null;
+}
+
+export interface ShareLinkItem {
+  id: string;
+  status: ShareLinkStatus;
+  createdAt: string;
+  expiresAt: string;
+  viewCap: number | null;
+  viewsUsed: number;
+  downloadEnabled: boolean;
+  revokedAt: string | null;
+  blockedAt: string | null;
+  /** Every access on record; `accesses` holds only the newest 100. */
+  accessCount: number;
+  /** Newest first. */
+  accesses: ShareAccessItem[];
+}
+
+export interface DisclosureAuthorizationItem {
+  id: string;
+  recipientName: string;
+  recipientRole: string;
+  purpose: string;
+  authorizedAt: string;
+  obtainedVia: DisclosureObtainedVia;
+  hasTerm: boolean;
+  links: ShareLinkItem[];
+}
+
+export interface DocumentShares {
+  documentId: string;
+  canShare: boolean;
+  blockedReason: ShareBlockedReason | null;
+  /** Set when a newer version of the document exists. */
+  supersededBy: string | null;
+  authorizations: DisclosureAuthorizationItem[];
+}
+
+export interface DisclosureAuthorizationInput {
+  recipientName: string;
+  recipientRole: string;
+  purpose: string;
+  /** yyyy-MM-dd */
+  authorizedAt: string;
+  obtainedVia: DisclosureObtainedVia;
+  term: File | null;
+}
+
+export interface CreateShareLinkRequest {
+  authorizationId: string;
+  expiresInDays: number;
+  viewCap: number | null;
+  downloadEnabled: boolean;
+}
+
+/** The only place the link and its password exist in clear: keep it out of any cache. */
+export interface CreatedShareLink {
+  id: string;
+  url: string;
+  password: string;
+  expiresAt: string;
+  viewCap: number | null;
+  downloadEnabled: boolean;
+}
+
+export interface SharedDocument {
+  blob: Blob;
+  /** File name for the download button; null when the provider did not allow downloading. */
+  downloadName: string | null;
+}

@@ -48,6 +48,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<DisposalTerm> DisposalTerms => Set<DisposalTerm>();
     public DbSet<FollowUpItem> FollowUpItems => Set<FollowUpItem>();
     public DbSet<PatientQuote> PatientQuotes => Set<PatientQuote>();
+    public DbSet<DisclosureAuthorization> DisclosureAuthorizations => Set<DisclosureAuthorization>();
+    public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
+    public DbSet<ShareAccess> ShareAccesses => Set<ShareAccess>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -326,6 +329,28 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
                     v => v.Aggregate(0, (h, m) => HashCode.Combine(h, m)),
                     v => v.ToList()));
             e.HasOne<ConformityRuleset>().WithMany().HasForeignKey(x => x.RulesetId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DisclosureAuthorization>(e =>
+        {
+            e.ToTable("DisclosureAuthorizations");
+            e.HasKey(x => x.Id);
+            e.HasOne<ClinicalDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShareLink>(e =>
+        {
+            e.ToTable("ShareLinks");
+            e.HasKey(x => x.Id);
+            e.HasOne<ClinicalDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<DisclosureAuthorization>().WithMany().HasForeignKey(x => x.AuthorizationId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ShareAccess>(e =>
+        {
+            e.ToTable("ShareAccesses");
+            e.HasKey(x => x.Id);
+            e.HasOne<ShareLink>().WithMany().HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ConformityCheck>(e =>
