@@ -20,8 +20,8 @@ export const sharesApi = {
     return data;
   },
   /** Every link of the provider, newest first, 20 per page. Only status and page travel in the URL. */
-  overview: async (status: "active" | "all", page: number): Promise<ShareOverviewPage> => {
-    const { data } = await api.get<ShareOverviewPage>(`${BASE}/shares`, { params: { status, page } });
+  overview: async (status: "active" | "all", page: number, patientId?: string): Promise<ShareOverviewPage> => {
+    const { data } = await api.get<ShareOverviewPage>(`${BASE}/shares`, { params: { status, page, patientId } });
     return data;
   },
   // `existing` means this recipient and purpose already had an authorization: its id comes back

@@ -255,7 +255,7 @@ public static class ShareService
     // Every link of the provider across documents, newest first. "active" keeps the links that open now (the same rule as
     // DeniedOutcome, written as a query). Discarded patients are left out. Counts come from one grouped query over this page only.
     public static async Task<ShareOverviewPage> ListOverviewAsync(
-        AnamnysDbContext db, Guid providerId, bool activeOnly, int page, DateTimeOffset now, CancellationToken ct)
+        AnamnysDbContext db, Guid providerId, bool activeOnly, int page, DateTimeOffset now, CancellationToken ct, Guid? patientId = null)
     {
         page = Math.Clamp(page, 1, MaxOverviewPage);
         var query =
@@ -264,6 +264,10 @@ public static class ShareService
             join p in db.Patients.AsNoTracking() on d.PatientId equals p.Id
             where d.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
             select new { l, d, p };
+        if (patientId is { } only)
+        {
+            query = query.Where(x => x.p.Id == only);
+        }
         if (activeOnly)
         {
             query = query.Where(x => x.l.RevokedAt == null && x.l.BlockedAt == null && x.l.ExpiresAt > now

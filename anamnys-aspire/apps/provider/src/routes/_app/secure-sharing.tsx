@@ -6,18 +6,21 @@ import { documentsApi } from "@anamnys/shared/api/documents";
 import { sharesApi } from "@anamnys/shared/api/sharing";
 import { toast } from "@anamnys/shared/ui/Toaster";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
+import PatientFilter from "@/components/sharing/PatientFilter";
 
 type Filter = "active" | "all";
 const FILTERS: Filter[] = ["active", "all"];
 const MAX_PAGE = 10_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const Route = createFileRoute("/_app/secure-sharing")({
-  // Only the filter and the page number in the URL (no PHI).
-  validateSearch: (search: Record<string, unknown>): { status: Filter; page: number } => {
+  // Only the filter, the page number and an opaque patient id in the URL (no PHI).
+  validateSearch: (search: Record<string, unknown>): { status: Filter; page: number; patientId?: string } => {
     const page = Number(search.page);
     return {
       status: search.status === "all" ? "all" : "active",
       page: Number.isInteger(page) && page >= 1 ? Math.min(page, MAX_PAGE) : 1,
+      patientId: typeof search.patientId === "string" && UUID.test(search.patientId) ? search.patientId : undefined,
     };
   },
   component: SecureSharingPage,
@@ -43,20 +46,35 @@ function SecureSharingPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { status, page } = Route.useSearch();
+  const { status, page, patientId } = Route.useSearch();
   const [revoking, setRevoking] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const shares = useQuery({
-    queryKey: ["shares-overview", status, page],
-    queryFn: () => sharesApi.overview(status, page),
+    queryKey: ["shares-overview", status, page, patientId],
+    queryFn: () => sharesApi.overview(status, page, patientId),
     placeholderData: keepPreviousData,
   });
   const kinds = useQuery({ queryKey: ["document-kinds"], queryFn: documentsApi.kinds });
   const kindTitle = (kind: string) => kinds.data?.find((k) => k.kind === kind)?.title ?? kind;
 
-  const go = (next: { status?: Filter; page?: number }) =>
-    void navigate({ to: "/secure-sharing", search: { status: next.status ?? status, page: next.page ?? 1 } });
+  const go = (next: { status?: Filter; page?: number; patientId?: string | null }) =>
+    void navigate({
+      to: "/secure-sharing",
+      search: {
+        status: next.status ?? status,
+        page: next.page ?? 1,
+        patientId: next.patientId === null ? undefined : (next.patientId ?? patientId),
+      },
+    });
+
+  const emptyKey = patientId
+    ? status === "active"
+      ? "sharing.overview.emptyPatient"
+      : "sharing.overview.emptyPatientAll"
+    : status === "active"
+      ? "sharing.overview.empty"
+      : "sharing.overview.emptyAll";
 
   const revoke = async () => {
     if (!revoking) return;
@@ -87,7 +105,11 @@ function SecureSharingPage() {
         <p className="text-body-md text-onSurfaceVariant">{t("sharing.overview.subtitle")}</p>
       </div>
 
-      <div role="group" aria-label={t("sharing.overview.filterLabel")} className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="min-w-0 flex-1">
+        <PatientFilter patientId={patientId} onChange={(id) => go({ patientId: id })} />
+      </div>
+      <div role="group" aria-label={t("sharing.overview.filterLabel")} className="flex shrink-0 flex-wrap gap-2">
         {FILTERS.map((f) => (
           <button
             key={f}
@@ -104,13 +126,14 @@ function SecureSharingPage() {
           </button>
         ))}
       </div>
+      </div>
 
       {shares.isPending ? null : shares.isError || !data ? (
         <p role="alert" className="text-body-md text-error">
           {t("sharing.overview.loadFailed")}
         </p>
       ) : data.items.length === 0 ? (
-        <p className="text-body-md text-onSurfaceVariant">{t(status === "active" ? "sharing.overview.empty" : "sharing.overview.emptyAll")}</p>
+        <p className="text-body-md text-onSurfaceVariant">{t(emptyKey)}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {data.items.map((item) => {

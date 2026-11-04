@@ -184,7 +184,7 @@ only):
 | Method and path | Body | Success | Errors |
 |---|---|---|---|
 | `GET documents/{documentId}/shares` | | 200 list | 401, 404 |
-| `GET shares?status=active|all&page=n` | | 200 overview page (section 13a) | 400, 401 |
+| `GET shares?status=active|all&page=n&patientId=` | | 200 overview page (section 13a) | 400, 401 |
 | `POST documents/{documentId}/disclosure-authorizations` | multipart: `recipientName`, `recipientRole`, `purpose`, `authorizedAt`, `obtainedVia`, `confirmed`, optional `term` | 201 `{ "id" }` | 400, 404, 409, 503 |
 | `POST documents/{documentId}/share-links` | `{ "authorizationId", "expiresInDays", "viewCap", "downloadEnabled" }` | 201 | 400, 404, 409, 429 |
 | `POST share-links/{linkId}/revoke` | | 204 (also when already revoked, audited once) | 404 |
@@ -263,8 +263,9 @@ Provider route `/secure-sharing` (the sidebar entry, feature flag `secureSharing
 created, across documents. Links are still created only from a signed document's page; the page says so and links
 back to the document.
 
-- Endpoint `GET /api/phi/providers/me/shares?status=active|all&page=n` (`ShareService.ListOverviewAsync`). `status`
-  defaults to `active` (any other value is a 400); `page` starts at 1 and is clamped to 1..10000. Page size is 20,
+- Endpoint `GET /api/phi/providers/me/shares?status=active|all&page=n&patientId=<id>` (`ShareService.ListOverviewAsync`).
+  `status` defaults to `active` (any other value is a 400); `page` starts at 1 and is clamped to 1..10000; the optional
+  `patientId` keeps only that patient's links, inside the provider's own scope (another provider's id returns nothing). Page size is 20,
   ordered by `createdAt` descending. Response: `{ items, total, page, pageSize }`.
 - Each item: `linkId`, `documentId`, `documentKind`, `signedAt`, `patientId`, `patientName`, `recipientName`,
   `recipientRole`, `purpose`, `createdAt`, `expiresAt`, `status` (`active`, `expired`, `revoked`, `blocked`,
@@ -275,13 +276,15 @@ back to the document.
   what the public route does. Queries are bounded: one count, one page (join of link, document, patient and
   authorization) and one grouped count over the 20 links of the page.
 - Like the other listings it writes no audit entry and logs no names; the response is `no-store`. The URL carries
-  only `status` and `page`, never a patient, document or recipient.
-- Page: filter Ativos/Todos, one card per link (status badge, patient, document kind and date linking to
+  only `status`, `page` and the opaque `patientId`, never a name, document or recipient.
+- Page: a patient search field (`PatientFilter`: type-ahead over the POST patient search from 2 characters, up to 8
+  suggestions; Enter or a click applies the highlighted one, the arrows move the highlight, editing the name or the X
+  clears the filter; the typed name never reaches the URL) next to the Ativos/Todos filter, one card per link (status badge, patient, document kind and date linking to
   `/documents/$documentId`, recipient and role, purpose, created, expires, views, last access, a note when a newer
   version exists), "Revogar" with the same confirmation as the document card on active links (it also refreshes the
   document page's list), empty state and Anterior/Próxima paging. Filter and page live in the URL search
-  (`?status=all&page=2`). Copy is in `pt.json` under `sharing.overview`.
-- Tests: `ShareOverviewTests` (scoping and discarded patients, status filter, paging, counts and newer version) and
+  (`?status=all&page=2&patientId=...`); with a patient chosen the empty state speaks of that patient. Copy is in `pt.json` under `sharing.overview`.
+- Tests: `ShareOverviewTests` (scoping and discarded patients, status filter, patient filter, paging, counts and newer version) and
   the 401 case in `ShareEndpointTests`.
 
 ---
