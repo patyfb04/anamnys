@@ -92,6 +92,27 @@ public class ShareOverviewTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task ListOverviewAsync_PatientFilter_KeepsOnlyThatPatientsLinks()
+    {
+        // Arrange
+        await using var s = await StartAsync();
+        var mine = await s.SharedAsync(Ct);
+        var second = await OtherAsync(s, s.Provider);
+        var secondLink = await second.SharedAsync(Ct);
+        await using var db = s.Db.CreateDbContext();
+
+        // Act
+        var first = await ShareService.ListOverviewAsync(db, s.Provider, false, 1, Now, Ct, s.Patient);
+        var both = await ShareService.ListOverviewAsync(db, s.Provider, false, 1, Now, Ct);
+
+        // Assert
+        first.Items.Select(i => i.LinkId).Should().BeEquivalentTo([mine.Id]);
+        first.Total.Should().Be(1);
+        both.Total.Should().Be(2);
+        both.Items.Select(i => i.LinkId).Should().Contain(secondLink.Id);
+    }
+
+    [Fact]
     public async Task ListOverviewAsync_Paging_NewestFirst_TwentyPerPage()
     {
         // Arrange

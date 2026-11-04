@@ -524,6 +524,12 @@
     },
     "overview": {
       "subtitle": "Os links são criados na página de um documento assinado. Aqui você acompanha todos eles e pode revogar os que não deseja mais.",
+      "patientFilter": "Paciente",
+      "patientSearch": "Buscar compartilhamentos por paciente...",
+      "patientNone": "Nenhum paciente encontrado.",
+      "emptyPatient": "Nenhum link ativo para este paciente.",
+      "emptyPatientAll": "Este paciente ainda não tem documentos compartilhados.",
+      "clearPatient": "Limpar filtro de paciente",
       "filterLabel": "Filtrar links",
       "filterActive": "Ativos",
       "filterAll": "Todos",
