@@ -90,6 +90,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 35. Patient Quotes (F-15)
 36. Record Search (F-16)
 37. Protected Sharing (F-17 + F-18)
+38. Document Integrity Chain (F-45)
 
 ## Building a single PDF from these files
 

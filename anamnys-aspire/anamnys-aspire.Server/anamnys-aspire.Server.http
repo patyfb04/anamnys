@@ -635,3 +635,21 @@ POST {{Server_HostAddress}}/api/public/shares/open
 Content-Type: application/json
 
 { "token": "token-da-url", "password": "senha-gerada" }
+
+###
+### F-45 integrity chain (design/specs/2026-11-03-integrity-chain-design.md §8). Every answer is Cache-Control: no-store and carries ids, dates and results only.
+### A signed note's seal. 200 { status: "intact" | "content_changed" | "chain_broken" | "unsealed" | "discarded", sealedAt, retroactive, anchored }; 401; 404 (unknown, another provider's, or not signed).
+GET {{Server_HostAddress}}/api/phi/notes/00000000-0000-0000-0000-000000000000/integrity
+
+###
+### A signed issued document's seal. Same answer as the note route.
+GET {{Server_HostAddress}}/api/phi/documents/00000000-0000-0000-0000-000000000000/integrity
+
+###
+### Verifies the provider's whole chain now (sequence, links, hashes, contents, timestamp tokens).
+### 200 { totalSeals, discarded, firstProblem: { sequence, subjectType, kind: "sequence_gap" | "chain_broken" | "content_changed" | "anchor_invalid" } | null, lastAnchor: { sequence, anchoredAt, tsaUrl } | null, verifiedAt }; 401.
+GET {{Server_HostAddress}}/api/phi/providers/me/integrity
+
+###
+### The verification report. 200 application/pdf, attachment "comprovante-integridade-<date>.pdf"; 401. Audited integrity_report_downloaded.
+GET {{Server_HostAddress}}/api/phi/providers/me/integrity/report.pdf

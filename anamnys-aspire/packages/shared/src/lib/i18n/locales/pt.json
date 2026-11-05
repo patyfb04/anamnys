@@ -1191,6 +1191,42 @@
       "totpAction": "Configurar 2FA"
     }
   },
+  "integrity": {
+    "badge": {
+      "intact": "Íntegro desde a assinatura em {{date}}",
+      "intactRetroactive": "Íntegro — selado em {{date}}",
+      "awaiting": "aguardando carimbo de tempo",
+      "contentChanged": "Conteúdo diferente do selado em {{date}}",
+      "chainBroken": "Sequência de selos interrompida (selado em {{date}})",
+      "seeCompliance": "Ver Conformidade"
+    },
+    "card": {
+      "title": "Integridade dos registros",
+      "loadFailed": "Não foi possível verificar a integridade agora.",
+      "state": "Estado da cadeia",
+      "intact": "Íntegra",
+      "problem": "Problema no selo nº {{sequence}} ({{subject}}): {{kind}}",
+      "problemNoSubject": "Problema no selo nº {{sequence}}: {{kind}}",
+      "subject": { "note": "nota", "document": "documento", "unknown": "registro" },
+      "kind": {
+        "sequence_gap": "selo ausente na sequência",
+        "chain_broken": "sequência interrompida",
+        "content_changed": "conteúdo diferente do selado",
+        "anchor_invalid": "carimbo de tempo não confere",
+        "unknown": "problema de integridade não identificado"
+      },
+      "total": "Registros selados",
+      "discarded": "{{count}} descartados conforme a guarda",
+      "lastAnchor": "Último carimbo de tempo",
+      "lastAnchorValue": "{{date}} — {{tsa}}",
+      "noAnchor": "Nenhum carimbo de tempo ainda",
+      "verifiedAt": "Verificado em {{date}}",
+      "verify": "Verificar agora",
+      "verifying": "Verificando…",
+      "download": "Baixar comprovante (PDF)",
+      "downloadFailed": "Não foi possível baixar o comprovante."
+    }
+  },
   "compliance": {
     "pager": { "previous": "Anteriores", "next": "Próximos", "range": "{{from}}–{{to}} de {{total}}" },
     "title": "Conformidade",
@@ -1267,6 +1303,7 @@
     "exportReady": "Sua exportação está pronta ({{when}})",
     "unsignedNote": "Nota sem assinatura de {{patient}}",
     "retentionDue": "Prazo de guarda do prontuário de {{patient}}",
+    "integrityProblem": "Problema de integridade nos registros: veja a Conformidade",
     "open": "Abrir avisos"
   },
   "settings": {

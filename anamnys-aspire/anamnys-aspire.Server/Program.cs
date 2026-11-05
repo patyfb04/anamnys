@@ -7,6 +7,7 @@ using Anamnys.Server.DocumentFacts;
 using Anamnys.Server.DocumentReading;
 using Anamnys.Server.Documents;
 using Anamnys.Server.Exports;
+using Anamnys.Server.Integrity;
 using Anamnys.Server.ExternalDocuments;
 using Anamnys.Server.Excerpts;
 using Anamnys.Server.Email;
@@ -45,6 +46,8 @@ builder.AddAccountExport();
 builder.AddExternalDocuments();
 builder.AddDocumentReading();
 builder.AddDocumentFacts();
+// F-45: TSA options (required outside Development), the timestamp authority and the retroactive sealing at startup.
+builder.AddIntegrity();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -55,6 +58,8 @@ if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
     builder.Services.AddHostedService<AppointmentNotificationWorker>();
     // The daily retention run creates bell notifications too (design/specs/2026-10-28-retention-panel-design.md §3).
     builder.Services.AddHostedService<RetentionJob>();
+    // The nightly timestamp and chain check (design/specs/2026-11-03-integrity-chain-design.md §7).
+    builder.Services.AddHostedService<IntegrityJob>();
 }
 
 // Public routes (/api/public/...) are anonymous: 30 requests per minute per client IP.
@@ -180,6 +185,7 @@ phi.MapRetentionEndpoints();
 phi.MapDiscardEndpoints();
 phi.MapProviderNotificationEndpoints();
 phi.MapShareEndpoints();
+phi.MapIntegrityEndpoints();
 app.MapConfirmationEndpoints(phi);
 app.MapPublicShareEndpoints();
 

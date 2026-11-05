@@ -1,3 +1,4 @@
+using Anamnys.Server.Integrity;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Retention;
@@ -269,6 +270,10 @@ public static class ClinicalDocumentService
             DocumentAudit.Add(db, document.Id, providerId, "document_signed", null, null, document.SignedByCrp, now);
             await db.SaveChangesAsync(ct);
             await RetentionClock.PushAsync(db, providerId, document.PatientId, now, ct);
+            // The seal is part of the signing: if it fails, the transaction rolls back (spec F-45 §4).
+            var contentHash = await IntegritySeals.DocumentContentHashAsync(db, providerId, document.Id, ct)
+                ?? throw new InvalidOperationException("The signed document could not be read back for sealing.");
+            await IntegritySeals.SealAsync(db, providerId, IntegritySeal.Document, document.Id, contentHash, now, ct);
             return new DocumentResult(DocumentOutcome.Ok, document.Id);
         }, ct);
     }

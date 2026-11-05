@@ -51,6 +51,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<DisclosureAuthorization> DisclosureAuthorizations => Set<DisclosureAuthorization>();
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareAccess> ShareAccesses => Set<ShareAccess>();
+    public DbSet<IntegritySeal> IntegritySeals => Set<IntegritySeal>();
+    public DbSet<IntegrityAnchor> IntegrityAnchors => Set<IntegrityAnchor>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -351,6 +353,20 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("ShareAccesses");
             e.HasKey(x => x.Id);
             e.HasOne<ShareLink>().WithMany().HasForeignKey(x => x.ShareLinkId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IntegritySeal>(e =>
+        {
+            e.ToTable("IntegritySeals");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IntegrityAnchor>(e =>
+        {
+            e.ToTable("IntegrityAnchors");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ConformityCheck>(e =>

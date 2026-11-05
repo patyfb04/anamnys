@@ -194,9 +194,11 @@ content, write the term and the audit row, commit.
 **Result:** 200 `{ termId, counts: { notes, clinicalDocuments, externalDocuments, sessions, appointments,
 transcripts, scaleApplications, medications, diagnoses, treatmentPlans, planObjectives, noteSections,
 themeTags, excerptRefs, patientQuotes, followUpItems, tissGuides, auditEntries, shareLinks,
-disclosureAuthorizations, documentHashes, extractedFacts, externalDocumentPages, recordingConsents,
+disclosureAuthorizations, extractedFacts, externalDocumentPages, recordingConsents,
 intakeResponses, dossiers, insurerAuthorizations, bookingHolds, appointmentSeries, invitations,
-notifications, portalAccounts } }`.
+notifications, portalAccounts } }`. The patient's integrity seals (`IntegritySeals`, F-45, chapter 38) are not
+deleted and not counted: they hold ids and hashes only and are marked `DiscardedAt` before the notes and documents
+are deleted.
 
 **Deleted** (one transaction, children first; the cascades named are the foreign keys' own):
 
@@ -210,7 +212,7 @@ notifications, portalAccounts } }`.
 | `AuditEntries` | rows of the patient's notes and documents (see the ruling below) |
 | `Transcripts` | the patient's sessions or notes |
 | `ShareLinks` | the patient's documents (`ShareAccesses` cascade) |
-| `DisclosureAuthorizations`, `DocumentHashes` | the patient's, or tied to the patient's documents |
+| `DisclosureAuthorizations` | the patient's, or tied to the patient's documents |
 | `ClinicalDocuments` | the patient's (`ConformityChecks` cascade) |
 | `Notes` | the patient's (`BillingCodes` cascade) |
 | `MedicationEntries` | the patient's |

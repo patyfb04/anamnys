@@ -1,3 +1,4 @@
+using Anamnys.Server.Integrity;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Excerpts;
@@ -191,6 +192,10 @@ public static class NoteEditing
             NoteAudit.Add(db, noteId, providerId, "signed", null, null, crp, now);
             await db.SaveChangesAsync(ct);
             await RetentionClock.PushAsync(db, providerId, note.PatientId, now, ct);
+            // The seal is part of the signing: if it fails, the transaction rolls back (spec F-45 §4).
+            var contentHash = await IntegritySeals.NoteContentHashAsync(db, providerId, noteId, ct)
+                ?? throw new InvalidOperationException("The signed note could not be read back for sealing.");
+            await IntegritySeals.SealAsync(db, providerId, IntegritySeal.Note, noteId, contentHash, now, ct);
             await tx.CommitAsync(ct);
             outcome = SignOutcome.Signed;
         });

@@ -224,6 +224,9 @@ if (builder.ExecutionContext.IsPublishMode)
     server.WithEnvironment("Storage__PublicUrl", builder.AddParameter("storage-public-url"));
     // The patient app's public https address, for share links; the server refuses to start without it.
     server.WithEnvironment("PatientPortal__BaseUrl", builder.AddParameter("patient-portal-url"));
+    // F-45: the RFC 3161 time stamping authority and the PEM of its root; the server refuses to start without the root.
+    server.WithEnvironment("Integrity__TsaUrl", builder.AddParameter("integrity-tsa-url"));
+    server.WithEnvironment("Integrity__TsaRootCertificate", builder.AddParameter("integrity-tsa-root-certificate"));
 }
 else if (!string.IsNullOrEmpty(storagePublicUrl))
 {
@@ -285,6 +288,19 @@ if (isDevRun)
     // Where invitation links point: the patient app's pinned dev origin (see `patient`
     // below). A deployment serves the patient app same-origin under /patient.
     server.WithEnvironment("PatientPortal__BaseUrl", "http://localhost:5274/patient");
+}
+
+// A dev run timestamps with the public FreeTSA and its root (integrity/freetsa-cacert.pem, from
+// https://freetsa.org/files/cacert.pem, valid until 2041), so manual testing shows anchoring. Only the chain head hash
+// leaves the machine. Parameters:integrity-tsa-url / Parameters:integrity-tsa-root-certificate override both.
+if (isDevRun)
+{
+    server.WithEnvironment("Integrity__TsaUrl",
+        builder.Configuration["Parameters:integrity-tsa-url"] is { Length: > 0 } tsaUrl ? tsaUrl : "https://freetsa.org/tsr");
+    server.WithEnvironment("Integrity__TsaRootCertificate",
+        builder.Configuration["Parameters:integrity-tsa-root-certificate"] is { Length: > 0 } tsaRoot
+            ? tsaRoot
+            : File.ReadAllText(Path.Combine(builder.AppHostDirectory, "integrity", "freetsa-cacert.pem")));
 }
 
 // Three SPAs, one server. Each is published into a sub-path of the server's

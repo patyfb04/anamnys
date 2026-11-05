@@ -124,7 +124,8 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-44, F-45 | schema only | `Dossiers`, `DocumentHashes` |
+| F-44 | schema only | `Dossiers` |
+| F-45 Cadeia de integridade | done | One append-only hash chain of seals per provider over signed notes and signed issued documents (canonical content, not the PDF), sealed inside the signing transaction; the discard marks the seal, keeps it. A daily RFC 3161 timestamp of the chain head (FreeTSA in Development), nightly verification with an in-app notice, badge on signed notes and documents, "Integridade dos registros" card with a PDF verification report on Conformidade. Records signed before F-45 are sealed retroactively at server start. `2026-11-03-integrity-chain.sql` must be applied to any persistent environment. `Integrity/`, `documentation/38-integrity-chain.md` |
 | F-46 Backup | not started | |
 | F-47 Marcadores de fala | schema only | `SpeechMarkers` |
 | F-48, F-49 | not started | |
@@ -171,10 +172,19 @@ Everything that does not depend on subscription and billing comes first; billing
 1. **Close groups A and B first (user, 2026-10-27):** ~~F-04 (attendance statistics)~~ done, ~~F-06 (retention panel)~~ done; groups A and B are closed.
    **Analyses (group D) closed:** ~~F-10 (aggregation layer)~~, ~~F-11 (theme timeline)~~, ~~F-12 (absence
    detection)~~, ~~F-13 (scale trajectory with events)~~ and ~~F-14 (plan adherence and follow-ups)~~ and ~~F-15 (patient quotes)~~ done.
-2. ~~F-16 (natural-language search)~~ done; ~~F-17/F-18 (protected sharing)~~ done;
-   F-45 → F-44 (dossier), F-46 (backup); F-29 rest (availability, recurrence,
-   month view, Google), F-31 (structured intake), F-61 rest, F-62, F-63, F-64, F-30 (WhatsApp).
-3. Blocked by decisions, not billing: F-23…F-28 (D-03), F-38…F-43 (D-06), F-19…F-22 (D-04).
+2. ~~F-16 (natural-language search)~~ done; ~~F-17/F-18 (protected sharing)~~ done.
+   **Provider portal first, patient portal after (user, 2026-11-03):** F-45 → F-44 (dossier), F-46 (backup);
+   group H: F-29 rest (availability, recurrence, month view, Google), F-31 (structured intake), F-30 (WhatsApp);
+   group G: F-23…F-28; group H2: F-38…F-43; group F: F-19…F-22.
+   Groups G, H2 and F are built "with a caveat" (user, 2026-11-03) instead of waiting for their decisions: for the F-23
+   consent term the user decided (2026-11-03) that a lawyer review does not gate it (D-03), as long as the term
+   states explicitly and with valid data the names of every party (patient, provider, guardian for minors), the date it was given and the rest
+   of what CFP 13/2022 asks (purpose, what is captured, audio destroyed after transcription, what is kept, who
+   accesses, retention, revocability). Consent is given once (per patient and treatment, as F-24 says), not per
+   session; D-06 is decided
+   (user, 2026-11-03): build the own room (group H2), still optional for the provider; the TUSS codes are checked against the ANS
+   table by us and the differences listed for the user to validate (D-04).
+3. Patient portal, after the whole provider portal: F-61 rest, F-62, F-63, F-64.
 4. **Last — Assinatura e cobrança, F-50 … F-59 (rest of the launch gate)** — not started; blocked by D-07
    (Paddle answers pending, per the Notion). F-60 is done (D-08 decided 2026-10-23: export available at any
    time while the account is active and for 60 days after cancellation, then the data is deleted;
@@ -203,3 +213,4 @@ Verified 2026-10-31 (F-16): full suite 1691 total, 0 failed, 3 skipped; provider
 Verified 2026-11-02 (F-17 + F-18): full suite 1779 total, 0 failed, 3 skipped, after the security and final review fixes; provider and patient build and lint clean. `2026-11-01-protected-sharing.sql` must be applied to any persistent environment (re-run where an earlier version was applied). Publishing now needs the AppHost parameter `patient-portal-url`; see chapter 20 for `ForwardedHeaders:KnownProxies`, proxy log scrubbing and the SPA deep-link fallback. Merged into develop on 2026-11-02 (commit 96f9bda).
 2026-11-02 (sharing follow-ups): the public page draws the PDF with pdf.js (`pdfjs-dist` 6.4.299, works on Android Chrome with download off); the "Compartilhamento" menu page lists every share link with filter, paging and revoke (`GET providers/me/shares`); each block of the Conformidade page pages 5 rows at a time. Full suite 1784 total, 0 failed, 3 skipped; provider and patient build and lint clean. Merged into develop on 2026-11-02 (commit 1b4360e).
 2026-11-03 (sharing patient filter): the "Compartilhamento" page has a patient search field (type-ahead, Enter or click applies, the name stays out of the URL) next to Ativos/Todos; `GET providers/me/shares` takes an optional `patientId`. Sharing tests green; provider build, type-check and lint clean.
+Verified 2026-11-03 (F-45): server tests (`*Integrity*`, `*MigrationTests*`, `*Discard*`, notifications and retention) ran green; provider and patient build and lint clean. Full suite 1853 total, 0 failed, 3 skipped (2026-11-04; a first run had one flaky failure that did not repeat). `2026-11-03-integrity-chain.sql` is applied to the dev database and must be applied to any persistent environment (it drops `DocumentHashes`); the retroactive backfill runs at the next server start; publishing needs the AppHost parameters `integrity-tsa-url` and `integrity-tsa-root-certificate` (chapter 20).

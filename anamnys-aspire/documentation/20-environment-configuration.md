@@ -64,6 +64,8 @@ start without it.
 | `storage-access-key`, `storage-secret-key` | new random hex values | SeaweedFS identity + server S3 client. |
 | `storage-public-url` | `https://<storage host>` (see 2.4) | Gate: outside Development the server refuses to start unless it is an absolute https URL. Publish mode requires it. |
 | `patient-portal-url` | `https://<host>/patient`, absolute https (env `PatientPortal__BaseUrl`) | Required outside Development. Gate: the server refuses to start unless `PatientPortal:BaseUrl` is an absolute https URL. Protected-sharing links (chapter 37) are built from it. Same shape as `storage-public-url`. |
+| `integrity-tsa-url` | absolute http(s) URL of an RFC 3161 time stamping authority (env `Integrity__TsaUrl`; FreeTSA is `https://freetsa.org/tsr`) | Required in publish mode. The daily anchor of the integrity chain (chapter 38) posts only a hash there; allow outbound HTTPS. |
+| `integrity-tsa-root-certificate` | PEM of the authority's root certificate (env `Integrity__TsaRootCertificate`) | Required in publish mode. Gate: outside Development the server refuses to start without a parsable root. Tokens are accepted only when they chain to it. |
 
 ### 2.2 Server settings
 
@@ -196,6 +198,8 @@ start without it.
 - [ ] `ForwardedHeaders:KnownProxies` configured; `/s/` path scrubbed from proxy logs
 - [ ] `patient-portal-url` (https); `/patient/s/{token}` deep link confirmed in a published build
 - [ ] `2026-11-01-protected-sharing.sql` applied (re-run if an earlier version was applied)
+- [ ] `2026-11-03-integrity-chain.sql` applied before the new version signs anything; the retroactive backfill runs at the next server start (chapter 38)
+- [ ] `integrity-tsa-url` and `integrity-tsa-root-certificate` set; outbound HTTPS to the authority
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore
 - [ ] Processor agreements; QuestPDF licence condition
