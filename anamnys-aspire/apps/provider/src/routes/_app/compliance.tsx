@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,8 @@ import { complianceApi } from "@anamnys/shared/api/compliance";
 import { documentsApi } from "@anamnys/shared/api/documents";
 import type { RetentionItem } from "@anamnys/shared/lib/types";
 import DiscardDialog from "@/components/compliance/DiscardDialog";
+import IntegrityCard from "@/components/compliance/IntegrityCard";
+import { goToCard } from "@/components/patients/detail/cardAnchors";
 import DisposalTermsList from "@/components/compliance/DisposalTermsList";
 import { Pager } from "@/components/compliance/Pager";
 import { usePaged } from "@/components/compliance/usePaged";
@@ -47,6 +49,11 @@ function CompliancePage() {
   const { data, isPending, isError } = useQuery({ queryKey: ["compliance"], queryFn: complianceApi.summary });
   const kinds = useQuery({ queryKey: ["document-kinds"], queryFn: documentsApi.kinds });
 
+  // The integrity badge links here with #integridade: open the card.
+  useEffect(() => {
+    if (window.location.hash === "#integridade") goToCard("integrity");
+  }, []);
+
   const kindTitle = (kind: string) => kinds.data?.find((k) => k.kind === kind)?.title ?? kind;
   const elementLabel = (kind: string, code: string) =>
     kinds.data?.find((k) => k.kind === kind)?.elements.find((e) => e.code === code)?.label ?? code;
@@ -57,6 +64,8 @@ function CompliancePage() {
         <h1 className="text-headline-lg text-onSurface">{t("compliance.title")}</h1>
         <p className="text-body-md text-onSurfaceVariant">{t("compliance.subtitle")}</p>
       </div>
+
+      <IntegrityCard />
 
       {isPending ? null : isError ? (
         <p role="alert" className="text-body-md text-error">

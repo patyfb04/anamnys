@@ -390,7 +390,8 @@ export type NotificationKind =
   | "appointment_auto_cancelled"
   | "account_export_ready"
   | "unsigned_note"
-  | "retention_due";
+  | "retention_due"
+  | "integrity_problem";
 
 export interface ProviderNotification {
   id: string;
@@ -1172,4 +1173,23 @@ export interface SharedDocument {
   blob: Blob;
   /** File name for the download button; null when the provider did not allow downloading. */
   downloadName: string | null;
+}
+
+// Document integrity hash chain (design/specs/2026-11-03-integrity-chain-design.md).
+export type IntegrityStatus = "intact" | "content_changed" | "chain_broken" | "unsealed" | "discarded";
+
+export interface RecordIntegrity {
+  status: IntegrityStatus;
+  sealedAt: string | null; // ISO instant
+  retroactive: boolean;
+  anchored: boolean;
+}
+
+export interface IntegritySummary {
+  totalSeals: number;
+  discarded: number;
+  // subjectType is null for sequence_gap and anchor_invalid (the problem is at a chain position, not a record).
+  firstProblem: { sequence: number; subjectType: string | null; kind: string } | null;
+  lastAnchor: { sequence: number; anchoredAt: string; tsaUrl: string } | null;
+  verifiedAt: string;
 }

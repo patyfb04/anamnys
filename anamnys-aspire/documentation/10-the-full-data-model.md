@@ -156,10 +156,12 @@ if you're ever asked to build a feature that touches any of it.
   audio, with an `Outcome` column — audio appears to get a stricter, separately-tracked
   destruction lifecycle than other document types, consistent with Chapter 1's framing of
   session audio as maximally sensitive).
-- **Integrity**: `DocumentHashes` implements a hash chain — each row stores a `Hash` and
-  its `PreviousHash`, `SealedAt` — a tamper-evidence mechanism for clinical documents, the
-  kind of thing you'd want to be able to prove a signed note hasn't been altered after the
-  fact.
+- **Integrity** (F-45, chapter 38): `IntegritySeals` implements a per-provider hash chain —
+  each row seals one signed note or clinical document with its `ContentHash`, its own `Hash`
+  and the `PreviousHash` of the seal before it, plus `Sequence`, `SealedAt`, `Retroactive`
+  and `DiscardedAt` — and `IntegrityAnchors` stores RFC 3161 timestamp tokens over the chain
+  head. Together they make it demonstrable that a signed record has not been altered after
+  the fact. (The earlier `DocumentHashes` table was schema only and was dropped by F-45.)
 - **Sharing**: `ShareLinks` (a document share link with a `TokenHash` — never a raw token —
   optional `PasswordHash`, `ExpiresAt`, and a `ViewCap`/`ViewsUsed` pair limiting total
   views) and `ShareAccesses` (every access against a link, including coarse geolocation and

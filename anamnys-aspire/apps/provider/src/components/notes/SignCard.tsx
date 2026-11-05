@@ -1,3 +1,4 @@
+import IntegrityBadge from "@/components/integrity/IntegrityBadge";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -58,6 +59,9 @@ export default function SignCard({ note, onSigned }: Props) {
         <p className="text-body-md text-onSurface">
           {t("noteView.signedAt", { date: new Date(note.signedAt).toLocaleString("pt-BR"), crp: note.signedByCrp ?? "—" })}
         </p>
+        <div className="mt-1">
+          <IntegrityBadge subject={{ type: "note", id: note.id }} version={note.signedAt} />
+        </div>
         {note.exportedAt && (
           <p className="mt-1 text-body-sm text-onSurfaceVariant">
             {t("noteView.exportedAt", { date: new Date(note.exportedAt).toLocaleString("pt-BR") })}

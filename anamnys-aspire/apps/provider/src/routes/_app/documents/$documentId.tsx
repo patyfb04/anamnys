@@ -1,3 +1,4 @@
+import IntegrityBadge from "@/components/integrity/IntegrityBadge";
 import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
@@ -152,6 +153,7 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
                 ? t("documents.signedAt", { date: new Date(detail.signedAt).toLocaleString("pt-BR"), crp: detail.signedByCrp ?? "—" })
                 : new Date(detail.createdAt).toLocaleString("pt-BR")}
             </span>
+            {detail.signedAt && <IntegrityBadge subject={{ type: "document", id: detail.id }} version={detail.signedAt} />}
           </div>
         </div>
         <button

@@ -107,7 +107,7 @@ public static class DiscardService
                 .SingleOrDefaultAsync(r => r.ProviderId == providerId && r.RecordKind == RetentionRule.Prontuario, ct);
             var period = await RetentionClock.PeriodAsync(db, providerId, patientId, ct);
             objectKeys = await ObjectKeysAsync(db, providerId, patientId, ct);
-            var counts = await DeleteContentAsync(db, providerId, patientId, patient.AccountId, ct);
+            var counts = await DeleteContentAsync(db, providerId, patientId, patient.AccountId, nowUtc, ct);
 
             var provider = await db.Providers.AsNoTracking().SingleAsync(p => p.Id == providerId, ct);
             var term = new DisposalTerm
@@ -201,7 +201,7 @@ public static class DiscardService
     // cascade (billing codes, conformity checks, share accesses, consent events, denials, speech markers, audio
     // destruction logs, appointment confirmations and tokens, reminders, room sessions) go with their parent.
     private static async Task<Dictionary<string, int>> DeleteContentAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, Guid? accountId, CancellationToken ct)
+        AnamnysDbContext db, Guid providerId, Guid patientId, Guid? accountId, DateTimeOffset now, CancellationToken ct)
     {
         var p = patientId;
         var v = providerId;
@@ -249,7 +249,14 @@ public static class DiscardService
             DELETE FROM "DisclosureAuthorizations" WHERE "PatientId" = {p}
                 OR "DocumentId" IN (SELECT "Id" FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v})
             """);
-        await Run("documentHashes", $"""DELETE FROM "DocumentHashes" WHERE "DocumentId" IN (SELECT "Id" FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v})""");
+        // The seals stay (ids and hashes only, no clinical text) and are marked discarded: the chain remains verifiable
+        // (spec F-45 section 4). Runs before the notes and documents are deleted, while the subqueries still find them.
+        // Not counted in the term: nothing is deleted here.
+        await db.Database.ExecuteSqlAsync($"""
+            UPDATE "IntegritySeals" SET "DiscardedAt" = {now} WHERE "ProviderId" = {v} AND "DiscardedAt" IS NULL AND (
+                ("SubjectType" = 'note' AND "SubjectId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
+                OR ("SubjectType" = 'document' AND "SubjectId" IN (SELECT "Id" FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v})))
+            """, ct);
         await Run("clinicalDocuments", $"""DELETE FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("notes", $"""DELETE FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("medications", $"""DELETE FROM "MedicationEntries" WHERE "PatientId" = {p}""");

@@ -175,7 +175,7 @@ Not built yet; planned for after the calendar deliveries.
     - Production storage host: a public TLS hostname with a reverse proxy to SeaweedFS's S3 port only. The code side is done: publish mode requires the AppHost parameter `storage-public-url`, and the server refuses to start outside Development unless `Storage:PublicUrl` is an absolute https URL.
     - Backup of the SeaweedFS volume (`anamnys-storage-data`).
     - QuestPDF Community license holds only below US$ 1M annual revenue.
-    - The exported PDF is not yet sealed into `DocumentHashes` (F-45); its SHA-256 is stored in `Notes.PdfSha256`.
+    - The exported PDF itself is not sealed, by design: F-45 seals the note's content into `IntegritySeals` (a PDF can be rendered again and differ byte by byte); the PDF's SHA-256 is stored in `Notes.PdfSha256`.
     - Test objects (`tests/{guid}.pdf`) accumulate in the dev bucket.
     - Manual browser check of export/download pending.    - The provider name on the PDF is the name at first export, not at signing.
     - `Storage` options are not validated at startup; empty settings fail only after the initializer's retries.
@@ -528,6 +528,22 @@ Protected sharing (F-17 + F-18; chapter `documentation/37-protected-sharing.md`)
 - **Forwarded headers were not tested with a real proxy.** `ForwardedHeaders:KnownProxies` and the startup checks are unit-tested only.
 - **Wrong passwords accumulate with no reset, by decision.** Five over the life of the link block it, even if a right password came in between.
 - **Not exercised in a browser;** build and lint only, and no `.http` run against a live AppHost.
+
+## Integridade dos registros
+
+Integrity chain (F-45; chapter `documentation/38-integrity-chain.md`).
+
+- **External documents (F-07) are not sealed.** Only signed notes and signed issued documents enter the chain.
+- **Disclosure authorizations (F-17) are not sealed.**
+- **Timestamp tokens are not embedded in the report PDF.** The report lists the head hash of each anchor; the tokens stay in `IntegrityAnchors`, so an outside party needs them from the provider.
+- **A rotation of the TSA root invalidates earlier anchors (review M1).** Tokens are verified against the one configured root; keep old roots or support several. **Must be solved before the first production deploy.**
+- **Only the first chain problem is notified per run.** Later problems in the same chain appear after the first is fixed.
+- **No sanity check of the token `genTime` against the clock.**
+- **The startup backfill runs in `StartAsync` (review M5)** and delays startup on a large first run. **Must move off server startup (e.g. into a `BackgroundService`) before the first production deploy.** Providers are already isolated: one failing provider is logged by exception type and the others are still sealed.
+- **`DiscardedAt` is not covered by any hash.** Database write access can mark a seal discarded and hide a later content change; cross-check with `DisposalTerms`.
+- **The unanchored tail and the tokens live only in the database.** Truncating the tail after the last anchor, or a superuser rewriting the chain with triggers disabled, cannot be detected from inside; the tokens do not leave the database yet.
+- **The report file name uses the UTC date**, and the job audit entries are attributed to the provider.
+- **Not exercised in a browser;** build and lint only.
 
 ## Guarda e descarte
 

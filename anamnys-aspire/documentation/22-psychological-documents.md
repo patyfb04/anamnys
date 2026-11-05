@@ -280,5 +280,5 @@ to the migration and must not be reverted.
    a PDF layout, and must be added to `AvailableKinds`.
 5. Add or adjust the tests in `anamnys-aspire.Tests/Documents/` and `Data/DocumentsMigrationTests`.
 6. Out of scope until their own features: delivery protocol (F-07), retention date
-   `RetentionUntil` (F-06), ICP-Brasil signature, sharing (F-17, F-18), sealing into
-   `DocumentHashes` (F-45).
+   `RetentionUntil` (F-06), ICP-Brasil signature, sharing (F-17, F-18). Sealing (F-45) is done:
+   signing a document seals its content into `IntegritySeals` (chapter 38).

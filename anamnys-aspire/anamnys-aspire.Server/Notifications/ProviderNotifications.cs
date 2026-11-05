@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Exports;
+using Anamnys.Server.Integrity;
 using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
 
@@ -61,7 +62,12 @@ public static class ProviderNotifications
             where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == RetentionJobSteps.NoteSubject
                 && note.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
             select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = p.FirstName + " " + p.LastName, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt };
-        var rows = await appointmentItems.Concat(exportItems).Concat(retentionItems).Concat(noteItems)
+        // Integrity chain problems (F-45): no subject row, they open the "Conformidade" page.
+        var integrityItems =
+            from n in db.Notifications.AsNoTracking()
+            where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == IntegrityJobSteps.Subject
+            select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = null, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt };
+        var rows = await appointmentItems.Concat(exportItems).Concat(retentionItems).Concat(noteItems).Concat(integrityItems)
             .OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Id)
             .Skip((page - 1) * PageSize).Take(PageSize)
             .ToListAsync(ct);
