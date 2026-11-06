@@ -57,6 +57,7 @@ export default function NotificationBell({ className }: { className?: string }) 
     if (n.kind === "unsigned_note" || n.kind === "retention_due") {
       return t(n.kind === "unsigned_note" ? "notifications.unsignedNote" : "notifications.retentionDue", { patient: n.patientName ?? "" });
     }
+    if (n.kind === "dossier_ready") return t("notifications.dossierReady", { patient: n.patientName ?? "" });
     if (n.kind === "integrity_problem") return t("notifications.integrityProblem");
     if (n.kind === "account_export_ready") {
       return t("notifications.exportReady", { when: whenFormat.format(new Date(n.createdAt)) });
@@ -104,6 +105,16 @@ export default function NotificationBell({ className }: { className?: string }) 
                 <li key={n.id} className="border-b border-outlineVariant last:border-b-0">
                   {n.kind === "unsigned_note" || n.kind === "retention_due" || n.kind === "integrity_problem" ? (
                     <Link to="/compliance" className={itemClass(n)} onClick={onItemClick(n)}>
+                      {label(n)}
+                    </Link>
+                  ) : n.kind === "dossier_ready" && n.patientId ? (
+                    <Link
+                      to="/patients/$patientId"
+                      params={{ patientId: n.patientId }}
+                      hash="dossiers"
+                      className={itemClass(n)}
+                      onClick={onItemClick(n)}
+                    >
                       {label(n)}
                     </Link>
                   ) : n.kind === "account_export_ready" ? (

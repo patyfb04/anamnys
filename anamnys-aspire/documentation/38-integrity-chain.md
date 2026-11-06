@@ -155,7 +155,7 @@ each anchor (`anchor_invalid`). It returns `totalSeals`, `discarded`, `firstProb
 
 - **Request.** `Rfc3161TimestampRequest.CreateFromHash` (package `System.Security.Cryptography.Pkcs` 10.0.11, which is
   not in the shared framework): SHA-256 of the UTF-8 hex head hash as the message imprint, 16-byte random nonce,
-  certificate requested; POST `application/timestamp-query`. `ProcessResponse` checks status, nonce and imprint.
+  certificate requested; POST `application/timestamp-query`. `ProcessResponse` checks status, nonce and imprint. `ITimestampAuthority` also stamps a raw SHA-256 digest (`StampDigestAsync` / `VerifyDigest`), used by the patient dossier (F-44, chapter 39) to timestamp the ZIP file itself; the chain anchors keep stamping the hash of the head-hash text.
 - **Cap.** The response is read up to 64 KiB (`MaxResponseBytes`) whether or not a `Content-Length` is sent; nothing
   larger is parsed.
 - **Verification** (`TimestampTokens.Verify`, never throws): the token decodes, its signature verifies for the imprint,

@@ -32,6 +32,7 @@ import ScalesCard from "@/components/scales/ScalesCard";
 import AttendanceCard from "@/components/attendance/AttendanceCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
+import DossiersCard from "@/components/dossiers/DossiersCard";
 import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
 import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
@@ -260,6 +261,8 @@ function PatientDetailPage() {
       <ExternalDocumentsCard patientId={patientId} readOnly={archived} />
 
       <DeclaredFactsCard patientId={patientId} />
+
+      <DossiersCard patientId={patientId} readOnly={archived} />
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />

@@ -107,7 +107,7 @@ CREATE TABLE "AuditEntries" (
 	"PreviousValue" text,
 	"NewValue" text,
 	"At" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text, 'plan_reviewed'::text, 'follow_up_created'::text, 'follow_up_resolved'::text, 'follow_up_reopened'::text, 'quote_recorded'::text, 'quote_removed'::text, 'disclosure_authorized'::text, 'share_link_created'::text, 'share_link_revoked'::text, 'disclosure_term_opened'::text, 'integrity_report_downloaded'::text, 'integrity_check_failed'::text]))))
+	CONSTRAINT "AuditEntries_subject_ck" CHECK ((("NoteId" IS NOT NULL) OR ("DocumentId" IS NOT NULL) OR ("Action" = ANY (ARRAY['account_export_requested'::text, 'account_export_downloaded'::text, 'external_document_uploaded'::text, 'external_document_opened'::text, 'external_document_deleted'::text, 'external_document_blocked'::text, 'fact_confirmed'::text, 'fact_corrected'::text, 'fact_discarded'::text, 'facts_extracted'::text, 'facts_deleted'::text, 'medication_from_fact'::text, 'patient_discarded'::text, 'plan_reviewed'::text, 'follow_up_created'::text, 'follow_up_resolved'::text, 'follow_up_reopened'::text, 'quote_recorded'::text, 'quote_removed'::text, 'disclosure_authorized'::text, 'share_link_created'::text, 'share_link_revoked'::text, 'disclosure_term_opened'::text, 'integrity_report_downloaded'::text, 'integrity_check_failed'::text, 'dossier_requested'::text, 'dossier_downloaded'::text, 'dossier_receipt_downloaded'::text]))))
 );
 CREATE TABLE "AvailabilityExceptions" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -336,10 +336,34 @@ CREATE TABLE "DisposalTerms" (
 CREATE TABLE "Dossiers" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"PatientId" uuid NOT NULL,
-	"GeneratedAt" timestamp with time zone DEFAULT now() NOT NULL,
+	"GeneratedAt" timestamp with time zone,
 	"ObjectKey" text,
 	"Manifest" jsonb,
-	"IntegrityVerified" boolean DEFAULT false NOT NULL
+	"IntegrityVerified" boolean DEFAULT false NOT NULL,
+	"ProviderId" uuid NOT NULL,
+	"Number" integer NOT NULL,
+	"Status" text DEFAULT 'queued' NOT NULL,
+	"Reason" text NOT NULL,
+	"ReasonNote" text,
+	"PeriodFrom" date,
+	"PeriodTo" date,
+	"RequestedAt" timestamp with time zone NOT NULL,
+	"ExpiresAt" timestamp with time zone,
+	"ExpiredAt" timestamp with time zone,
+	"SizeBytes" bigint,
+	"ZipSha256" text,
+	"AnchorToken" bytea,
+	"AnchoredAt" timestamp with time zone,
+	"FailureReason" text,
+	CONSTRAINT "Dossiers_Provider_Number_key" UNIQUE("ProviderId","Number"),
+	CONSTRAINT "Dossiers_Number_ck" CHECK (("Number" >= 1)),
+	CONSTRAINT "Dossiers_Status_ck" CHECK (("Status" = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text, 'expired'::text]))),
+	CONSTRAINT "Dossiers_Reason_ck" CHECK (("Reason" = ANY (ARRAY['crp'::text, 'court'::text, 'patient_request'::text, 'other'::text]))),
+	CONSTRAINT "Dossiers_ReasonNote_ck" CHECK (((("Reason" = 'other'::text) = ("ReasonNote" IS NOT NULL)) AND (("ReasonNote" IS NULL) OR ((char_length("ReasonNote") >= 1) AND (char_length("ReasonNote") <= 200))))),
+	CONSTRAINT "Dossiers_Period_ck" CHECK ((("PeriodFrom" IS NULL) OR ("PeriodTo" IS NULL) OR ("PeriodFrom" <= "PeriodTo"))),
+	CONSTRAINT "Dossiers_Generated_ck" CHECK ((("GeneratedAt" IS NOT NULL) = ("Status" = ANY (ARRAY['done'::text, 'expired'::text])))),
+	CONSTRAINT "Dossiers_ObjectKey_ck" CHECK ((("ObjectKey" IS NULL) OR ("Status" = 'done'::text))),
+	CONSTRAINT "Dossiers_FailureReason_ck" CHECK ((("FailureReason" IS NULL) OR ("FailureReason" = ANY (ARRAY['dossier_error'::text, 'interrupted'::text]))))
 );
 CREATE TABLE "ExcerptRefs" (
 	"Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1069,7 +1093,8 @@ CREATE INDEX "DisclosureAuthorizations_DocumentId_idx" ON "DisclosureAuthorizati
 CREATE UNIQUE INDEX "DisclosureAuthorizations_Recipient_key" ON "DisclosureAuthorizations" ("DocumentId", lower("RecipientName"), lower("RecipientRole"), lower("Purpose"));
 CREATE INDEX "DisposalRecords_PatientId_idx" ON "DisposalRecords" ("PatientId");
 CREATE INDEX "DisposalTerms_Provider_Created_idx" ON "DisposalTerms" ("ProviderId", "CreatedAt" DESC);
-CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","GeneratedAt");
+CREATE INDEX "Dossiers_PatientId_idx" ON "Dossiers" ("PatientId","RequestedAt");
+CREATE UNIQUE INDEX "Dossiers_Patient_active_key" ON "Dossiers" ("PatientId") WHERE "Status" = ANY (ARRAY['queued'::text, 'running'::text]);
 CREATE INDEX "ExcerptRefs_Provider_Source_idx" ON "ExcerptRefs" ("ProviderId","SourceType","SourceId");
 CREATE INDEX "ExternalDocuments_PatientId_idx" ON "ExternalDocuments" ("PatientId");
 CREATE INDEX "ExternalDocuments_Provider_Uploaded_idx" ON "ExternalDocuments" ("ProviderId","UploadedAt" DESC);
@@ -1165,6 +1190,7 @@ ALTER TABLE "DisposalTerms" ADD CONSTRAINT "DisposalTerms_Patient_fk" FOREIGN KE
 ALTER TABLE "IntegritySeals" ADD CONSTRAINT "IntegritySeals_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "IntegrityAnchors" ADD CONSTRAINT "IntegrityAnchors_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "Dossiers" ADD CONSTRAINT "Dossiers_PatientId_fkey" FOREIGN KEY ("PatientId") REFERENCES "Patients"("Id") ON DELETE RESTRICT;
+ALTER TABLE "Dossiers" ADD CONSTRAINT "Dossiers_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE RESTRICT;
 ALTER TABLE "ExternalDocuments" ADD CONSTRAINT "ExternalDocuments_Patient_fk" FOREIGN KEY ("PatientId","ProviderId") REFERENCES "Patients"("Id","ProviderId") ON DELETE RESTRICT;
 ALTER TABLE "ExcerptRefs" ADD CONSTRAINT "ExcerptRefs_ProviderId_fkey" FOREIGN KEY ("ProviderId") REFERENCES "Providers"("Id") ON DELETE CASCADE;
 ALTER TABLE "ExtractedFacts" ADD CONSTRAINT "ExtractedFacts_ExcerptRefId_fkey" FOREIGN KEY ("ExcerptRefId") REFERENCES "ExcerptRefs"("Id") ON DELETE SET NULL;

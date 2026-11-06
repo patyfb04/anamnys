@@ -264,6 +264,57 @@
     "originDeleted": "documento excluído",
     "viewInDocument": "Ver no documento"
   },
+  "dossier": {
+    "title": "Dossiês",
+    "empty": "Nenhum dossiê gerado.",
+    "loadFailed": "Não foi possível carregar os dossiês.",
+    "generate": "Gerar dossiê",
+    "dialogTitle": "Gerar dossiê",
+    "description": "Reúne notas assinadas, documentos, divulgações e comprovantes de integridade em um arquivo ZIP.",
+    "periodFrom": "Período: de",
+    "periodTo": "até",
+    "periodHint": "Deixe em branco para incluir todo o histórico.",
+    "reasonLegend": "Motivo",
+    "reason": {
+      "crp": "Pedido do CRP",
+      "court": "Intimação ou ordem judicial",
+      "patient_request": "Solicitação do próprio paciente",
+      "other": "Outro"
+    },
+    "reasonNote": "Descreva o motivo (até 200 caracteres)",
+    "warning": "O arquivo contém dados de saúde do paciente. Entregue apenas a quem tem direito.",
+    "submit": "Gerar",
+    "submitting": "Gerando…",
+    "requested": "Dossiê solicitado. Avisaremos quando estiver pronto.",
+    "inProgress": "Já existe um dossiê sendo gerado para este paciente.",
+    "requestFailed": "Não foi possível gerar o dossiê.",
+    "errors": {
+      "invalid_reason": "Escolha um motivo.",
+      "reason_note_required": "Descreva o motivo.",
+      "invalid_period": "O período é inválido: a data inicial deve ser anterior à final."
+    },
+    "number": "Dossiê {{number}}",
+    "requestedOn": "Solicitado em {{date}}",
+    "period": "Período: {{from}} a {{to}}",
+    "periodFromOnly": "Período: a partir de {{from}}",
+    "periodToOnly": "Período: até {{to}}",
+    "periodAll": "Histórico completo",
+    "status": {
+      "queued": "Na fila",
+      "running": "Gerando",
+      "done": "Pronto até {{date}}",
+      "failed": "Falhou",
+      "expired": "Expirado"
+    },
+    "download": "Baixar",
+    "downloadFailed": "Não foi possível baixar o dossiê.",
+    "receipt": "Comprovante de entrega",
+    "receiptFailed": "Não foi possível baixar o comprovante.",
+    "timestamp": "Carimbo de tempo (.tsr)",
+    "timestampFailed": "Não foi possível baixar o carimbo de tempo.",
+    "retry": "Tentar de novo",
+    "integrityProblem": "Verificação de integridade com problemas"
+  },
   "externalDocuments": {
     "title": "Documentos recebidos",
     "upload": "Enviar documento",
@@ -1303,6 +1354,7 @@
     "exportReady": "Sua exportação está pronta ({{when}})",
     "unsignedNote": "Nota sem assinatura de {{patient}}",
     "retentionDue": "Prazo de guarda do prontuário de {{patient}}",
+    "dossierReady": "Dossiê de {{patient}} pronto para baixar",
     "integrityProblem": "Problema de integridade nos registros: veja a Conformidade",
     "open": "Abrir avisos"
   },

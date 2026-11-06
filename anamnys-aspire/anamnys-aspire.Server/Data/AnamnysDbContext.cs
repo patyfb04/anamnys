@@ -40,6 +40,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ThemeTermSuccession> ThemeTermSuccessions => Set<ThemeTermSuccession>();
     public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
     public DbSet<AccountExport> AccountExports => Set<AccountExport>();
+    public DbSet<Dossier> Dossiers => Set<Dossier>();
     public DbSet<ExcerptRef> ExcerptRefs => Set<ExcerptRef>();
     public DbSet<ExternalDocument> ExternalDocuments => Set<ExternalDocument>();
     public DbSet<ExternalDocumentPage> ExternalDocumentPages => Set<ExternalDocumentPage>();
@@ -248,6 +249,16 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("AccountExports");
             e.HasKey(x => x.Id);
             e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Dossier>(e =>
+        {
+            e.ToTable("Dossiers");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Manifest).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.ProviderId, x.Number }).IsUnique();
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<RetentionRule>(e =>

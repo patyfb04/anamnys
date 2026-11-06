@@ -391,7 +391,8 @@ export type NotificationKind =
   | "account_export_ready"
   | "unsigned_note"
   | "retention_due"
-  | "integrity_problem";
+  | "integrity_problem"
+  | "dossier_ready";
 
 export interface ProviderNotification {
   id: string;
@@ -400,8 +401,42 @@ export interface ProviderNotification {
   patientName: string | null;
   startsAt: string | null; // ISO instant
   exportId: string | null;
+  patientId?: string | null; // dossier_ready: the patient page that holds the dossier
   createdAt: string;
   readAt: string | null;
+}
+
+// Patient dossier (design/specs/2026-11-04-patient-dossier-design.md).
+export type DossierStatus = "queued" | "running" | "done" | "failed" | "expired";
+export type DossierReason = "crp" | "court" | "patient_request" | "other";
+
+export interface DossierItem {
+  id: string;
+  number: number;
+  status: DossierStatus;
+  reason: DossierReason;
+  periodFrom: string | null; // YYYY-MM-DD
+  periodTo: string | null;
+  requestedAt: string;
+  generatedAt: string | null;
+  expiresAt: string | null;
+  sizeBytes: number | null;
+  anchored: boolean;
+  integrityVerified: boolean | null;
+}
+
+export interface DossierPage {
+  items: DossierItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface DossierRequest {
+  reason: DossierReason;
+  reasonNote?: string;
+  periodFrom?: string;
+  periodTo?: string;
 }
 
 // Full account export (design/specs/2026-10-23-account-export-design.md).

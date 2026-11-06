@@ -200,6 +200,7 @@ start without it.
 - [ ] `2026-11-01-protected-sharing.sql` applied (re-run if an earlier version was applied)
 - [ ] `2026-11-03-integrity-chain.sql` applied before the new version signs anything; the retroactive backfill runs at the next server start (chapter 38)
 - [ ] `integrity-tsa-url` and `integrity-tsa-root-certificate` set; outbound HTTPS to the authority
+- [ ] `2026-11-04-patient-dossier.sql` applied before the new version starts (chapter 39)
 - [ ] Memory sized; tzdata in the image
 - [ ] Backups of Postgres and SeaweedFS + a rehearsed restore
 - [ ] Processor agreements; QuestPDF licence condition

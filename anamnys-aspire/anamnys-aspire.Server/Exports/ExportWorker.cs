@@ -19,13 +19,15 @@ public sealed class ExportWorker(
         }
     }
 
-    // Best effort: temp ZIPs a previous process left behind (a crash skips DeleteOnClose).
-    internal static int DeleteLeftoverTempFiles(string directory, DateTimeOffset startedAt, ILogger logger)
+    // Best effort: temp ZIPs a previous process left behind (a crash skips DeleteOnClose). The dossier worker passes its
+    // own pattern.
+    internal static int DeleteLeftoverTempFiles(
+        string directory, DateTimeOffset startedAt, ILogger logger, string pattern = "anamnys-export-*.zip")
     {
         var deleted = 0;
         try
         {
-            foreach (var path in Directory.EnumerateFiles(directory, "anamnys-export-*.zip"))
+            foreach (var path in Directory.EnumerateFiles(directory, pattern))
             {
                 try
                 {
