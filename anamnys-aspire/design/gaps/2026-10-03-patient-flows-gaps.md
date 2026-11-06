@@ -535,7 +535,7 @@ Integrity chain (F-45; chapter `documentation/38-integrity-chain.md`).
 
 - **External documents (F-07) are not sealed.** Only signed notes and signed issued documents enter the chain.
 - **Disclosure authorizations (F-17) are not sealed.**
-- **Timestamp tokens are not embedded in the report PDF.** The report lists the head hash of each anchor; the tokens stay in `IntegrityAnchors`, so an outside party needs them from the provider.
+- **Timestamp tokens are not embedded in the F-45 provider report PDF.** The report lists the head hash of each anchor; the tokens stay in `IntegrityAnchors`, so an outside party needs them from the provider. The F-44 dossier ZIP does ship the covering anchor tokens (`integridade/carimbos/`); only the F-45 provider report still lacks them.
 - **A rotation of the TSA root invalidates earlier anchors (review M1).** Tokens are verified against the one configured root; keep old roots or support several. **Must be solved before the first production deploy.**
 - **Only the first chain problem is notified per run.** Later problems in the same chain appear after the first is fixed.
 - **No sanity check of the token `genTime` against the clock.**
@@ -544,6 +544,21 @@ Integrity chain (F-45; chapter `documentation/38-integrity-chain.md`).
 - **The unanchored tail and the tokens live only in the database.** Truncating the tail after the last anchor, or a superuser rewriting the chain with triggers disabled, cannot be detected from inside; the tokens do not leave the database yet.
 - **The report file name uses the UTC date**, and the job audit entries are attributed to the provider.
 - **Not exercised in a browser;** build and lint only.
+
+## Dossiê do paciente
+
+Patient dossier (F-44; chapter `documentation/39-patient-dossier.md`).
+
+- **Structured clinical data (scales, diagnoses, medication, objectives) is not in the dossier as CSV.**
+- **No e-mail delivery.** The provider downloads the ZIP and hands it over.
+- **No request from the patient portal.** Only the provider generates dossiers.
+- **The race paths are untested** (two requests at once, a discard during a build).
+- **A row stuck after a database error blocks new requests for that patient until the server restarts** (the restart handling fails or re-enqueues it).
+- **A dossier row stuck `queued` after a database error** (F-44): if the first `queued -> running` update in `DossierWorker.RunAsync` throws, `FailAsync` matches only `running`, so the row stays `queued` and blocks the patient until the restart re-enqueues it.
+- **Memory per external file:** each file is read into memory while copied (about twice its size, roughly 40 MB at the 20 MB limit); a streaming store API would remove it.
+- **The disclosure summary row is dated by its authorization** even when a link or access pulled it into the period.
+- **Provider UI minors:** no `keepPreviousData` (pager flicker), the page is not reset to 1 after a request, a second bell click on `#dossiers` does not re-trigger, a `dossier_ready` notice without a patient id falls back to the calendar link, no pending state on the receipt and token buttons, no UI tests, not exercised in a browser.
+- **The dossier token is a separate download** from the receipt; it is not embedded in the ZIP.
 
 ## Guarda e descarte
 

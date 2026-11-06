@@ -653,3 +653,37 @@ GET {{Server_HostAddress}}/api/phi/providers/me/integrity
 ###
 ### The verification report. 200 application/pdf, attachment "comprovante-integridade-<date>.pdf"; 401. Audited integrity_report_downloaded.
 GET {{Server_HostAddress}}/api/phi/providers/me/integrity/report.pdf
+
+###
+### F-44 patient dossier (design/specs/2026-11-04-patient-dossier-design.md §3). Every answer is Cache-Control: no-store; 401 without a
+### provider session; 404 for an unknown, discarded or another provider's patient or dossier. No URL or file name carries the patient's name.
+### Request one. reason: "crp" | "court" | "patient_request" | "other"; reasonNote (1..200) required only for "other"; periodFrom/periodTo
+### optional practice dates (none = whole history). 202 { id, status: "queued" }; 400 { code: "invalid_reason" | "reason_note_required" |
+### "invalid_period" }; 409 { code: "dossier_in_progress" } while the patient has one queued or running. Audited dossier_requested
+### (reason and period only, never the note). Built in the background; a bell notice dossier_ready (with patientId) when done.
+POST {{Server_HostAddress}}/api/phi/patients/00000000-0000-0000-0000-000000000000/dossiers
+Content-Type: application/json
+
+{ "reason": "other", "reasonNote": "Pedido da escola", "periodFrom": "2026-01-01", "periodTo": "2026-10-31" }
+
+###
+### The patient's dossiers, newest first, 5 per page. 200 { items: [{ id, number, status: "queued" | "running" | "done" | "failed" | "expired",
+### reason, periodFrom, periodTo, requestedAt, generatedAt, expiresAt, sizeBytes, anchored, integrityVerified }], total, page, pageSize }.
+GET {{Server_HostAddress}}/api/phi/patients/00000000-0000-0000-0000-000000000000/dossiers?page=1
+
+###
+### A one-hour presigned link to the ZIP ("anamnys-dossie-AAAA-MM-DD-NNN.zip"), new on each call. 200 { url, expiresAt };
+### 409 { code: "not_ready" | "expired" } (the ZIP is kept 7 days). Audited dossier_downloaded.
+POST {{Server_HostAddress}}/api/phi/dossiers/00000000-0000-0000-0000-000000000000/download
+
+###
+### The delivery receipt: the ZIP's SHA-256, its timestamp (or "sem carimbo") and the manifest's files with hashes. Also after the ZIP expired.
+### 200 application/pdf, attachment "anamnys-dossie-NNN-comprovante.pdf"; 409 { code: "not_ready" }. Audited dossier_receipt_downloaded.
+GET {{Server_HostAddress}}/api/phi/dossiers/00000000-0000-0000-0000-000000000000/receipt.pdf
+
+###
+### The ZIP's RFC 3161 timestamp token (raw DER) over the ZIP's own SHA-256, so a third party can run
+### `openssl ts -verify -data anamnys-dossie-AAAA-MM-DD-NNN.zip -in anamnys-dossie-NNN.tsr -token_in -CAfile <root>`.
+### 200 application/octet-stream (a bare DER TimeStampToken, hence -token_in), attachment "anamnys-dossie-NNN.tsr"; 404 (unknown, another provider's, or generated without a
+### timestamp); 409 { code: "not_ready" } before generation. Audited dossier_receipt_downloaded ("<id> tsr").
+GET {{Server_HostAddress}}/api/phi/dossiers/00000000-0000-0000-0000-000000000000/timestamp.tsr

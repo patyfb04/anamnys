@@ -14,14 +14,24 @@ public sealed class HttpTimestampAuthority(HttpClient http, IntegrityOptions opt
 
     public string Url => options.TsaUrl;
 
-    public async Task<byte[]> StampAsync(string headHash, CancellationToken ct)
+    public Task<byte[]> StampAsync(string headHash, CancellationToken ct) => StampImprintAsync(TimestampTokens.Imprint(headHash), ct);
+
+    public Task<byte[]> StampDigestAsync(byte[] sha256Digest, CancellationToken ct) =>
+        sha256Digest.Length == SHA256.HashSizeInBytes
+            ? StampImprintAsync(sha256Digest, ct)
+            : throw new ArgumentException("A SHA-256 digest has 32 bytes.", nameof(sha256Digest));
+
+    public DateTimeOffset? VerifyDigest(byte[] token, byte[] sha256Digest) => TimestampTokens.VerifyImprint(token, sha256Digest, _root);
+
+    // Only the imprint leaves the system; the token is checked against the configured root before it is returned.
+    private async Task<byte[]> StampImprintAsync(byte[] imprint, CancellationToken ct)
     {
         if (_root is null)
         {
             throw new InvalidOperationException("No TSA root certificate is configured (Integrity:TsaRootCertificate).");
         }
         var request = Rfc3161TimestampRequest.CreateFromHash(
-            TimestampTokens.Imprint(headHash), HashAlgorithmName.SHA256, null, RandomNumberGenerator.GetBytes(16), true);
+            imprint, HashAlgorithmName.SHA256, null, RandomNumberGenerator.GetBytes(16), true);
         using var content = new ByteArrayContent(request.Encode());
         content.Headers.ContentType = new MediaTypeHeaderValue("application/timestamp-query");
         using var message = new HttpRequestMessage(HttpMethod.Post, options.TsaUrl) { Content = content };
@@ -31,7 +41,7 @@ public sealed class HttpTimestampAuthority(HttpClient http, IntegrityOptions opt
         // Status, nonce and message imprint; throws CryptographicException when any of them is wrong.
         request.ProcessResponse(body, out _);
         var token = TimestampTokens.TokenOf(body);
-        if (Verify(token, headHash) is null)
+        if (TimestampTokens.VerifyImprint(token, imprint, _root) is null)
         {
             throw new CryptographicException("The timestamp token does not chain to the configured root.");
         }

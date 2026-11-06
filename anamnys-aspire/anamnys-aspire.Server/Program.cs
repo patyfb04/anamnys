@@ -6,6 +6,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.DocumentFacts;
 using Anamnys.Server.DocumentReading;
 using Anamnys.Server.Documents;
+using Anamnys.Server.Dossiers;
 using Anamnys.Server.Exports;
 using Anamnys.Server.Integrity;
 using Anamnys.Server.ExternalDocuments;
@@ -48,6 +49,8 @@ builder.AddDocumentReading();
 builder.AddDocumentFacts();
 // F-45: TSA options (required outside Development), the timestamp authority and the retroactive sealing at startup.
 builder.AddIntegrity();
+// F-44: the patient dossier worker and its restart handling and daily sweep.
+builder.AddPatientDossier();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
@@ -186,6 +189,7 @@ phi.MapDiscardEndpoints();
 phi.MapProviderNotificationEndpoints();
 phi.MapShareEndpoints();
 phi.MapIntegrityEndpoints();
+phi.MapDossierEndpoints();
 app.MapConfirmationEndpoints(phi);
 app.MapPublicShareEndpoints();
 

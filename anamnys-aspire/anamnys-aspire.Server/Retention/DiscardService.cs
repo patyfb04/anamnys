@@ -213,7 +213,8 @@ public static class DiscardService
             DELETE FROM "Notifications" WHERE "ProviderId" = {v} AND (
                 ("SubjectType" = 'patient' AND "SubjectId" = {p})
                 OR ("SubjectType" = 'note' AND "SubjectId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
-                OR ("SubjectType" = 'appointment' AND "SubjectId" IN (SELECT "Id" FROM "Appointments" WHERE "PatientId" = {p} AND "ProviderId" = {v})))
+                OR ("SubjectType" = 'appointment' AND "SubjectId" IN (SELECT "Id" FROM "Appointments" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
+                OR ("SubjectType" = 'dossier' AND "SubjectId" IN (SELECT "Id" FROM "Dossiers" WHERE "PatientId" = {p})))
             """);
         await Run("excerptRefs", $"""
             DELETE FROM "ExcerptRefs" WHERE "ProviderId" = {v} AND (

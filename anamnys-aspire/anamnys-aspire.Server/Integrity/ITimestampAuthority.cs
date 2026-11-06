@@ -18,6 +18,13 @@ public interface ITimestampAuthority
     // The token's genTime when it verifies for this head hash (signature, message imprint, signer chained to the root);
     // null otherwise, never an exception.
     DateTimeOffset? Verify(byte[] token, string headHash);
+
+    // F-44: the DER TimeStampToken over a file's own SHA-256 digest (32 bytes), so `openssl ts -verify -data <file>` works
+    // on the file itself. Already verified against the root; throws on any failure.
+    Task<byte[]> StampDigestAsync(byte[] sha256Digest, CancellationToken ct);
+
+    // The token's genTime when it verifies for this file digest; null otherwise, never an exception.
+    DateTimeOffset? VerifyDigest(byte[] token, byte[] sha256Digest);
 }
 
 public static class TimestampTokens
@@ -29,9 +36,13 @@ public static class TimestampTokens
     // check it with `openssl ts -verify -data` on a file holding just the hash.
     public static byte[] Imprint(string headHash) => SHA256.HashData(Encoding.UTF8.GetBytes(headHash));
 
-    public static DateTimeOffset? Verify(byte[] token, string headHash, X509Certificate2? root)
+    public static DateTimeOffset? Verify(byte[] token, string headHash, X509Certificate2? root) =>
+        VerifyImprint(token, Imprint(headHash), root);
+
+    // The token's genTime when its message imprint is exactly this SHA-256 value and it chains to the root.
+    public static DateTimeOffset? VerifyImprint(byte[] token, byte[] imprint, X509Certificate2? root)
     {
-        if (root is null || token.Length == 0)
+        if (root is null || token.Length == 0 || imprint.Length != SHA256.HashSizeInBytes)
         {
             return null;
         }
@@ -39,7 +50,7 @@ public static class TimestampTokens
         {
             if (!Rfc3161TimestampToken.TryDecode(token, out var decoded, out var consumed) || consumed != token.Length
                 || decoded.TokenInfo.HashAlgorithmId.Value != Sha256Oid
-                || !decoded.VerifySignatureForHash(Imprint(headHash), HashAlgorithmName.SHA256, out var signer, null)
+                || !decoded.VerifySignatureForHash(imprint, HashAlgorithmName.SHA256, out var signer, null)
                 || signer is null)
             {
                 return null;

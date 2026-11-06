@@ -63,6 +63,18 @@ internal sealed class FakeTimestampAuthority : ITimestampAuthority, IDisposable
 
     public DateTimeOffset? Verify(byte[] token, string headHash) => TimestampTokens.Verify(token, headHash, Root);
 
+    public Task<byte[]> StampDigestAsync(byte[] sha256Digest, CancellationToken ct)
+    {
+        Requests++;
+        if (Down)
+        {
+            throw new HttpRequestException("TSA unreachable");
+        }
+        return Task.FromResult(Token(sha256Digest, Serial()));
+    }
+
+    public DateTimeOffset? VerifyDigest(byte[] token, byte[] sha256Digest) => TimestampTokens.VerifyImprint(token, sha256Digest, Root);
+
     // The real HTTP authority, configured with this root, talking to this fake.
     public HttpTimestampAuthority Http() =>
         new(new HttpClient(new Handler(this)), new IntegrityOptions { TsaUrl = FakeUrl, TsaRootCertificate = RootPem });
