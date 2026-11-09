@@ -66,6 +66,12 @@ start without it.
 | `patient-portal-url` | `https://<host>/patient`, absolute https (env `PatientPortal__BaseUrl`) | Required outside Development. Gate: the server refuses to start unless `PatientPortal:BaseUrl` is an absolute https URL. Protected-sharing links (chapter 37) are built from it. Same shape as `storage-public-url`. |
 | `integrity-tsa-url` | absolute http(s) URL of an RFC 3161 time stamping authority (env `Integrity__TsaUrl`; FreeTSA is `https://freetsa.org/tsr`) | Required in publish mode. The daily anchor of the integrity chain (chapter 38) posts only a hash there; allow outbound HTTPS. |
 | `integrity-tsa-root-certificate` | PEM of the authority's root certificate (env `Integrity__TsaRootCertificate`) | Required in publish mode. Gate: outside Development the server refuses to start without a parsable root. Tokens are accepted only when they chain to it. |
+| `backup-enabled` | `true` in Development turns backup on (user secret `Parameters:backup-enabled`; remove it afterwards, the test AppHost reads the same secrets); publish mode always backs up | Chapter 40. Unset: the graph is the old one. |
+| `backup-s3-endpoint`, `backup-s3-bucket` | S3-compatible destination off the server, and its bucket | Required in publish mode. Must be reachable at the first start of a fresh PostgreSQL volume (chapter 40, section 7). In Development a second SeaweedFS (`backup-store`) is the destination. |
+| `backup-s3-access-key`, `backup-s3-secret-key` | credentials of that bucket | Required in publish mode, secret. |
+| `backup-encryption-key` | 32 random bytes, base64 (`openssl rand -base64 32`) | Required whenever backup is on, secret. **Keep it outside the server; losing it makes every backup unreadable** (chapter 40, section 6). |
+| `backup-alert-email` | administrator e-mail (env `Backup__AlertEmail`) | Required whenever backup is on. Receives the `BackupMonitor` alerts through Resend. |
+| `backup-agent-db-password` | new random value | Required in publish mode, secret; generated into user secrets in Development. Login password of the `anamnys_backup_agent` role. |
 
 ### 2.2 Server settings
 
@@ -167,6 +173,7 @@ start without it.
 
 - Postgres (all clinical data, audit trail) and the SeaweedFS volume (exported PDFs).
 - A restore must be rehearsed before the product promises a "cofre" or long-term custody.
+- Implemented (F-46): WAL-G, a backup agent, a monitor, `scripts/restore.sh` and a monthly drill; see chapter 40. Parameters in 2.1 (`backup-*`); apply `2026-11-05-backup-runs.sql` first.
 
 ### 2.8 Licences and legal (before charging anyone)
 

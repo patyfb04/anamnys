@@ -53,7 +53,9 @@ public sealed class SharedAppHostFixture : IAsyncLifetime
                 // The fake scanner needs no ClamAV container (the AppHost skips it for this value).
                 "--ExternalDocuments:Scanner=fake",
                 // No document fact extraction with the real model (F-08): the server uses NoFactExtractor.
-                "--DocumentFacts:Extractor=none"],
+                "--DocumentFacts:Extractor=none",
+                // No backup (F-46) in tests, even when a `backup-enabled=true` user secret is left over from a drill.
+                "--Parameters:backup-enabled=false"],
                 TestContext.Current.CancellationToken);
 
         var keycloakResource = appHost.Resources.OfType<KeycloakResource>().Single();

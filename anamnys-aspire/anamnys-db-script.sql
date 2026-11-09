@@ -1794,3 +1794,39 @@ CREATE TRIGGER "IntegritySeals_no_truncate" BEFORE TRUNCATE ON "IntegritySeals"
 DROP TRIGGER IF EXISTS "IntegrityAnchors_no_truncate" ON "IntegrityAnchors";
 CREATE TRIGGER "IntegrityAnchors_no_truncate" BEFORE TRUNCATE ON "IntegrityAnchors"
   FOR EACH STATEMENT EXECUTE FUNCTION "Integrity_no_truncate"();
+CREATE TABLE IF NOT EXISTS "BackupRuns" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Kind" text NOT NULL,
+    "StartedAt" timestamp with time zone NOT NULL,
+    "FinishedAt" timestamp with time zone NOT NULL,
+    "Outcome" text NOT NULL,
+    "Bytes" bigint,
+    "ErrorCode" text,
+    "BackupName" text,
+    CONSTRAINT "BackupRuns_Kind_ck" CHECK ("Kind" IN ('full', 'files', 'retention')),
+    CONSTRAINT "BackupRuns_Outcome_ck" CHECK ("Outcome" IN ('ok', 'failed'))
+);
+CREATE INDEX IF NOT EXISTS "BackupRuns_Kind_FinishedAt_idx" ON "BackupRuns" ("Kind", "FinishedAt" DESC);
+
+CREATE TABLE IF NOT EXISTS "BackupAlerts" (
+    "Id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    "Check" text NOT NULL,
+    "OpenedAt" timestamp with time zone NOT NULL,
+    "ClosedAt" timestamp with time zone,
+    "NotifiedAt" timestamp with time zone
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "BackupAlerts_OpenCheck_key" ON "BackupAlerts" ("Check") WHERE "ClosedAt" IS NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anamnys_backup_agent') THEN
+    CREATE ROLE anamnys_backup_agent NOLOGIN;
+  END IF;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END
+$$;
+
+GRANT INSERT ON "BackupRuns" TO anamnys_backup_agent;
+GRANT SELECT ON "Providers", "Patients", "Notes", "NoteSections", "ClinicalDocuments", "ExternalDocuments",
+                "IntegritySeals", "IntegrityAnchors", "AuditEntries", "Dossiers", "ShareLinks"
+    TO anamnys_backup_agent;

@@ -41,6 +41,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ThemeTermChange> ThemeTermChanges => Set<ThemeTermChange>();
     public DbSet<AccountExport> AccountExports => Set<AccountExport>();
     public DbSet<Dossier> Dossiers => Set<Dossier>();
+    public DbSet<BackupRun> BackupRuns => Set<BackupRun>();
+    public DbSet<BackupAlert> BackupAlerts => Set<BackupAlert>();
     public DbSet<ExcerptRef> ExcerptRefs => Set<ExcerptRef>();
     public DbSet<ExternalDocument> ExternalDocuments => Set<ExternalDocument>();
     public DbSet<ExternalDocumentPage> ExternalDocumentPages => Set<ExternalDocumentPage>();
@@ -249,6 +251,20 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("AccountExports");
             e.HasKey(x => x.Id);
             e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BackupRun>(e =>
+        {
+            e.ToTable("BackupRuns");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.Kind, x.FinishedAt });
+        });
+
+        modelBuilder.Entity<BackupAlert>(e =>
+        {
+            e.ToTable("BackupAlerts");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => x.Check).IsUnique().HasFilter("\"ClosedAt\" IS NULL");
         });
 
         modelBuilder.Entity<Dossier>(e =>

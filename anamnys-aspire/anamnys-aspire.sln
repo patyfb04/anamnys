@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{1787FE1D-0
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "admin", "apps\admin\admin.esproj", "{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "anamnys-aspire.RestoreCheck", "anamnys-aspire.RestoreCheck\anamnys-aspire.RestoreCheck.csproj", "{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -95,6 +97,18 @@ Global
 		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|x64.ActiveCfg = Release|Any CPU
 		{B1899EB2-4D9A-4050-AE63-B8AE3A7EAC6C}.Release|x86.ActiveCfg = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|x64.Build.0 = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Debug|x86.Build.0 = Debug|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|x64.ActiveCfg = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|x64.Build.0 = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|x86.ActiveCfg = Release|Any CPU
+		{3E4F121E-3896-4414-97F3-CD9B33ADCE2A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

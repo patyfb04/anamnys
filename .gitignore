@@ -6,6 +6,8 @@ anamnys-aspire/anamnys-aspire.AppHost/bin/
 anamnys-aspire/anamnys-aspire.AppHost/obj/
 anamnys-aspire/anamnys-aspire.Tests/bin/
 anamnys-aspire/anamnys-aspire.Tests/obj/
+anamnys-aspire/anamnys-aspire.RestoreCheck/bin/
+anamnys-aspire/anamnys-aspire.RestoreCheck/obj/
 
 # esproj build output (dir names can contain a literal backslash on macOS)
 anamnys-aspire/apps/*/obj*
