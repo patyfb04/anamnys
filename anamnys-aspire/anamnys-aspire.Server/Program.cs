@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Anamnys.Server.Appointments;
 using Anamnys.Server.Auth;
+using Anamnys.Server.Backup;
 using Anamnys.Server.Data;
 using Anamnys.Server.DocumentFacts;
 using Anamnys.Server.DocumentReading;
@@ -54,6 +55,9 @@ builder.AddPatientDossier();
 
 builder.AddAnamnysAuthentication();
 builder.AddEmail();
+// F-46: Backup:Enabled (off by default) turns on the freshness monitor; AlertEmail receives the alerts.
+var backupOptions = builder.Configuration.GetSection(BackupOptions.Section).Get<BackupOptions>() ?? new BackupOptions();
+builder.Services.AddSingleton(backupOptions);
 
 builder.Services.AddSingleton(TimeProvider.System);
 if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
@@ -63,6 +67,8 @@ if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
     builder.Services.AddHostedService<RetentionJob>();
     // The nightly timestamp and chain check (design/specs/2026-11-03-integrity-chain-design.md §7).
     builder.Services.AddHostedService<IntegrityJob>();
+    // The 15-minute backup freshness check (design/specs/2026-11-05-backup-restore-design.md §2.4); does nothing unless Backup:Enabled.
+    builder.Services.AddHostedService<BackupMonitorJob>();
 }
 
 // Public routes (/api/public/...) are anonymous: 30 requests per minute per client IP.

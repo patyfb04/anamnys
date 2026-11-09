@@ -22,7 +22,8 @@ const MOCK_FLAGS: FeatureFlags = {
   documentIntake: true,
   analytics: true,
   secureSharing: true,
-  billing: true,
+  // Off until group F (convênios: TISS/TUSS) gives /billing a page.
+  billing: false,
 };
 
 const MOCK_DELAY_MS = 150;

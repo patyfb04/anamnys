@@ -64,6 +64,14 @@ needs its own values for `provider-client-secret`, `patient-client-secret`, and
 management works, with no expectation of reusing anything from a developer's machine or
 from this repository.
 
+**Backup (F-46).** A real deployment must supply the backup destination and the keys; nothing in this repository does:
+`backup-s3-endpoint`, `backup-s3-bucket`, `backup-s3-access-key`, `backup-s3-secret-key`, `backup-encryption-key` (kept
+outside the server, in the owner's password manager: losing it makes every backup unreadable), `backup-alert-email` and
+`backup-agent-db-password`. Publish mode requires them and always backs up. The destination must be reachable at the very
+first start of a fresh PostgreSQL volume. **Before claiming custody (the word "cofre"), run `scripts/restore-drill.sh`
+against the real deployment and keep an `aprovado` record newer than 90 days** (chapter 40). The local drill of
+2026-11-07 does not count for production.
+
 ## TLS and realm hardening outside Development
 
 A few settings from earlier chapters flip specifically based on environment, and it's

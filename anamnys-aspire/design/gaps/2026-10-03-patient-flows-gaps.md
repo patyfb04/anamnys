@@ -545,6 +545,23 @@ Integrity chain (F-45; chapter `documentation/38-integrity-chain.md`).
 - **The report file name uses the UTC date**, and the job audit entries are attributed to the provider.
 - **Not exercised in a browser;** build and lint only.
 
+## Backup e restauração
+
+
+- **Monthly drill is manual (2026-11-08).** The backup itself runs on its own in production: publish always enables it, PostgreSQL ships WAL and the `backup-agent` container runs its own schedule (daily full at 03:00, objects every 10 minutes, retention), independent of the application server; the server only watches (`BackupMonitor`). In Development it stays off (`Parameters:backup-enabled`) so a dev machine does not run the agent, send real alert e-mails when it sleeps, or change the test setup. What does not run on its own is the monthly restore drill: `scripts/restore-drill.sh` is run by hand and the "monthly" cadence is only a rule in chapter 40. To do with the production deployment: a scheduled drill (monthly, throwaway environment, record written, e-mail on `reprovado`).
+Backup and point-in-time restore (F-46; chapter `documentation/40-backup-restore.md`).
+
+- **`restore.sh` cannot restore a monthly full older than the 30-day window.** The 12 monthly permanent fulls are kept, but `restore.sh` has only `--target-time` and `--latest`, both of which need the WAL after the full (removed after 30 days). A monthly restore needs a manual procedure (`wal-g backup-fetch <name>`, `recovery_target = 'immediate'`) until a `--backup <name>` option is added (ruling I-4, 2026-11-08: YAGNI before production).
+- **Point-in-time replay not yet shown end to end.** Drill 4 replayed no change written after the full backup and overlaid no object version folder. The drill now records both (and counts the agent's `BackupRuns` rows as changes); drill 5, with a change after the full and an object overwritten after the target, is pending.
+- **Key rotation leaves a window without point-in-time restore** between the redeploy with the new key and the first new-key full (chapter 40 §6); forcing a full by hand (`docker exec <agent> wal-g backup-push`) is documented but not exercised.
+- **Development data is polluted by tests.** The dev database has 6 `content_changed` chains and about 520 missing objects written by the test suite; they pre-exist any restore, so the drill runs in baseline mode and lists them separately. Clean the dev data or isolate the tests.
+- **A real S3 with a missing bucket was not demonstrated.** SeaweedFS creates buckets on the first PUT; only the expected behavior (the archiver retries until the bucket exists) is documented.
+- ~~**The restored-versus-current check assumes an empty destination bucket.**~~ Resolved 2026-11-08: the check is the object restore's "restored >= objects in `current/`", and `restore.sh` now requires `RESTORE_S3_BUCKET` explicitly (no default) and refuses a destination bucket that already holds any object, so the check holds and a restore can never revert a live store.
+- **The first start of a fresh volume with an unreachable destination is only documented** (`timeout 60`, `PGCTLTIMEOUT=300`), not measured; the destination must be reachable.
+- **Advisories remain in Tests/AppHost:** `Microsoft.AspNetCore.SignalR.Common` (NU1903) and `MessagePack` (NU1902). Pkcs and Cryptography.Xml were moved to 10.0.14.
+- **The production drill is pending.** The local drill (2026-11-07) passed; "cofre" needs production plus an `aprovado` drill in the last 90 days, repeated monthly.
+- A failed `wal-g backup-list` at agent start skips the immediate full only before 03:00 (the 03:00 slot covers it; after 03:00 the first loop pass takes one); `--latest` against a still-archiving origin may need "run again".
+
 ## Dossiê do paciente
 
 Patient dossier (F-44; chapter `documentation/39-patient-dossier.md`).
@@ -670,3 +687,7 @@ Full account export (F-60; chapter `documentation/24-account-export.md`).
 - **Patient portal (delivery 3):** done in `2026-10-04-patient-portal-sessions`.
 - **Provider app accepted a patient-only session:** fixed in `fix/realm-scoped-session`.
 - **Appointments had no write path:** done in `2026-10-05-provider-calendar`.
+
+## Faturamento (convênios)
+
+- The provider sidenav entry "Faturamento" (`/billing`) is hidden (feature flag `billing: false` in `packages/shared/src/api-mock/featureFlags.ts`, 2026-11-07): the route never existed. It comes back with group F (F-19 to F-22, TISS/TUSS).

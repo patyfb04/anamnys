@@ -237,6 +237,124 @@ else
     server.WithEnvironment("Storage__PublicUrl", storage.GetEndpoint("s3"));
 }
 
+// F-46 backup and point-in-time restore (design/specs/2026-11-05-backup-restore-design.md §2.1–2.3). Off unless
+// `Parameters:backup-enabled` is true (read directly, like storage-public-url, so with it unset a dev run and the test
+// AppHost get exactly the graph they had before: Aspire's postgres:18 image, no archiving, no WAL-G environment, no
+// backup-agent, no backup-store, no Backup__* on the server). Publish mode always backs up, to the destination its
+// required parameters name. A run with backup enabled targets a second local SeaweedFS, `backup-store`.
+var backupEnabled = builder.ExecutionContext.IsPublishMode
+    || string.Equals(builder.Configuration["Parameters:backup-enabled"], "true", StringComparison.OrdinalIgnoreCase);
+if (backupEnabled)
+{
+    ReferenceExpression backupEndpoint;
+    ReferenceExpression backupBucket;
+    ReferenceExpression backupAccessKey;
+    ReferenceExpression backupSecretKey;
+    IResourceBuilder<ParameterResource> backupAgentDbPassword;
+    IResourceBuilder<ContainerResource>? backupStore = null;
+    if (builder.ExecutionContext.IsPublishMode)
+    {
+        backupEndpoint = ReferenceExpression.Create($"{builder.AddParameter("backup-s3-endpoint")}");
+        backupBucket = ReferenceExpression.Create($"{builder.AddParameter("backup-s3-bucket")}");
+        backupAccessKey = ReferenceExpression.Create($"{builder.AddParameter("backup-s3-access-key", secret: true)}");
+        backupSecretKey = ReferenceExpression.Create($"{builder.AddParameter("backup-s3-secret-key", secret: true)}");
+        backupAgentDbPassword = builder.AddParameter("backup-agent-db-password", secret: true);
+    }
+    else
+    {
+        // The local destination: same SeaweedFS image and identity-file pattern as `storage`, its own volume and its
+        // own keys (generated once and kept in the AppHost's user secrets; alphanumeric, see `storage`).
+        var keyDefault = new GenerateParameterDefault { MinLength = 32, Special = false };
+        var storeAccessKey = builder.AddParameter("backup-store-access-key", keyDefault, secret: true, persist: true);
+        var storeSecretKey = builder.AddParameter("backup-store-secret-key", keyDefault, secret: true, persist: true);
+        backupStore = builder.AddContainer("backup-store", "chrislusf/seaweedfs", "4.48")
+            .WithVolume("anamnys-backup-store-data", "/data")
+            .WithEnvironment("S3_ACCESS_KEY", storeAccessKey)
+            .WithEnvironment("S3_SECRET_KEY", storeSecretKey)
+            .WithEntrypoint("/bin/sh")
+            .WithArgs("-c", """
+                printf '{"identities":[{"name":"backup","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List"]}]}' "$S3_ACCESS_KEY" "$S3_SECRET_KEY" > /tmp/s3.json && exec weed server -dir=/data -ip=127.0.0.1 -ip.bind=127.0.0.1 -s3 -s3.port=8333 -s3.ip.bind=0.0.0.0 -s3.port.iceberg=0 -s3.port.lance=0 -s3.config=/tmp/s3.json -filer.encryptVolumeData -s3.encryptVolumeData -volume.max=0
+                """)
+            .WithHttpEndpoint(targetPort: 8333, name: "s3")
+            .WithHttpHealthCheck("/healthz", endpointName: "s3");
+        backupEndpoint = ReferenceExpression.Create($"{backupStore.GetEndpoint("s3")}");
+        backupBucket = ReferenceExpression.Create($"anamnys-backup");
+        backupAccessKey = ReferenceExpression.Create($"{storeAccessKey}");
+        backupSecretKey = ReferenceExpression.Create($"{storeSecretKey}");
+        backupAgentDbPassword = builder.AddParameter("backup-agent-db-password",
+            new GenerateParameterDefault { MinLength = 32, Special = false }, secret: true, persist: true);
+    }
+
+    // 32 random bytes, base64 (`openssl rand -base64 32`); kept outside the server, losing it makes every backup
+    // unreadable (spec §5). Required in every mode: a dev run asks for it like any unset parameter.
+    var backupEncryptionKey = builder.AddParameter("backup-encryption-key", secret: true);
+    var backupAlertEmail = builder.AddParameter("backup-alert-email");
+
+    // WAL-G's environment, identical on PostgreSQL (wal-push from archive_command) and on the agent (backup-push).
+    void WithWalG<T>(IResourceBuilder<T> resource) where T : IResourceWithEnvironment => resource
+        .WithEnvironment("WALG_S3_PREFIX", ReferenceExpression.Create($"s3://{backupBucket}/pg"))
+        .WithEnvironment("AWS_ENDPOINT", backupEndpoint)
+        .WithEnvironment("AWS_REGION", "us-east-1")
+        .WithEnvironment("AWS_ACCESS_KEY_ID", backupAccessKey)
+        .WithEnvironment("AWS_SECRET_ACCESS_KEY", backupSecretKey)
+        .WithEnvironment("AWS_S3_FORCE_PATH_STYLE", "true")
+        .WithEnvironment("WALG_LIBSODIUM_KEY", backupEncryptionKey)
+        .WithEnvironment("WALG_LIBSODIUM_KEY_TRANSFORM", "base64")
+        .WithEnvironment("WALG_COMPRESSION_METHOD", "brotli");
+
+    // §2.1: postgres:18 plus WAL-G (postgres/Dockerfile), WAL shipped at least every 60 s. hba_file adds replication
+    // connections, which the agent's remote backup-push needs. `timeout 60`: with the destination unreachable WAL-G
+    // retries without end, which hangs shutdown (a fresh volume's init server never stops); bounded, a hung push fails
+    // and PostgreSQL retries the segment later. 60 s still fits a 16 MB segment over a slow link.
+    postgres
+        .WithDockerfile("../postgres")
+        .WithArgs("-c", "archive_mode=on", "-c", "archive_command=timeout 60 wal-g wal-push %p", "-c", "archive_timeout=60",
+            "-c", "wal_level=replica", "-c", "hba_file=/etc/postgresql/anamnys/pg_hba.conf");
+    WithWalG(postgres);
+    // The entrypoint's pg_ctl stop (fresh-volume init) waits 60 s by default; the archiver may retry a failing segment
+    // 3 times at shutdown, each bounded by the 60 s timeout above, so give it 300 s.
+    postgres.WithEnvironment("PGCTLTIMEOUT", "300");
+    if (backupStore is not null)
+    {
+        postgres.WaitFor(backupStore);
+    }
+
+    // §2.3: the agent connects as the superuser (WAL-G requires it for backup-push; it also gives
+    // anamnys_backup_agent its login) and writes BackupRuns as anamnys_backup_agent.
+    var postgresEndpoint = postgres.Resource.PrimaryEndpoint;
+    var backupAgent = builder.AddDockerfile("backup-agent", "../backup-agent")
+        .WithEnvironment("PGHOST", postgresEndpoint.Property(EndpointProperty.Host))
+        .WithEnvironment("PGPORT", postgresEndpoint.Property(EndpointProperty.Port))
+        .WithEnvironment("PGUSER", postgres.Resource.UserNameReference)
+        .WithEnvironment("PGPASSWORD", ReferenceExpression.Create($"{postgres.Resource.PasswordParameter}"))
+        .WithEnvironment("ANAMNYS_DB", anamnysDb.Resource.DatabaseName)
+        .WithEnvironment("KEYCLOAK_DB", keycloakDb.Resource.DatabaseName)
+        .WithEnvironment("BACKUP_AGENT_DB_PASSWORD", backupAgentDbPassword)
+        .WithEnvironment("SOURCE_S3_ENDPOINT", storage.GetEndpoint("s3"))
+        .WithEnvironment("SOURCE_S3_ACCESS_KEY", storageAccessKey)
+        .WithEnvironment("SOURCE_S3_SECRET_KEY", storageSecretKey)
+        // The server's bucket (StorageOptions.Bucket's default; the AppHost never overrides it).
+        .WithEnvironment("SOURCE_S3_BUCKET", "notes")
+        .WithEnvironment("BACKUP_S3_ENDPOINT", backupEndpoint)
+        .WithEnvironment("BACKUP_S3_BUCKET", backupBucket)
+        .WithEnvironment("BACKUP_S3_ACCESS_KEY", backupAccessKey)
+        .WithEnvironment("BACKUP_S3_SECRET_KEY", backupSecretKey)
+        .WithEnvironment("BACKUP_ENCRYPTION_KEY", backupEncryptionKey)
+        .WaitFor(anamnysDb)
+        .WaitFor(keycloakDb)
+        .WaitFor(storage);
+    WithWalG(backupAgent);
+    if (backupStore is not null)
+    {
+        backupAgent.WaitFor(backupStore);
+    }
+
+    // §2.4: the server's BackupMonitor runs only with Backup:Enabled.
+    server
+        .WithEnvironment("Backup__Enabled", "true")
+        .WithEnvironment("Backup__AlertEmail", backupAlertEmail);
+}
+
 // Lets the server's outside-Development startup gate (DevOnlyTestClientGuard)
 // query Keycloak's admin API for the dev-only test service-account clients.
 // KEYCLOAK_ADMIN_BASE_ADDRESS is a plain endpoint reference (resolved to a

@@ -1,0 +1,7 @@
+# Files that run or are read inside Linux containers must keep LF on every checkout (core.autocrlf=true on Windows
+# would otherwise turn them into CRLF: a "#!/bin/sh\r" entrypoint does not start).
+*.sh text eol=lf
+anamnys-aspire/postgres/Dockerfile text eol=lf
+anamnys-aspire/postgres/pg_hba.conf text eol=lf
+anamnys-aspire/backup-agent/Dockerfile text eol=lf
+anamnys-aspire/backup-agent/rclone.conf.template text eol=lf

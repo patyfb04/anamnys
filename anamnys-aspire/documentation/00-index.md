@@ -92,6 +92,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 37. Protected Sharing (F-17 + F-18)
 38. Document Integrity Chain (F-45)
 39. Patient Dossier (F-44)
+40. Backup and Point-in-Time Restore (F-46)
 
 ## Building a single PDF from these files
 

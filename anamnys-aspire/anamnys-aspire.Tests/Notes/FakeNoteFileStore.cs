@@ -34,8 +34,13 @@ internal sealed class FakeNoteFileStore : INoteFileStore
         await PutAsync(key, buffer.ToArray(), contentType, ct);
     }
 
+    // Reads throw, as a store with a wrong endpoint or wrong credentials does.
+    public bool FailGet { get; set; }
+
     public Task<byte[]?> GetAsync(string key, CancellationToken ct) =>
-        Task.FromResult(Objects.TryGetValue(key, out var content) ? content : null);
+        FailGet
+            ? Task.FromException<byte[]?>(new HttpRequestException("store down"))
+            : Task.FromResult(Objects.TryGetValue(key, out var content) ? content : null);
 
     public Task DeleteAsync(string key, CancellationToken ct)
     {

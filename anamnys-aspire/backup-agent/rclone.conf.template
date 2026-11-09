@@ -1,0 +1,35 @@
+# Rendered by agent.sh into $HOME/rclone.conf at start: only the @...@ placeholders (endpoints and the bucket) are
+# substituted. No secret is ever written here: the S3 keys and the crypt passwords reach rclone through
+# RCLONE_CONFIG_<REMOTE>_<OPTION> environment variables set by agent.sh, which override this file.
+
+# The live object store (SeaweedFS), read only by the agent.
+[storagesrc]
+type = s3
+provider = Other
+endpoint = @SOURCE_ENDPOINT@
+force_path_style = true
+no_check_bucket = true
+
+# The backup bucket, off the server (spec §2.2). WAL-G writes pg/ itself; rclone writes files/ and meta/.
+[backupdest]
+type = s3
+provider = Other
+endpoint = @DEST_ENDPOINT@
+force_path_style = true
+
+# files/: contents, object names and folder names all encrypted, so nothing under files/ is readable in the bucket
+# (not even documents/<providerId>/). The layout current/ and versions/AAAA-MM-DDTHHMM/ (UTC) exists only through this
+# remote: sync, --backup-dir, the version listing and purge, and any restore must address backupcrypt:, never the
+# raw backupdest: paths.
+[backupcrypt]
+type = crypt
+remote = backupdest:@DEST_BUCKET@/files
+filename_encryption = standard
+directory_name_encryption = true
+
+# meta/counts/<backup-name>.json: contents encrypted, names kept.
+[metacrypt]
+type = crypt
+remote = backupdest:@DEST_BUCKET@/meta
+filename_encryption = off
+suffix = none
