@@ -39,10 +39,10 @@ public static class AppointmentEndpoints
             {
                 return Results.ValidationProblem(errors);
             }
-            var (outcome, id) = await Appointments.CreateAsync(db, providerId, request, DateTimeOffset.UtcNow, ct);
-            return outcome == AppointmentOutcome.Ok
-                ? Results.Created($"/api/phi/providers/me/appointments/{id}", new { id })
-                : ToResult(outcome);
+            var result = await Appointments.CreateWithReasonsAsync(db, providerId, request, DateTimeOffset.UtcNow, ct);
+            return result.Outcome == AppointmentOutcome.Ok
+                ? Results.Created($"/api/phi/providers/me/appointments/{result.Id}", new { id = result.Id })
+                : ToResult(result);
         });
 
         appointments.MapPut("{appointmentId:guid}", async (Guid appointmentId, UpdateAppointmentRequest request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
@@ -56,7 +56,7 @@ public static class AppointmentEndpoints
             {
                 return Results.ValidationProblem(errors);
             }
-            return ToResult(await Appointments.UpdateAsync(db, providerId, appointmentId, request, DateTimeOffset.UtcNow, ct));
+            return ToResult(await Appointments.UpdateWithReasonsAsync(db, providerId, appointmentId, request, DateTimeOffset.UtcNow, ct));
         });
 
         appointments.MapPost("{appointmentId:guid}/status", async (Guid appointmentId, ChangeAppointmentStatusRequest request, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
@@ -73,6 +73,17 @@ public static class AppointmentEndpoints
             return ToResult(await Appointments.SetStatusAsync(db, providerId, appointmentId, request, DateTimeOffset.UtcNow, ct));
         });
     }
+
+    // 409 outside_availability carries the reasons (design/specs/2026-11-09-availability-design.md §4).
+    internal static IResult ToResult(AppointmentWriteResult result) =>
+        result.Outcome == AppointmentOutcome.OutsideAvailability
+            ? Results.Conflict(new
+            {
+                code = "outside_availability",
+                message = "Fora da sua disponibilidade.",
+                reasons = result.Reasons,
+            })
+            : ToResult(result.Outcome);
 
     private static IResult ToResult(AppointmentOutcome outcome) => outcome switch
     {

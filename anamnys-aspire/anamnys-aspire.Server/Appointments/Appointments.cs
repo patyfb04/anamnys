@@ -1,3 +1,4 @@
+using Anamnys.Server.Availability;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Notifications;
@@ -8,7 +9,12 @@ using Npgsql;
 
 namespace Anamnys.Server.Appointments;
 
-public enum AppointmentOutcome { Ok, NotFound, Overlap, PatientArchived, InvalidTransition, NotStarted, Changed }
+public enum AppointmentOutcome { Ok, NotFound, Overlap, PatientArchived, InvalidTransition, NotStarted, Changed, OutsideAvailability }
+
+// The outcome of a create or reschedule, with the reasons when it falls outside the provider's availability
+// (design/specs/2026-11-09-availability-design.md §3, §4).
+public sealed record AppointmentWriteResult(
+    AppointmentOutcome Outcome, Guid? Id = null, IReadOnlyList<OutsideAvailabilityReason>? Reasons = null);
 
 // Provider-scoped appointment operations. See
 // design/specs/2026-10-05-provider-calendar-design.md §3. Every call resolves the
@@ -57,27 +63,43 @@ public static class Appointments
     public static async Task<(AppointmentOutcome Outcome, Guid? Id)> CreateAsync(
         AnamnysDbContext db, Guid providerId, CreateAppointmentRequest request, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        var result = await CreateWithReasonsAsync(db, providerId, request, now, cancellationToken);
+        return (result.Outcome, result.Id);
+    }
+
+    // Create, running the outside-availability check first: with reasons and no acknowledgement nothing is written and
+    // the reasons come back; acknowledged, the appointment is saved with an appointment_outside_availability entry.
+    public static async Task<AppointmentWriteResult> CreateWithReasonsAsync(
+        AnamnysDbContext db, Guid providerId, CreateAppointmentRequest request, DateTimeOffset now, CancellationToken cancellationToken)
+    {
         var patient = await db.Patients.AsNoTracking()
             .Where(p => p.Id == request.PatientId && p.ProviderId == providerId)
             .Select(p => new { p.ArchivedAt, p.ContactEmail })
             .SingleOrDefaultAsync(cancellationToken);
         if (patient is null)
         {
-            return (AppointmentOutcome.NotFound, null);
+            return new AppointmentWriteResult(AppointmentOutcome.NotFound);
         }
         if (patient.ArchivedAt is not null)
         {
-            return (AppointmentOutcome.PatientArchived, null);
+            return new AppointmentWriteResult(AppointmentOutcome.PatientArchived);
         }
 
         var startsAt = request.StartsAt!.Value.ToUniversalTime();
+        var endsAt = startsAt.AddMinutes(request.DurationMinutes!.Value);
+        var reasons = await AvailabilityCheck.ReasonsAsync(db, providerId, startsAt, endsAt, cancellationToken);
+        if (reasons.Count > 0 && !request.AcknowledgeOutsideAvailability)
+        {
+            return new AppointmentWriteResult(AppointmentOutcome.OutsideAvailability, Reasons: reasons);
+        }
+
         var appointment = new Appointment
         {
             Id = Guid.NewGuid(),
             ProviderId = providerId,
             PatientId = request.PatientId!.Value,
             StartsAt = startsAt,
-            EndsAt = startsAt.AddMinutes(request.DurationMinutes!.Value),
+            EndsAt = endsAt,
             Timezone = PracticeTimezone,
             Modality = request.Modality!,
             Status = AppointmentStatus.Scheduled,
@@ -87,30 +109,55 @@ public static class Appointments
         db.Appointments.Add(appointment);
         await AppointmentNotifications.OnScheduledAsync(
             db, appointment, patient.ContactEmail is not null, now.ToUniversalTime(), cancellationToken);
+        if (reasons.Count > 0)
+        {
+            AvailabilityCheck.AddAudit(db, providerId, appointment.Id, reasons, now);
+        }
 
         var outcome = await SaveAsync(db, cancellationToken);
-        return (outcome, outcome == AppointmentOutcome.Ok ? appointment.Id : null);
+        return new AppointmentWriteResult(outcome, outcome == AppointmentOutcome.Ok ? appointment.Id : null);
     }
 
     public static async Task<AppointmentOutcome> UpdateAsync(
+        AnamnysDbContext db, Guid providerId, Guid appointmentId, UpdateAppointmentRequest request, DateTimeOffset now, CancellationToken cancellationToken) =>
+        (await UpdateWithReasonsAsync(db, providerId, appointmentId, request, now, cancellationToken)).Outcome;
+
+    // Reschedule, with the same outside-availability check as create when the time changes (a modality-only change
+    // is not a reschedule and is never checked).
+    public static async Task<AppointmentWriteResult> UpdateWithReasonsAsync(
         AnamnysDbContext db, Guid providerId, Guid appointmentId, UpdateAppointmentRequest request, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var appointment = await db.Appointments
             .SingleOrDefaultAsync(a => a.Id == appointmentId && a.ProviderId == providerId, cancellationToken);
         if (appointment is null)
         {
-            return AppointmentOutcome.NotFound;
+            return new AppointmentWriteResult(AppointmentOutcome.NotFound);
         }
         if (appointment.Status is not (AppointmentStatus.Scheduled or AppointmentStatus.Confirmed))
         {
-            return AppointmentOutcome.InvalidTransition;
+            return new AppointmentWriteResult(AppointmentOutcome.InvalidTransition);
         }
 
         var startsAt = request.StartsAt!.Value.ToUniversalTime();
         var endsAt = startsAt.AddMinutes(request.DurationMinutes!.Value);
-        if (appointment.StartsAt == startsAt && appointment.EndsAt == endsAt && appointment.Modality == request.Modality)
+        var timeChanged = appointment.StartsAt != startsAt || appointment.EndsAt != endsAt;
+        if (!timeChanged && appointment.Modality == request.Modality)
         {
-            return AppointmentOutcome.Ok;
+            return new AppointmentWriteResult(AppointmentOutcome.Ok, appointment.Id);
+        }
+
+        IReadOnlyList<OutsideAvailabilityReason> reasons = [];
+        if (timeChanged)
+        {
+            reasons = await AvailabilityCheck.ReasonsAsync(db, providerId, startsAt, endsAt, cancellationToken);
+            if (reasons.Count > 0 && !request.AcknowledgeOutsideAvailability)
+            {
+                return new AppointmentWriteResult(AppointmentOutcome.OutsideAvailability, Reasons: reasons);
+            }
+            if (reasons.Count > 0)
+            {
+                AvailabilityCheck.AddAudit(db, providerId, appointment.Id, reasons, now);
+            }
         }
 
         var hasEmail = await PatientHasEmailAsync(db, providerId, appointment.PatientId, cancellationToken);
@@ -120,7 +167,7 @@ public static class Appointments
         // A new time needs a new confirmation, even if the old one was already confirmed.
         appointment.Status = AppointmentStatus.Scheduled;
         await AppointmentNotifications.OnScheduledAsync(db, appointment, hasEmail, now.ToUniversalTime(), cancellationToken);
-        return await SaveAsync(db, cancellationToken);
+        return new AppointmentWriteResult(await SaveAsync(db, cancellationToken), appointment.Id);
     }
 
     public static async Task<AppointmentOutcome> SetStatusAsync(
@@ -146,12 +193,6 @@ public static class Appointments
         }
 
         appointment.Status = to;
-        if (to == AppointmentStatus.Cancelled)
-        {
-            appointment.CancelledAt = nowUtc;
-            appointment.CancelledBy = "provider";
-            appointment.CancellationReason = ProfileText.Clean(request.Reason);
-        }
 
         switch (to)
         {
@@ -159,8 +200,7 @@ public static class Appointments
                 await AppointmentNotifications.OnConfirmedAsync(db, appointment, "provider", nowUtc, cancellationToken);
                 break;
             case AppointmentStatus.Cancelled:
-                var hasEmail = await PatientHasEmailAsync(db, providerId, appointment.PatientId, cancellationToken);
-                await AppointmentNotifications.OnCancelledAsync(db, appointment, hasEmail, nowUtc, cancellationToken);
+                await CancelByProviderAsync(db, appointment, ProfileText.Clean(request.Reason), nowUtc, cancellationToken);
                 break;
             case AppointmentStatus.Attended:
                 await ApplyAttendedAsync(db, appointment, nowUtc, cancellationToken);
@@ -198,6 +238,19 @@ public static class Appointments
             await RetentionClock.RecomputeAsync(db, cancellationToken, providerId: providerId, patientId: appointment.PatientId);
         }
         return outcome;
+    }
+
+    // The provider's cancellation: status, who, when and why, and the patient's cancellation notice. Never saves, so
+    // callers keep one unit of work (the status change, or a block cancelling the appointments it covers).
+    internal static async Task CancelByProviderAsync(
+        AnamnysDbContext db, Appointment appointment, string? reason, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+    {
+        appointment.Status = AppointmentStatus.Cancelled;
+        appointment.CancelledAt = nowUtc;
+        appointment.CancelledBy = "provider";
+        appointment.CancellationReason = reason;
+        var hasEmail = await PatientHasEmailAsync(db, appointment.ProviderId, appointment.PatientId, cancellationToken);
+        await AppointmentNotifications.OnCancelledAsync(db, appointment, hasEmail, nowUtc, cancellationToken);
     }
 
     // Side effects of an appointment becoming attended; never saves, so callers keep one unit of work.

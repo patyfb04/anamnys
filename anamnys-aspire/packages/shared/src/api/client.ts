@@ -24,13 +24,16 @@ export class ApiError extends Error {
   readonly status?: number;
   readonly errors?: Record<string, string[]>;
   readonly code?: string;
+  // The raw response body, for endpoints whose error carries more than a message (e.g. a 409 with a list).
+  readonly body?: unknown;
 
-  constructor(message: string, status?: number, errors?: Record<string, string[]>, code?: string) {
+  constructor(message: string, status?: number, errors?: Record<string, string[]>, code?: string, body?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.errors = errors;
     this.code = code;
+    this.body = body;
   }
 }
 
@@ -41,7 +44,7 @@ api.interceptors.response.use(
       | { message?: string; detail?: string; code?: string; errors?: Record<string, string[]> }
       | undefined;
     const msg = data?.message ?? data?.detail ?? error.message ?? "An unexpected error occurred.";
-    return Promise.reject(new ApiError(msg, error.response?.status, data?.errors, data?.code));
+    return Promise.reject(new ApiError(msg, error.response?.status, data?.errors, data?.code, data));
   }
 );
 

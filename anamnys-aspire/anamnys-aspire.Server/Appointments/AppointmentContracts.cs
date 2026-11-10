@@ -54,7 +54,8 @@ public static class AppointmentRules
     }
 }
 
-public sealed record CreateAppointmentRequest(Guid? PatientId, DateTimeOffset? StartsAt, int? DurationMinutes, string? Modality)
+public sealed record CreateAppointmentRequest(
+    Guid? PatientId, DateTimeOffset? StartsAt, int? DurationMinutes, string? Modality, bool AcknowledgeOutsideAvailability = false)
 {
     public Dictionary<string, string[]> Validate()
     {
@@ -68,7 +69,8 @@ public sealed record CreateAppointmentRequest(Guid? PatientId, DateTimeOffset? S
     }
 }
 
-public sealed record UpdateAppointmentRequest(DateTimeOffset? StartsAt, int? DurationMinutes, string? Modality)
+public sealed record UpdateAppointmentRequest(
+    DateTimeOffset? StartsAt, int? DurationMinutes, string? Modality, bool AcknowledgeOutsideAvailability = false)
 {
     public Dictionary<string, string[]> Validate()
     {

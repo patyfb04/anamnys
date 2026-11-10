@@ -37,6 +37,7 @@ public class ProtectedSharingMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-11-03-integrity-chain.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-04-patient-dossier.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-05-backup-runs.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-11-09-availability.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))
@@ -45,6 +46,7 @@ public class ProtectedSharingMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-11-03-integrity-chain.sql");
             await RunMigrationAsync(db, "2026-11-04-patient-dossier.sql");
             await RunMigrationAsync(db, "2026-11-05-backup-runs.sql");
+            await RunMigrationAsync(db, "2026-11-09-availability.sql");
         }
 
         // Act

@@ -378,6 +378,91 @@ export interface UpdateAppointmentRequest {
   startsAt: string; // ISO instant
   durationMinutes: number;
   modality: AppointmentModality;
+  // Save even when the slot falls outside the provider's availability (409 outside_availability otherwise).
+  acknowledgeOutsideAvailability?: boolean;
+}
+
+// Availability, blocks and calendar overlay (design/specs/2026-11-09-availability-design.md).
+export interface AvailabilityInterval {
+  start: string; // "HH:mm"
+  end: string;
+}
+
+export interface AvailabilityDay {
+  weekday: number; // 0 = Sunday
+  intervals: AvailabilityInterval[];
+}
+
+export interface AvailabilityVersion {
+  effectiveFrom: string; // "yyyy-MM-dd"
+  days: AvailabilityDay[];
+}
+
+export interface AvailabilityResponse {
+  current: AvailabilityVersion | null;
+  upcoming: AvailabilityVersion[];
+}
+
+export interface HolidayItem {
+  key: string;
+  name: string;
+  date: string; // "yyyy-MM-dd"
+}
+
+export interface HolidaySettings {
+  worksOnHolidays: boolean;
+  disabledHolidays: string[];
+  holidays: HolidayItem[];
+}
+
+export type BlockKind = "block" | "vacation" | "holiday";
+
+export interface BlockItem {
+  id: string;
+  kind: BlockKind;
+  startsAt: string; // ISO instant
+  endsAt: string;
+  allDay: boolean;
+  reason: string | null;
+}
+
+export interface BlockRequest {
+  kind: BlockKind;
+  startsAt: string; // ISO instant with Z
+  endsAt: string;
+  allDay: boolean;
+  reason?: string;
+  cancelAffected?: boolean;
+  expectedAppointmentIds?: string[];
+}
+
+export interface AffectedAppointment {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  patientId: string;
+  patientName: string;
+}
+
+export interface CalendarOverlayDay {
+  date: string; // "yyyy-MM-dd"
+  windows: { startsAt: string; endsAt: string }[];
+  holiday: { key: string; name: string } | null;
+}
+
+export interface CalendarOverlay {
+  days: CalendarOverlayDay[];
+  blocks: BlockItem[];
+}
+
+export type OutsideAvailabilityKind = "outside_hours" | "block" | "holiday";
+
+export interface OutsideAvailabilityReason {
+  kind: OutsideAvailabilityKind;
+  from?: string;
+  to?: string;
+  blockKind?: BlockKind;
+  holidayName?: string;
 }
 
 export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
