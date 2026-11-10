@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import type { Appointment } from "@anamnys/shared/lib/types";
+import { useTranslation } from "react-i18next";
+import type { Appointment, BlockItem, CalendarOverlay } from "@anamnys/shared/lib/types";
 import AppointmentCard from "./AppointmentCard";
 import { PRACTICE_ZONE, isWeekend, offsetLabel, todayIn, zonedParts } from "./calendarTime";
+import { BAND_STYLE, HOLIDAY_BAND_STYLE, blockLabel, outsideSegments, overlayFor, type DayOverlay } from "./overlay";
 
 const HOUR_PX = 56;
 const DEFAULT_START_HOUR = 7;
@@ -11,12 +13,17 @@ const SNAP_MINUTES = 15;
 interface Props {
   days: string[];
   appointments: Appointment[];
+  overlay?: CalendarOverlay;
+  // Whether saved hours apply on the date; without them nothing is shaded.
+  hasHours: (date: string) => boolean;
   onSlotClick: (date: string, minutes: number) => void;
   onAppointmentClick: (appointment: Appointment) => void;
 }
 
-export default function CalendarGrid({ days, appointments, onSlotClick, onAppointmentClick }: Props) {
+export default function CalendarGrid({ days, appointments, overlay, hasHours, onSlotClick, onAppointmentClick }: Props) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dayOverlays = useMemo(() => new Map(days.map((d) => [d, overlayFor(d, overlay)])), [days, overlay]);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000);
@@ -63,6 +70,11 @@ export default function CalendarGrid({ days, appointments, onSlotClick, onAppoin
           >
             <div className="text-label-md uppercase">{weekday.format(new Date(`${date}T12:00:00Z`))}</div>
             <div className="text-headline-md">{Number(date.slice(8))}</div>
+            {dayOverlays.get(date)?.holidayName && (
+              <div className="mx-1 mt-1 truncate rounded-radii-sm bg-pastelBlue px-1 text-label-sm text-onPastelBlue">
+                {t("calendar.overlay.holiday", { name: dayOverlays.get(date)!.holidayName })}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -85,6 +97,15 @@ export default function CalendarGrid({ days, appointments, onSlotClick, onAppoin
               {hours.map((h) => (
                 <div key={h} style={{ top: (h - startHour) * HOUR_PX }} className="absolute inset-x-0 border-t border-outlineVariant/60" />
               ))}
+              <DayOverlayLayer
+                overlay={dayOverlays.get(date)!}
+                shade={dayOverlays.get(date)!.known && (hasHours(date) || dayOverlays.get(date)!.windows.length > 0)}
+                from={startHour * 60}
+                to={endHour * 60}
+                toPx={toPx}
+                holidayLabel={(name) => t("calendar.overlay.holiday", { name })}
+                bandLabel={(b) => blockLabel(t, b)}
+              />
               {placed
                 .filter((p) => p.date === date)
                 .map((p) => (
@@ -106,6 +127,42 @@ export default function CalendarGrid({ days, appointments, onSlotClick, onAppoin
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface LayerProps {
+  overlay: DayOverlay;
+  shade: boolean;
+  from: number;
+  to: number;
+  toPx: (minutes: number) => number;
+  holidayLabel: (name: string) => string;
+  bandLabel: (block: BlockItem) => string;
+}
+
+// Under the cards and click-through: shaded hours outside the windows, then the holiday and the block bands.
+function DayOverlayLayer({ overlay, shade, from, to, toPx, holidayLabel, bandLabel }: LayerProps) {
+  const clamp = (m: number) => Math.min(Math.max(m, from), to);
+  const box = (start: number, end: number) => ({ top: toPx(clamp(start)), height: toPx(clamp(end)) - toPx(clamp(start)) });
+  return (
+    <div className="pointer-events-none absolute inset-0 z-0" aria-hidden>
+      {shade &&
+        outsideSegments(overlay.windows, from, to).map((s) => (
+          <div key={`o${s.start}`} style={box(s.start, s.end)} className="absolute inset-x-0 bg-onSurface/[0.06]" />
+        ))}
+      {overlay.holidayName && (
+        <div style={box(from, to)} className={`absolute inset-x-0.5 rounded-radii-sm px-1 pt-0.5 text-label-sm ${HOLIDAY_BAND_STYLE}`}>
+          <span className="block truncate">{holidayLabel(overlay.holidayName)}</span>
+        </div>
+      )}
+      {overlay.bands
+        .filter((b) => b.end > from && b.start < to)
+        .map((b) => (
+          <div key={b.block.id} style={box(b.start, b.end)} className={`absolute inset-x-0.5 rounded-radii-sm px-1 pt-0.5 text-label-sm ${BAND_STYLE[b.block.kind]}`}>
+            <span className="block truncate">{bandLabel(b.block)}</span>
+          </div>
+        ))}
     </div>
   );
 }

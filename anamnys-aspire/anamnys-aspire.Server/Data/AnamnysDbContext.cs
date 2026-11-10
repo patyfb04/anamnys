@@ -56,6 +56,10 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ShareAccess> ShareAccesses => Set<ShareAccess>();
     public DbSet<IntegritySeal> IntegritySeals => Set<IntegritySeal>();
     public DbSet<IntegrityAnchor> IntegrityAnchors => Set<IntegrityAnchor>();
+    public DbSet<AvailabilityRuleVersion> AvailabilityVersions => Set<AvailabilityRuleVersion>();
+    public DbSet<AvailabilityRule> AvailabilityRules => Set<AvailabilityRule>();
+    public DbSet<AvailabilityException> AvailabilityExceptions => Set<AvailabilityException>();
+    public DbSet<ProviderHolidaySettings> ProviderHolidaySettings => Set<ProviderHolidaySettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -299,6 +303,31 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
                     v => new Dictionary<string, int>(v)));
             e.HasIndex(x => x.PatientId).IsUnique();
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AvailabilityRuleVersion>(e =>
+        {
+            e.ToTable("AvailabilityVersions");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<AvailabilityRule>(e =>
+        {
+            e.ToTable("AvailabilityRules");
+            e.HasKey(x => x.Id);
+            e.HasOne<AvailabilityRuleVersion>().WithMany().HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvailabilityException>(e =>
+        {
+            e.ToTable("AvailabilityExceptions");
+            e.HasKey(x => x.Id);
+        });
+
+        modelBuilder.Entity<ProviderHolidaySettings>(e =>
+        {
+            e.ToTable("ProviderHolidaySettings");
+            e.HasKey(x => x.ProviderId);
         });
 
         modelBuilder.Entity<BookingPolicy>(e =>

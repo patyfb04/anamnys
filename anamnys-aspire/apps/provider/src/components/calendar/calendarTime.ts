@@ -1,7 +1,7 @@
 // Calendar dates are "YYYY-MM-DD" strings on the practice's wall clock, never Date objects:
 // the browser's own time zone must not move an appointment to another day or hour.
 export const PRACTICE_ZONE = "America/Sao_Paulo";
-export type CalendarView = "week" | "day";
+export type CalendarView = "week" | "day" | "month";
 
 function partsIn(instant: Date, zone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -47,8 +47,21 @@ export function weekStart(date: string): string {
   return addDays(date, weekday === 0 ? -6 : 1 - weekday);
 }
 
+// Month view: six weeks from the Monday on or before the 1st of the date's month.
+export function monthGridDays(date: string): string[] {
+  const start = weekStart(`${date.slice(0, 7)}-01`);
+  return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+}
+
+// The 1st of the month n months away.
+export function addMonths(date: string, n: number): string {
+  const [y, m] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 10);
+}
+
 export function visibleDays(view: CalendarView, date: string): string[] {
   if (view === "day") return [date];
+  if (view === "month") return monthGridDays(date);
   const start = weekStart(date);
   return Array.from({ length: 7 }, (_, i) => addDays(start, i));
 }
@@ -60,6 +73,26 @@ export function offsetLabel(zone: string, at: Date): string {
 
 export function formatTime(instant: Date, zone: string): string {
   return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: zone }).format(instant);
+}
+
+// "10/01/2026" for a "YYYY-MM-DD" date (pt-BR, no time zone shift).
+export function formatDate(date: string): string {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(0, 4)}`;
+}
+
+// "10/01" for a "YYYY-MM-DD" date.
+export function formatDayMonth(date: string): string {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+}
+
+// Minutes since local midnight as "HH:mm".
+export function minutesToTime(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+export function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 export function isWeekend(date: string): boolean {

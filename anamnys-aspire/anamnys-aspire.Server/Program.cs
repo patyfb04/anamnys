@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Anamnys.Server.Appointments;
+using Anamnys.Server.Availability;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Backup;
 using Anamnys.Server.Data;
@@ -176,6 +177,7 @@ phi.MapPatientRecordEndpoints();
 phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
 phi.MapAppointmentEndpoints();
+phi.MapAvailabilityEndpoints();
 phi.MapNoteEndpoints();
 phi.MapScaleEndpoints();
 phi.MapDocumentEndpoints();

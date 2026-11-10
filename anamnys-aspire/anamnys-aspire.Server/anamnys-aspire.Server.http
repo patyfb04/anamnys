@@ -687,3 +687,72 @@ GET {{Server_HostAddress}}/api/phi/dossiers/00000000-0000-0000-0000-000000000000
 ### 200 application/octet-stream (a bare DER TimeStampToken, hence -token_in), attachment "anamnys-dossie-NNN.tsr"; 404 (unknown, another provider's, or generated without a
 ### timestamp); 409 { code: "not_ready" } before generation. Audited dossier_receipt_downloaded ("<id> tsr").
 GET {{Server_HostAddress}}/api/phi/dossiers/00000000-0000-0000-0000-000000000000/timestamp.tsr
+
+###
+### F-29 delivery 2: availability, holidays, blocks, calendar overlay (design/specs/2026-11-09-availability-design.md §4).
+### All no-store, provider-scoped, 404 for another provider's ids.
+### The weekly hours in force today and the upcoming versions. 200 { current: { effectiveFrom, days: [{ weekday (0 = Sunday), intervals: [{ start: "HH:mm", end }] }] } | null,
+### upcoming: [same shape] }. Every version lists the seven weekdays; "Não atendo" = no intervals.
+GET {{Server_HostAddress}}/api/phi/providers/me/availability
+
+###
+### New hours from effectiveFrom (local date, not in the past): closes the version open on that date the day before and replaces later ones. days is required ([] = "Não atendo" every day, still a version).
+### 200 (the GET shape); 400 { code: "invalid_intervals" | "effective_in_past" | "invalid_effective_from" }. Audited availability_changed.
+PUT {{Server_HostAddress}}/api/phi/providers/me/availability
+Content-Type: application/json
+
+{ "effectiveFrom": "2026-11-16", "days": [ { "weekday": 1, "intervals": [ { "start": "08:00", "end": "12:00" }, { "start": "14:00", "end": "18:00" } ] }, { "weekday": 3, "intervals": [ { "start": "09:00", "end": "13:00" } ] } ] }
+
+###
+### Cancels an upcoming version (the previous one gets its end back). 204; 404 (unknown, today or past). Audited availability_changed.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/availability/upcoming/2026-11-16
+
+###
+### 200 { worksOnHolidays, disabledHolidays: [key], holidays: [{ key, name, date }] } (this and next year's national holidays).
+GET {{Server_HostAddress}}/api/phi/providers/me/holiday-settings
+
+###
+### 200 (the GET shape); 400 { code: "invalid_holidays" } for an unknown key. Audited availability_changed ("holidays").
+PUT {{Server_HostAddress}}/api/phi/providers/me/holiday-settings
+Content-Type: application/json
+
+{ "worksOnHolidays": false, "disabledHolidays": ["carnaval_segunda", "carnaval_terca"] }
+
+###
+### Blocks overlapping [from, to), newest first. 200 [{ id, kind: "block" | "vacation" | "holiday", startsAt, endsAt, allDay, reason }]; 400 { code: "invalid_range" }.
+GET {{Server_HostAddress}}/api/phi/providers/me/blocks?from=2026-11-09T03:00:00Z&to=2027-02-07T03:00:00Z
+
+###
+### The active (scheduled or confirmed) appointments a block would overlap that are not over yet. 200 [{ id, startsAt, endsAt, patientId, patientName }];
+### 400 { code: "invalid_range" | "invalid_kind" | "invalid_reason" }. allDay: from startsAt's local date to endsAt's local date, both included.
+POST {{Server_HostAddress}}/api/phi/providers/me/blocks/preview
+Content-Type: application/json
+
+{ "kind": "vacation", "startsAt": "2027-01-10T00:00:00-03:00", "endsAt": "2027-01-20T00:00:00-03:00", "allDay": true }
+
+###
+### Creates the block. cancelAffected: true (with expectedAppointmentIds = the preview's ids) cancels exactly those appointments in the same transaction
+### ("ausência do profissional", the patient's cancellation notice); if the affected set changed since the preview: 409 { code: "changed", appointments: [preview shape] }
+### and nothing is written. false changes no appointment. 201 { id, cancelledAppointmentIds }; 400 as the preview or "expected_appointments_required". Audited block_created.
+POST {{Server_HostAddress}}/api/phi/providers/me/blocks
+Content-Type: application/json
+
+{ "kind": "vacation", "startsAt": "2027-01-10T00:00:00-03:00", "endsAt": "2027-01-20T00:00:00-03:00", "allDay": true, "reason": "Férias", "cancelAffected": true, "expectedAppointmentIds": ["00000000-0000-0000-0000-000000000000"] }
+
+###
+### 204; 404. Never touches appointments. Audited block_deleted.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/blocks/00000000-0000-0000-0000-000000000000
+
+###
+### Per local date (from and to included, at most 62 days): the working windows and the applicable national holiday; plus the blocks.
+### 200 { days: [{ date, windows: [{ startsAt, endsAt }], holiday: { key, name } | null }], blocks: [as GET blocks] }; 400 { code: "invalid_range" }.
+GET {{Server_HostAddress}}/api/phi/providers/me/calendar-overlay?from=2026-11-01&to=2026-12-12
+
+###
+### Create and reschedule take acknowledgeOutsideAvailability (default false). Outside the hours, in a block or on a holiday without it:
+### 409 { code: "outside_availability", message, reasons: [{ kind: "outside_hours" | "block" | "holiday", from?, to?, blockKind?, holidayName? }] }.
+### With it: saved and audited appointment_outside_availability (id and reason kinds only).
+POST {{Server_HostAddress}}/api/phi/providers/me/appointments
+Content-Type: application/json
+
+{ "patientId": "00000000-0000-0000-0000-000000000000", "startsAt": "2026-11-21T13:00:00Z", "durationMinutes": 50, "modality": "online", "acknowledgeOutsideAvailability": true }

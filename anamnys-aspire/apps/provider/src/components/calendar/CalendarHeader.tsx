@@ -1,11 +1,13 @@
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { AppointmentStatus } from "@anamnys/shared/lib/types";
 import type { CalendarView } from "./calendarTime";
 import { ALL_STATUSES } from "./status";
 
 interface Props {
   days: string[];
+  // The anchor date ("YYYY-MM-DD"); the month view names its month.
+  date: string;
   view: CalendarView;
   showViewToggle: boolean;
   status?: AppointmentStatus;
@@ -15,11 +17,16 @@ interface Props {
   onViewChange: (view: CalendarView) => void;
   onStatusChange: (status?: AppointmentStatus) => void;
   onNew: () => void;
+  onBlock: () => void;
 }
 
-function periodLabel(days: string[]): string {
+function periodLabel(days: string[], view: CalendarView, anchor: string): string {
   const fmt = (date: string, opts: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat("pt-BR", { ...opts, timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+  if (view === "month") {
+    const label = fmt(`${anchor.slice(0, 7)}-01`, { month: "long", year: "numeric" });
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
   const first = days[0];
   const last = days[days.length - 1];
   if (first === last) return fmt(first, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -41,7 +48,7 @@ export default function CalendarHeader(props: Props) {
             <button type="button" onClick={props.onPrevious} aria-label={t("calendar.previous")} className="p-1.5 rounded-radii-full hover:bg-pastelLavender">
               <ChevronLeft size={18} />
             </button>
-            <span className="min-w-48 text-center text-label-lg text-onSurface">{periodLabel(days)}</span>
+            <span className="min-w-48 text-center text-label-lg text-onSurface">{periodLabel(days, view, props.date)}</span>
             <button type="button" onClick={props.onNext} aria-label={t("calendar.next")} className="p-1.5 rounded-radii-full hover:bg-pastelLavender">
               <ChevronRight size={18} />
             </button>
@@ -50,13 +57,18 @@ export default function CalendarHeader(props: Props) {
             {t("calendar.today")}
           </button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {showViewToggle && (
             <div className="flex rounded-radii-lg bg-surfaceContainerHigh p-1">
               <button type="button" className={toggleClass(view === "day")} onClick={() => props.onViewChange("day")}>{t("calendar.views.day")}</button>
               <button type="button" className={toggleClass(view === "week")} onClick={() => props.onViewChange("week")}>{t("calendar.views.week")}</button>
+              <button type="button" className={toggleClass(view === "month")} onClick={() => props.onViewChange("month")}>{t("calendar.views.month")}</button>
             </div>
           )}
+          <button type="button" onClick={props.onBlock} className="flex items-center gap-2 rounded-radii-lg border border-outlineVariant px-4 py-2 text-label-lg text-onSurface hover:bg-pastelLavender">
+            <Ban size={18} />
+            {t("blocks.open")}
+          </button>
           <button type="button" onClick={props.onNew} className="flex items-center gap-2 rounded-radii-lg bg-primary px-4 py-2 text-label-lg text-onPrimary hover:brightness-110">
             <Plus size={18} />
             {t("calendar.newAppointment")}

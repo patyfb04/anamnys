@@ -93,6 +93,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 38. Document Integrity Chain (F-45)
 39. Patient Dossier (F-44)
 40. Backup and Point-in-Time Restore (F-46)
+41. Availability, Blocks and Month View (F-29, delivery 2)
 
 ## Building a single PDF from these files
 

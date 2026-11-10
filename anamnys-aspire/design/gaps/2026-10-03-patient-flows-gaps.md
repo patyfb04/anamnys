@@ -53,6 +53,15 @@ feature work are appended to the matching section.
   while everything is São Paulo (no DST since 2019).
 - **No drag and drop**: rescheduling is done in the details panel.
 
+### F-29 delivery 2 (availability, blocks, month view)
+
+- **Past-date shading under an older version may be off.** The overlay has no "version in force" flag, so a past date under an older version that had a weekday closed may not be shaded. Cosmetic.
+- **No concurrency test for the block lock** (simultaneous block writes, or a block against a booking).
+- **Recurrence (delivery 3) and the Google mirror (delivery 4) are still pending.**
+- **Patient booking with free slots is F-62** (patient portal); until then availability only warns the provider.
+- Not checked in a browser; the migration `2026-11-09-availability.sql` is not applied to the dev database yet.
+- **UI minors kept from the Task 2 review:** `MonthView` re-declares the block-kind colour mapping instead of reusing `BAND_STYLE`; `outsideReasons` falls back silently to "fora dos horários" for an unknown reason kind (hides contract drift); `AvailabilitySection` fills the hours grid once from the first data and does not re-sync after "Cancelar mudança"; no unit tests for the pure helpers (`outsideSegments`, `monthGridDays`, `overlayFor`, `describeReason`); `ApiError.body` keeps the full 409 response (patient names in the `changed` list) in memory, so no global logger may ever serialise it.
+
 ### UI polish
 
 - **Accessibility:** the Dia/Semana toggle has no `aria-pressed`, today's header no

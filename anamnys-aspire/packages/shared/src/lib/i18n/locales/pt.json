@@ -1361,6 +1361,12 @@
   "settings": {
     "title": "Ajustes",
     "pageTitle": "Configurações",
+    "tabs": {
+      "label": "Seções das configurações",
+      "agenda": "Agenda",
+      "prontuario": "Prontuário",
+      "geral": "Geral"
+    },
     "bookingPolicy": {
       "title": "Confirmação de consultas",
       "description": "Defina quando uma consulta sem confirmação do paciente é cancelada.",
@@ -2276,7 +2282,17 @@
     "today": "Hoje",
     "previous": "Período anterior",
     "next": "Próximo período",
-    "views": { "day": "Dia", "week": "Semana" },
+    "views": { "day": "Dia", "week": "Semana", "month": "Mês" },
+    "month": {
+      "weekdays": { "mon": "Seg", "tue": "Ter", "wed": "Qua", "thu": "Qui", "fri": "Sex", "sat": "Sáb", "sun": "Dom" },
+      "more_one": "+{{count}} consulta",
+      "more_other": "+{{count}} consultas",
+      "openDay": "Abrir {{date}} na visão do dia"
+    },
+    "overlay": {
+      "holiday": "Feriado: {{name}}",
+      "loadFailed": "Não foi possível carregar seus horários e bloqueios."
+    },
     "newAppointment": "Nova consulta",
     "statusFilter": { "label": "Status", "all": "Todos os status" },
     "status": {
@@ -2322,5 +2338,108 @@
       "noEmail": "Paciente sem e-mail: não receberá confirmação.",
       "writeNote": "Escrever nota"
     }
+  },
+  "availability": {
+    "title": "Horários de atendimento",
+    "description": "Defina quando você atende. A agenda sombreia os horários fora deles e avisa ao marcar uma consulta fora; você pode marcar mesmo assim.",
+    "loadFailed": "Não foi possível carregar seus horários.",
+    "noneYet": "Você ainda não definiu seus horários. Abaixo há uma sugestão; nada vale até você salvar.",
+    "currentSince": "Horários em vigor desde {{date}}.",
+    "upcoming": "Mudança a partir de {{date}}",
+    "cancelUpcoming": "Cancelar mudança",
+    "upcomingCancelled": "Mudança cancelada.",
+    "upcomingCancelFailed": "Não foi possível cancelar a mudança.",
+    "weekdays": {
+      "0": "Domingo",
+      "1": "Segunda-feira",
+      "2": "Terça-feira",
+      "3": "Quarta-feira",
+      "4": "Quinta-feira",
+      "5": "Sexta-feira",
+      "6": "Sábado"
+    },
+    "weekdaysShort": { "0": "Dom", "1": "Seg", "2": "Ter", "3": "Qua", "4": "Qui", "5": "Sex", "6": "Sáb" },
+    "worksOn": "Atendo na {{day}}",
+    "closed": "Não atendo",
+    "start": "Início",
+    "end": "Fim",
+    "addInterval": "Intervalo",
+    "removeInterval": "Remover intervalo",
+    "copyToWorkdays": "Copiar para os dias úteis",
+    "effectiveFrom": "Vale a partir de",
+    "replacesUpcoming": "Salvar a partir desta data substitui a mudança agendada para {{dates}}.",
+    "problems": {
+      "order": "Cada intervalo deve começar antes de terminar.",
+      "overlap": "Os intervalos não podem se sobrepor.",
+      "step": "Use horários em passos de 5 minutos (até 23:55).",
+      "count": "No máximo 6 intervalos por dia."
+    },
+    "save": "Salvar horários",
+    "saved": "Horários salvos.",
+    "saveFailed": "Não foi possível salvar os horários.",
+    "holidays": {
+      "title": "Feriados nacionais",
+      "description": "Por padrão, você não atende em feriados nacionais: a agenda os marca e avisa ao marcar uma consulta neles.",
+      "loadFailed": "Não foi possível carregar os feriados.",
+      "worksOnHolidays": "Atendo em feriados",
+      "worksHint": "Você atende em feriados: nenhum feriado nacional será marcado como folga.",
+      "listHint": "Desligue um feriado em que você atende. A escolha vale para todos os anos.",
+      "dayOff": "Folga",
+      "working": "Atendo",
+      "dayOffFor": "Folga em {{name}}",
+      "save": "Salvar feriados",
+      "saved": "Preferências de feriado salvas.",
+      "saveFailed": "Não foi possível salvar as preferências de feriado."
+    },
+    "outsideTitle": "Este horário está fora da sua disponibilidade:",
+    "outsideHint": "Você pode marcar mesmo assim ou mudar a data e o horário.",
+    "bookAnyway": "Marcar mesmo assim",
+    "reasons": {
+      "outsideHours": "Fora dos seus horários de atendimento.",
+      "holiday": "Feriado: {{name}}.",
+      "block": {
+        "vacation": "Cai nas suas férias {{period}}.",
+        "block": "Cai no seu bloqueio {{period}}.",
+        "holiday": "Cai no feriado local {{period}}."
+      },
+      "fromTo": "de {{from}} a {{to}}",
+      "onDay": "em {{date}}"
+    }
+  },
+  "blocks": {
+    "open": "Bloquear período",
+    "title": "Bloquear período",
+    "kindLabel": "Tipo",
+    "kind": { "vacation": "Férias", "block": "Bloqueio", "holiday": "Feriado local" },
+    "from": "De",
+    "to": "Até",
+    "allDay": "Dia inteiro",
+    "startTime": "Início",
+    "endTime": "Fim",
+    "timedHint": "O bloqueio vai do início no primeiro dia até o fim no último dia.",
+    "reason": "Motivo (opcional)",
+    "continue": "Continuar",
+    "back": "Voltar",
+    "invalidRange": "Revise o período: o fim deve ser depois do início.",
+    "affectedIntro_one": "{{count}} consulta cai neste período:",
+    "affectedIntro_other": "{{count}} consultas caem neste período:",
+    "affectedHint": "Ao cancelar, os pacientes com e-mail cadastrado recebem o aviso de cancelamento. O motivo registrado na consulta é \"ausência do profissional\".",
+    "changed": "As consultas afetadas mudaram desde a prévia. Revise a lista e escolha de novo.",
+    "noneAffectedNow": "Nenhuma consulta é afetada agora.",
+    "keep": "Manter as consultas",
+    "cancelAndNotify": "Cancelar e avisar os pacientes",
+    "save": "Salvar bloqueio",
+    "saved": "Período bloqueado.",
+    "savedCancelled_one": "Período bloqueado. {{count}} consulta cancelada.",
+    "savedCancelled_other": "Período bloqueado. {{count}} consultas canceladas.",
+    "saveFailed": "Não foi possível bloquear o período.",
+    "upcomingTitle": "Próximos bloqueios",
+    "upcomingEmpty": "Nenhum bloqueio nos próximos 90 dias.",
+    "loadFailed": "Não foi possível carregar os bloqueios.",
+    "range": "{{from}} a {{to}}",
+    "delete": "Excluir bloqueio",
+    "deleteConfirm": "Excluir? As consultas não mudam.",
+    "deleted": "Bloqueio excluído.",
+    "deleteFailed": "Não foi possível excluir o bloqueio."
   }
 }
