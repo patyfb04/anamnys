@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { User, Video } from "lucide-react";
+import { Repeat, User, Video } from "lucide-react";
 import type { Appointment } from "@anamnys/shared/lib/types";
 import { formatTime } from "./calendarTime";
 import { STATUS_STYLE } from "./status";
@@ -28,7 +28,10 @@ export default function AppointmentCard({ appointment: a, top, height, onClick }
     >
       <div className="flex items-center justify-between gap-1">
         <span className="font-semibold">{start}–{end}</span>
-        <ModalityIcon size={14} aria-label={t(`calendar.modality.${a.modality}`)} />
+        <span className="flex items-center gap-1">
+          {a.seriesId && <Repeat size={12} aria-label={t("series.repeatIcon")} />}
+          <ModalityIcon size={14} aria-label={t(`calendar.modality.${a.modality}`)} />
+        </span>
       </div>
       <div className="truncate text-body-md">{a.patientName}</div>
       <div className="truncate uppercase tracking-wide">{t(`calendar.status.${a.status}`)}</div>

@@ -756,3 +756,46 @@ POST {{Server_HostAddress}}/api/phi/providers/me/appointments
 Content-Type: application/json
 
 { "patientId": "00000000-0000-0000-0000-000000000000", "startsAt": "2026-11-21T13:00:00Z", "durationMinutes": 50, "modality": "online", "acknowledgeOutsideAvailability": true }
+
+###
+### F-29 delivery 3: recurring appointments (design/specs/2026-11-09-appointment-series-design.md). Weekday and time come from startsAt (local, America/Sao_Paulo).
+### interval 1 (weekly) or 2 (every two weeks); end by endsOn ("yyyy-MM-dd") or occurrenceCount (1..520), not both, or neither (never ends).
+### Occurrences are generated for the next 84 days and extended daily. One summary e-mail; each confirmation request max(48 h, auto-cancel hours + 24 h) before its session.
+### 201 { seriesId, firstAppointmentId, generated, skipped: [{ seriesIndex, startsAt }] } (skipped: slot taken, not created); 400 validation problem or { code: "invalid_interval" | "invalid_end" }; 404 unknown patient;
+### 409 { code: "outside_availability", reasons } (first session only) or { code: "overlap" }; 422 archived patient. Audited series_created.
+POST {{Server_HostAddress}}/api/phi/providers/me/appointment-series
+Content-Type: application/json
+
+{ "patientId": "00000000-0000-0000-0000-000000000000", "startsAt": "2026-11-17T14:00:00-03:00", "durationMinutes": 50, "modality": "online", "interval": 1, "occurrenceCount": 10 }
+
+###
+### 200 { id, patientId, interval, weekday (0 = Sunday), startTime "HH:mm", timezone, startsOn, endsOn, occurrenceCount, active, description,
+### upcoming: [{ id, startsAt, status, seriesIndex, detached }] } (occurrences not yet over, all statuses); 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/appointment-series/00000000-0000-0000-0000-000000000000
+
+###
+### The patient's active series: 200 [ same shape without upcoming ]; 404 unknown patient.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/appointment-series
+
+###
+### "This and following" from an occurrence, preview: 200 { newFirstStartsAt, moving, staying: [{ id, startsAt, reason: "detached" | "confirmed" }] };
+### 400 validation problem or { code: "invalid_end" }; 404; 409 { code: "invalid_occurrence" | "series_ended" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/appointment-series/00000000-0000-0000-0000-000000000000/split/preview
+Content-Type: application/json
+
+{ "fromAppointmentId": "00000000-0000-0000-0000-000000000000", "weekday": 4, "startTime": "16:00", "durationMinutes": 50, "modality": "presencial" }
+
+###
+### The split: 200 { newSeriesId, skipped: [{ seriesIndex, startsAt }] }; as the preview, plus 409 { code: "outside_availability", reasons } (new first session) or { code: "overlap" }. Audited series_split.
+POST {{Server_HostAddress}}/api/phi/providers/me/appointment-series/00000000-0000-0000-0000-000000000000/split
+Content-Type: application/json
+
+{ "fromAppointmentId": "00000000-0000-0000-0000-000000000000", "weekday": 4, "startTime": "16:00", "durationMinutes": 50, "modality": "presencial", "acknowledgeOutsideAvailability": false }
+
+###
+### Ends the series from a date (today or later): cancels its active sessions from that date, without per-session e-mails, and sends one notice.
+### 200 { cancelled }; 400 { code: "invalid_date" }; 404; 409 { code: "series_ended" }. Audited series_ended.
+POST {{Server_HostAddress}}/api/phi/providers/me/appointment-series/00000000-0000-0000-0000-000000000000/end
+Content-Type: application/json
+
+{ "fromDate": "2026-12-08" }

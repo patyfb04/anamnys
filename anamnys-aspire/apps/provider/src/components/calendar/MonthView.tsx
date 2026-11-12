@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Repeat } from "lucide-react";
 import type { Appointment, CalendarOverlay } from "@anamnys/shared/lib/types";
 import { PRACTICE_ZONE, formatTime, todayIn, zonedParts } from "./calendarTime";
 import { blockLabel, overlayFor } from "./overlay";
@@ -75,9 +76,10 @@ export default function MonthView({ days, month, appointments, overlay, onDayCli
               {items.slice(0, MAX_PER_DAY).map((a) => (
                 <span
                   key={a.id}
-                  className={`truncate rounded-radii-sm border-l-2 px-1 text-label-sm ${STATUS_STYLE[a.status]}`}
+                  className={`flex items-center gap-1 rounded-radii-sm border-l-2 px-1 text-label-sm ${STATUS_STYLE[a.status]}`}
                 >
-                  {formatTime(new Date(a.startsAt), PRACTICE_ZONE)} {a.patientName}
+                  {a.seriesId && <Repeat size={10} className="shrink-0" aria-label={t("series.repeatIcon")} />}
+                  <span className="truncate">{formatTime(new Date(a.startsAt), PRACTICE_ZONE)} {a.patientName}</span>
                 </span>
               ))}
               {extra > 0 && <span className="px-1 text-label-sm text-onSurfaceVariant">{t("calendar.month.more", { count: extra })}</span>}

@@ -30,6 +30,7 @@ import DetailCard from "@/components/patients/detail/DetailCard";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
 import AttendanceCard from "@/components/attendance/AttendanceCard";
+import PatientSeriesCard from "@/components/calendar/PatientSeriesCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
 import DossiersCard from "@/components/dossiers/DossiersCard";
@@ -251,6 +252,8 @@ function PatientDetailPage() {
 
       {/* Full width: each instrument's series gets its own column inside the card. */}
       <ScalesCard patientId={patientId} readOnly={archived} />
+
+      <PatientSeriesCard patientId={patientId} readOnly={archived} />
 
       <AttendanceCard patientId={patientId} />
 

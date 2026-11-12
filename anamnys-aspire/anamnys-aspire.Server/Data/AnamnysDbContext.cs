@@ -15,6 +15,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<BreakGlassGrant> BreakGlassGrants => Set<BreakGlassGrant>();
     public DbSet<AccessLog> AccessLogs => Set<AccessLog>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
+    public DbSet<AppointmentSeries> AppointmentSeries => Set<AppointmentSeries>();
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<NoteSection> NoteSections => Set<NoteSection>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
@@ -123,6 +124,17 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("Appointments");
             e.HasKey(x => x.Id);
         });
+
+        modelBuilder.Entity<AppointmentSeries>(e =>
+        {
+            e.ToTable("AppointmentSeries");
+            e.HasKey(x => x.Id);
+            e.HasOne<AppointmentSeries>().WithMany().HasForeignKey(x => x.PreviousSeriesId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Mapped so a series and its occurrences saved together are inserted in FK order explicitly.
+        modelBuilder.Entity<Appointment>()
+            .HasOne<AppointmentSeries>().WithMany().HasForeignKey(x => x.SeriesId).OnDelete(DeleteBehavior.SetNull);
 
         modelBuilder.Entity<Note>(e =>
         {
