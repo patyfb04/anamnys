@@ -62,6 +62,22 @@ feature work are appended to the matching section.
 - Not checked in a browser; the migration `2026-11-09-availability.sql` is not applied to the dev database yet.
 - **UI minors kept from the Task 2 review:** `MonthView` re-declares the block-kind colour mapping instead of reusing `BAND_STYLE`; `outsideReasons` falls back silently to "fora dos horários" for an unknown reason kind (hides contract drift); `AvailabilitySection` fills the hours grid once from the first data and does not re-sync after "Cancelar mudança"; no unit tests for the pure helpers (`outsideSegments`, `monthGridDays`, `overlayFor`, `describeReason`); `ApiError.body` keeps the full 409 response (patient names in the `changed` list) in memory, so no global logger may ever serialise it.
 
+### F-29 delivery 3 (recurring appointments)
+
+- **Monthly and free-form recurrence** are not built; a series is weekly or every two weeks.
+- **Moving a series to another patient** is not possible.
+- **Split summary counts closed sessions:** after a split, "N sessões já estão marcadas" also counts re-linked cancelled (or attended/no-show) sessions (`SeriesService.GenerationFactsAsync` counts every index); it should count scheduled/confirmed only.
+- **Ended before the summary is sent:** a series ended (or cancelled by a split from occurrence 1) before the worker sent its `series_scheduled` gives the patient both "Sessões marcadas" and "Sessões encerradas"; the summary could be treated as stale when the series is cancelled or already over.
+- **Reschedule vs split race:** a single reschedule does not take the series lock; racing a split on the same occurrence can hit a deleted row and surface as a 500 (single-user practice, rare).
+- **Split invalidates sent confirmation links:** moving occurrences are deleted and regenerated, so a confirmation request already e-mailed for one of them stops working; only the new summary is sent (documented in chapter 42).
+- **The 520-occurrence cap is silent**, and some validation messages are duplicated from the single-appointment form.
+- **Skipped occurrences are not retried**: a taken slot is reported (response, bell notice) and the provider books that week by hand.
+- **Only the first occurrence goes through the outside-availability check.**
+- **Series confirmation lead** is `max(48 h, AutoCancelHours + 24 h)`: patients of providers with long auto-cancel windows are asked earlier than 48 h.
+- **Unused `pt.json` keys:** `series.patient.empty` and `series.createdFuture`.
+- Not checked in a browser yet (the user tests it next). The migration `2026-11-10-appointment-series.sql` is applied to the dev database (2026-11-10) and the full suite passed (2073, 0 failed).
+- **Confluence update pending.**
+
 ### UI polish
 
 - **Accessibility:** the Dia/Semana toggle has no `aria-pressed`, today's header no

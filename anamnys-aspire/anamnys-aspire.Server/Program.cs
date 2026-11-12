@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Anamnys.Server.Appointments;
+using Anamnys.Server.Appointments.Series;
 using Anamnys.Server.Availability;
 using Anamnys.Server.Auth;
 using Anamnys.Server.Backup;
@@ -70,6 +71,8 @@ if (builder.Configuration.GetValue("Notifications:WorkerEnabled", true))
     builder.Services.AddHostedService<IntegrityJob>();
     // The 15-minute backup freshness check (design/specs/2026-11-05-backup-restore-design.md §2.4); does nothing unless Backup:Enabled.
     builder.Services.AddHostedService<BackupMonitorJob>();
+    // The daily extension of recurring appointments (design/specs/2026-11-09-appointment-series-design.md §3).
+    builder.Services.AddHostedService<SeriesExtensionJob>();
 }
 
 // Public routes (/api/public/...) are anonymous: 30 requests per minute per client IP.
@@ -178,6 +181,7 @@ phi.MapPatientInvitationEndpoints();
 phi.MapPatientPortalEndpoints();
 phi.MapAppointmentEndpoints();
 phi.MapAvailabilityEndpoints();
+phi.MapSeriesEndpoints();
 phi.MapNoteEndpoints();
 phi.MapScaleEndpoints();
 phi.MapDocumentEndpoints();

@@ -145,6 +145,20 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         return total;
     }
 
+    // A series of the patient with one unread bell notice about an occurrence the daily extension could not create.
+    private static async Task<Guid> AddSeriesWithSkippedNoticeAsync(RetentionScratch s, Record r)
+    {
+        var series = Guid.NewGuid();
+        await s.ExecuteAsync(
+            """
+            INSERT INTO "AppointmentSeries" ("Id","PatientId","ProviderId","RecurrenceRule","StartsOn","Weekday","StartTime")
+            VALUES (@id, @pa, @p, 'WEEKLY;INTERVAL=1;BYDAY=TU', '2019-06-04', 2, '14:00');
+            INSERT INTO "Notifications" ("ProviderId","Kind","SubjectType","SubjectId","Channel","ScheduledFor","DeliveryStatus","DedupeKey")
+            VALUES (@p, 'series_occurrence_skipped', 'appointment_series', @id, 'in_app', now(), 'sent', 'series_skipped:' || @id || ':3');
+            """, Ct, ("id", series), ("pa", r.Patient), ("p", r.Provider));
+        return series;
+    }
+
     private static Task<DiscardResult> DiscardAsync(RetentionScratch s, FakeNoteFileStore store, Record r, string name, DateTimeOffset? now = null)
     {
         var db = s.CreateDbContext();
@@ -159,6 +173,8 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         var store = new FakeNoteFileStore();
         var r = await SeedExpiredAsync(s, store);
         var other = await SeedExpiredAsync(s, store, r.Provider, "Bia");
+        var series = await AddSeriesWithSkippedNoticeAsync(s, r);
+        var otherSeries = await AddSeriesWithSkippedNoticeAsync(s, other);
         (await RemainingAsync(s, r)).Should().BeGreaterThan(20);
 
         // Act
@@ -168,6 +184,14 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         result.Outcome.Should().Be(DiscardOutcome.Ok);
         (await RemainingAsync(s, r)).Should().Be(0);
         (await RemainingAsync(s, other)).Should().BeGreaterThan(20);
+
+        // The series bell notice goes with the series, so the unread count holds only the other patient's three notices.
+        (await s.CountAsync("""SELECT count(*) FROM "Notifications" WHERE "SubjectId" = @id""", Ct, ("id", series))).Should().Be(0);
+        (await s.CountAsync("""SELECT count(*) FROM "Notifications" WHERE "SubjectId" = @id""", Ct, ("id", otherSeries))).Should().Be(1);
+        await using (var inboxDb = s.CreateDbContext())
+        {
+            (await Server.Notifications.ProviderNotifications.ListAsync(inboxDb, r.Provider, 1, Ct)).UnreadCount.Should().Be(3);
+        }
 
         // Objects: the patient's three are gone after commit, the other patient's stay; the term is stored by id.
         store.Deleted.Should().BeEquivalentTo(r.Keys);
@@ -187,7 +211,7 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         {
             ["notes"] = 2, ["clinicalDocuments"] = 1, ["externalDocuments"] = 1, ["sessions"] = 1, ["appointments"] = 2,
             ["transcripts"] = 1, ["scaleApplications"] = 1, ["medications"] = 1, ["diagnoses"] = 1, ["treatmentPlans"] = 1,
-            ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 2, ["invitations"] = 1, ["followUpItems"] = 1,
+            ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 3, ["appointmentSeries"] = 1, ["invitations"] = 1, ["followUpItems"] = 1,
             ["patientQuotes"] = 1,
         });
 

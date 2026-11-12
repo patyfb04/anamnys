@@ -55,9 +55,29 @@ public static class Appointments
                     .Where(c => c.AppointmentId == x.a.Id && c.ConfirmedAt == null && c.ClosedAt == null)
                     .Select(c => c.DeadlineAt).FirstOrDefault(),
                 x.p.ContactEmail != null,
-                x.a.SessionId != null && db.Notes.Any(n => n.SessionId == x.a.SessionId)))
+                x.a.SessionId != null && db.Notes.Any(n => n.SessionId == x.a.SessionId),
+                x.a.SeriesId,
+                x.a.SeriesIndex,
+                x.a.Detached,
+                (string?)null))
             .ToListAsync(cancellationToken);
-        return new AppointmentListResponse(items);
+        return new AppointmentListResponse(await WithSeriesDescriptionsAsync(db, providerId, items, cancellationToken));
+    }
+
+    // "toda terça às 14:00" for the occurrences of a series (design/specs/2026-11-09-appointment-series-design.md §4).
+    private static async Task<IReadOnlyList<AppointmentItem>> WithSeriesDescriptionsAsync(
+        AnamnysDbContext db, Guid providerId, List<AppointmentItem> items, CancellationToken cancellationToken)
+    {
+        var seriesIds = items.Where(i => i.SeriesId is not null).Select(i => i.SeriesId!.Value).Distinct().ToList();
+        if (seriesIds.Count == 0)
+        {
+            return items;
+        }
+        var descriptions = (await db.AppointmentSeries.AsNoTracking()
+                .Where(s => seriesIds.Contains(s.Id) && s.ProviderId == providerId)
+                .ToListAsync(cancellationToken))
+            .ToDictionary(s => s.Id, Series.SeriesPattern.Describe);
+        return [.. items.Select(i => i.SeriesId is { } id && descriptions.TryGetValue(id, out var text) ? i with { SeriesDescription = text } : i)];
     }
 
     public static async Task<(AppointmentOutcome Outcome, Guid? Id)> CreateAsync(
@@ -164,6 +184,12 @@ public static class Appointments
         appointment.StartsAt = startsAt;
         appointment.EndsAt = endsAt;
         appointment.Modality = request.Modality!;
+        // A series occurrence changed on its own no longer follows the pattern: a later "this and following" leaves it
+        // where it is (design/specs/2026-11-09-appointment-series-design.md §3).
+        if (appointment.SeriesId is not null)
+        {
+            appointment.Detached = true;
+        }
         // A new time needs a new confirmation, even if the old one was already confirmed.
         appointment.Status = AppointmentStatus.Scheduled;
         await AppointmentNotifications.OnScheduledAsync(db, appointment, hasEmail, now.ToUniversalTime(), cancellationToken);
@@ -241,15 +267,18 @@ public static class Appointments
     }
 
     // The provider's cancellation: status, who, when and why, and the patient's cancellation notice. Never saves, so
-    // callers keep one unit of work (the status change, or a block cancelling the appointments it covers).
+    // callers keep one unit of work (the status change, or a block cancelling the appointments it covers). Ending a
+    // series passes notifyPatient: false, since the patient gets one "series ended" notice instead.
     internal static async Task CancelByProviderAsync(
-        AnamnysDbContext db, Appointment appointment, string? reason, DateTimeOffset nowUtc, CancellationToken cancellationToken)
+        AnamnysDbContext db, Appointment appointment, string? reason, DateTimeOffset nowUtc, CancellationToken cancellationToken,
+        bool notifyPatient = true)
     {
         appointment.Status = AppointmentStatus.Cancelled;
         appointment.CancelledAt = nowUtc;
         appointment.CancelledBy = "provider";
         appointment.CancellationReason = reason;
-        var hasEmail = await PatientHasEmailAsync(db, appointment.ProviderId, appointment.PatientId, cancellationToken);
+        var hasEmail = notifyPatient
+            && await PatientHasEmailAsync(db, appointment.ProviderId, appointment.PatientId, cancellationToken);
         await AppointmentNotifications.OnCancelledAsync(db, appointment, hasEmail, nowUtc, cancellationToken);
     }
 

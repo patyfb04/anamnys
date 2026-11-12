@@ -8,6 +8,7 @@ import CalendarHeader from "@/components/calendar/CalendarHeader";
 import CalendarGrid from "@/components/calendar/CalendarGrid";
 import AppointmentFormModal, { type FormMode } from "@/components/calendar/AppointmentFormModal";
 import AppointmentDetailsModal from "@/components/calendar/AppointmentDetailsModal";
+import SeriesSplitModal from "@/components/calendar/SeriesSplitModal";
 import MonthView from "@/components/calendar/MonthView";
 import BlockPeriodModal from "@/components/calendar/BlockPeriodModal";
 import UpcomingBlocksPanel from "@/components/calendar/UpcomingBlocksPanel";
@@ -53,6 +54,7 @@ function CalendarPage() {
   const [form, setForm] = useState<FormMode | null>(null);
   const [selected, setSelected] = useState<Appointment | null>(null);
   const [blocking, setBlocking] = useState(false);
+  const [splitting, setSplitting] = useState<Appointment | null>(null);
   // "Nova consulta" from the header: today at 09:00 when today is visible, else the first visible day (the 1st in the
   // month view, whose grid starts in the previous month).
   const defaultSlot = (): Extract<FormMode, { kind: "create" }> => {
@@ -123,12 +125,17 @@ function CalendarPage() {
       <UpcomingBlocksPanel />
       {blocking && <BlockPeriodModal onClose={() => setBlocking(false)} />}
       {form && <AppointmentFormModal mode={form} onClose={closeForm} />}
+      {splitting && <SeriesSplitModal appointment={splitting} onClose={() => setSplitting(null)} />}
       {selected && (
         <AppointmentDetailsModal
           appointment={selected}
           onClose={() => setSelected(null)}
           onEdit={() => {
             setForm({ kind: "edit", appointment: selected });
+            setSelected(null);
+          }}
+          onSplit={() => {
+            setSplitting(selected);
             setSelected(null);
           }}
         />

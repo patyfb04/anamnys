@@ -1356,6 +1356,7 @@
     "retentionDue": "Prazo de guarda do prontuário de {{patient}}",
     "dossierReady": "Dossiê de {{patient}} pronto para baixar",
     "integrityProblem": "Problema de integridade nos registros: veja a Conformidade",
+    "seriesSkipped": "Sessão de {{patient}} em {{when}} não foi marcada: o horário já estava ocupado",
     "open": "Abrir avisos"
   },
   "settings": {
@@ -2441,5 +2442,113 @@
     "deleteConfirm": "Excluir? As consultas não mudam.",
     "deleted": "Bloqueio excluído.",
     "deleteFailed": "Não foi possível excluir o bloqueio."
+  },
+  "series": {
+    "repeat": "Repetir",
+    "repeatOptions": {
+      "none": "Não repete",
+      "weekly": "Toda semana",
+      "biweekly": "A cada 2 semanas"
+    },
+    "ends": "Termina",
+    "endOptions": {
+      "never": "Nunca",
+      "onDate": "Em",
+      "afterCount": "Após"
+    },
+    "endDate": "Data do fim",
+    "count": "Número de sessões",
+    "sessions": "sessões",
+    "every": {
+      "0": "todo domingo",
+      "1": "toda segunda",
+      "2": "toda terça",
+      "3": "toda quarta",
+      "4": "toda quinta",
+      "5": "toda sexta",
+      "6": "todo sábado"
+    },
+    "weekday": {
+      "0": "domingo",
+      "1": "segunda",
+      "2": "terça",
+      "3": "quarta",
+      "4": "quinta",
+      "5": "sexta",
+      "6": "sábado"
+    },
+    "weekdayLabel": "Dia da semana",
+    "patternWeekly": "{{every}} às {{time}}",
+    "patternBiweekly": "{{weekday}} sim, {{weekday}} não, às {{time}}",
+    "summaryNever": "Sessões {{pattern}}, a partir de {{start}}, sem data para terminar.",
+    "summaryUntil": "Sessões {{pattern}}, de {{start}} até {{end}}.",
+    "summaryCount_one": "{{count}} sessão: {{start}}.",
+    "summaryCount_other": "{{count}} sessões {{pattern}}, a partir de {{start}}.",
+    "endDateRequired": "Escolha a data do fim.",
+    "countRequired": "Informe de 1 a 520 sessões.",
+    "created_one": "Série criada: {{count}} sessão marcada.",
+    "created_other": "Série criada: {{count}} sessões marcadas.",
+    "createdFuture": "As seguintes entram na agenda semana a semana.",
+    "skipped": "Não foi possível marcar: {{dates}} (horário ocupado).",
+    "skippedTitle": "Algumas sessões não foram marcadas",
+    "close": "Fechar",
+    "partOf": "Faz parte de uma série: {{description}} (sessão {{index}} de {{total}})",
+    "partOfOpen": "Faz parte de uma série: {{description}} (sessão {{index}})",
+    "partOfPlain": "Faz parte de uma série: {{description}}",
+    "partOfDetached": "Esta sessão foi alterada e não segue mais o horário da série.",
+    "scope": {
+      "rescheduleTitle": "Remarcar",
+      "cancelTitle": "Cancelar",
+      "onlyThis": "Só esta sessão",
+      "thisAndFollowing": "Esta e as seguintes",
+      "endFromHere": "Encerrar a série a partir desta"
+    },
+    "split": {
+      "title": "Remarcar esta e as seguintes",
+      "hint": "As sessões a partir de {{date}} passam para o novo horário. Sessões confirmadas ou alteradas uma a uma ficam como estão.",
+      "preview": "Ver o que muda",
+      "newFirst": "Primeira sessão no novo horário: {{when}}.",
+      "moving_one": "{{count}} sessão marcada passa para o novo horário.",
+      "moving_other": "{{count}} sessões marcadas passam para o novo horário.",
+      "stayingTitle": "Ficam como estão:",
+      "stayingNone": "Nenhuma sessão fica no horário antigo.",
+      "reason": {
+        "detached": "alterada uma a uma",
+        "confirmed": "confirmada pelo paciente"
+      },
+      "save": "Remarcar as seguintes",
+      "done": "Sessões remarcadas.",
+      "failed": "Não foi possível remarcar as sessões."
+    },
+    "end": {
+      "title": "Encerrar a série",
+      "body": "As sessões marcadas a partir de {{date}} serão canceladas. Se o paciente tiver e-mail cadastrado, recebe um único aviso. As anteriores não mudam.",
+      "confirm": "Encerrar série",
+      "done_one": "Série encerrada: {{count}} sessão cancelada.",
+      "done_other": "Série encerrada: {{count}} sessões canceladas.",
+      "failed": "Não foi possível encerrar a série."
+    },
+    "errors": {
+      "invalid_interval": "Escolha toda semana ou a cada 2 semanas.",
+      "invalid_end": "O fim da série não é válido.",
+      "invalid_occurrence": "Esta sessão não pode mais ser remarcada com as seguintes.",
+      "series_ended": "Esta série já foi encerrada.",
+      "invalid_date": "A data precisa ser hoje ou depois.",
+      "start_in_past": "A primeira sessão precisa ser num horário que ainda não passou.",
+      "overlap": "Horário já ocupado."
+    },
+    "patient": {
+      "title": "Séries de sessões",
+      "empty": "Nenhuma série ativa.",
+      "loadFailed": "Não foi possível carregar as séries.",
+      "since": "desde {{date}}",
+      "until": "até {{date}}",
+      "count_one": "{{count}} sessão no total",
+      "count_other": "{{count}} sessões no total",
+      "end": "Encerrar série",
+      "archivedNote": "Paciente arquivado: novas sessões destas séries não entram na agenda até o paciente ser reativado.",
+      "endBody": "As sessões marcadas a partir de {{date}} serão canceladas. Se o paciente tiver e-mail cadastrado, recebe um único aviso."
+    },
+    "repeatIcon": "Sessão de uma série"
   }
 }

@@ -141,6 +141,11 @@ public sealed record AppointmentItem(
     string? CancellationReason,
     DateTimeOffset? ConfirmationDeadlineAt,
     bool PatientHasEmail,
-    bool HasNote);
+    bool HasNote,
+    // F-29 delivery 3: null / false outside a series; SeriesDescription e.g. "toda terça às 14:00".
+    Guid? SeriesId = null,
+    int? SeriesIndex = null,
+    bool Detached = false,
+    string? SeriesDescription = null);
 
 public sealed record AppointmentListResponse(IReadOnlyList<AppointmentItem> Items);

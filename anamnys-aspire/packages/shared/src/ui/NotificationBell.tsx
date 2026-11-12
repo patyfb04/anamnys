@@ -59,6 +59,13 @@ export default function NotificationBell({ className }: { className?: string }) 
     }
     if (n.kind === "dossier_ready") return t("notifications.dossierReady", { patient: n.patientName ?? "" });
     if (n.kind === "integrity_problem") return t("notifications.integrityProblem");
+    // Links to the calendar day the session would have had (the default branch below).
+    if (n.kind === "series_occurrence_skipped") {
+      return t("notifications.seriesSkipped", {
+        patient: n.patientName ?? "",
+        when: n.startsAt ? whenFormat.format(new Date(n.startsAt)) : "",
+      });
+    }
     if (n.kind === "account_export_ready") {
       return t("notifications.exportReady", { when: whenFormat.format(new Date(n.createdAt)) });
     }

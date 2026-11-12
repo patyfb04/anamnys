@@ -1,4 +1,5 @@
 using Anamnys.Server.Appointments;
+using Anamnys.Server.Appointments.Series;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Email;
@@ -97,6 +98,7 @@ public static class NotificationWorkerSteps
     private static void LogFailure(ILogger? logger, Guid reminderId, Exception e) =>
         logger?.LogWarning("Appointment e-mail for reminder {ReminderId} failed: {ExceptionType}.", reminderId, e.GetType().Name);
 
+
     private static async Task<Reminder?> LockPendingAsync(AnamnysDbContext db, Guid id, CancellationToken ct) =>
         (await db.Reminders.FromSql($"""
             SELECT * FROM "Reminders" WHERE "Id" = {id} AND "DeliveryStatus" = 'pending'
@@ -149,8 +151,14 @@ public static class NotificationWorkerSteps
         var appointment = row.Appointment;
 
         var active = appointment.Status is AppointmentStatus.Scheduled or AppointmentStatus.Confirmed;
+        // A series notice rides on an occurrence but speaks for the series: the occurrence's own status does not matter.
+        var isSeriesNotice = ReminderTemplates.Series.Contains(reminder.TemplateKey);
+        var series = isSeriesNotice && appointment.SeriesId is { } seriesId
+            ? await db.AppointmentSeries.AsNoTracking().SingleOrDefaultAsync(s => s.Id == seriesId, ct)
+            : null;
         var stale = row.ContactEmail is null
-            || (reminder.TemplateKey != ReminderTemplates.Cancellation && !active);
+            || (isSeriesNotice && series is null)
+            || (!isSeriesNotice && reminder.TemplateKey != ReminderTemplates.Cancellation && !active);
         var confirmation = reminder.ConfirmationId is { } confirmationId
             ? await db.AppointmentConfirmations.SingleOrDefaultAsync(c => c.Id == confirmationId, ct)
             : null;
@@ -197,6 +205,16 @@ public static class NotificationWorkerSteps
                 nowUtc, appointment.StartsAt);
         }
 
+        SeriesEmailData? seriesData = null;
+        if (series is not null)
+        {
+            var (created, missing) = await SeriesService.GenerationFactsAsync(db, series, ct);
+            var pending = SeriesPattern.LastDate(series) is not { } last || series.GeneratedUntil is not { } covered || covered < last;
+            seriesData = new SeriesEmailData(
+                row.ContactEmail!, row.FirstName, row.ProviderName, SeriesPattern.Summary(series), SeriesPattern.Describe(series),
+                series.DefaultModality, SeriesService.EndedFrom(series), created, series.OccurrenceCount, missing, pending);
+        }
+
         try
         {
             // Composing can fail too (AppointmentEmails throws for an unknown Timezone); that
@@ -205,6 +223,8 @@ public static class NotificationWorkerSteps
             {
                 ReminderTemplates.Confirmation => AppointmentEmails.Confirmation(data, link!, deadline),
                 ReminderTemplates.Reminder1h => AppointmentEmails.Reminder(data, link),
+                ReminderTemplates.SeriesScheduled => AppointmentEmails.SeriesScheduled(seriesData!),
+                ReminderTemplates.SeriesEnded => AppointmentEmails.SeriesEnded(seriesData!),
                 _ => AppointmentEmails.Cancellation(data),
             };
             await sender.SendAsync(message, ct);

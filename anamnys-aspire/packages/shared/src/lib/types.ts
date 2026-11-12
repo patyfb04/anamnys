@@ -362,6 +362,11 @@ export interface Appointment {
   confirmationDeadlineAt: string | null;
   patientHasEmail: boolean;
   hasNote: boolean;
+  // Recurring series (design/specs/2026-11-09-appointment-series-design.md); null/false for single appointments.
+  seriesId?: string | null;
+  seriesIndex?: number | null;
+  detached?: boolean;
+  seriesDescription?: string | null; // e.g. "toda terça às 14:00"
 }
 
 // Public confirmation link (design/specs/2026-10-07-appointment-notifications-design.md).
@@ -469,6 +474,79 @@ export interface CreateAppointmentRequest extends UpdateAppointmentRequest {
   patientId: string;
 }
 
+// Recurring appointments (design/specs/2026-11-09-appointment-series-design.md §4). Dates "yyyy-MM-dd", times "HH:mm".
+export type SeriesInterval = 1 | 2;
+
+export interface CreateSeriesRequest {
+  patientId: string;
+  startsAt: string; // ISO instant; weekday and time are taken from it in America/Sao_Paulo
+  durationMinutes: number;
+  modality: AppointmentModality;
+  interval: SeriesInterval;
+  endsOn?: string;
+  occurrenceCount?: number;
+  acknowledgeOutsideAvailability?: boolean;
+}
+
+// An occurrence not created because its slot was already taken.
+export interface SkippedOccurrence {
+  seriesIndex: number;
+  startsAt: string; // ISO instant
+}
+
+export interface SeriesCreated {
+  seriesId: string;
+  firstAppointmentId: string;
+  generated: number;
+  skipped: SkippedOccurrence[];
+}
+
+export interface SeriesSummary {
+  id: string;
+  patientId: string;
+  interval: SeriesInterval;
+  weekday: number; // 0 = Sunday … 6 = Saturday
+  startTime: string;
+  timezone: string;
+  startsOn: string;
+  endsOn: string | null;
+  occurrenceCount: number | null;
+  active: boolean;
+  description: string; // e.g. "toda terça às 14:00"
+}
+
+export interface SeriesOccurrence {
+  id: string;
+  startsAt: string;
+  status: AppointmentStatus;
+  seriesIndex: number | null;
+  detached: boolean;
+}
+
+export interface SeriesDetail extends SeriesSummary {
+  upcoming: SeriesOccurrence[];
+}
+
+export interface SplitSeriesRequest {
+  fromAppointmentId: string;
+  weekday: number;
+  startTime: string;
+  durationMinutes: number;
+  modality: AppointmentModality;
+  acknowledgeOutsideAvailability?: boolean;
+}
+
+export interface SplitPreview {
+  newFirstStartsAt: string;
+  moving: number;
+  staying: { id: string; startsAt: string; reason: "detached" | "confirmed" }[];
+}
+
+export interface SplitResult {
+  newSeriesId: string;
+  skipped: SkippedOccurrence[];
+}
+
 // Provider notifications and booking policy (/api/phi/providers/me/...).
 export type NotificationKind =
   | "appointment_confirmed"
@@ -477,7 +555,8 @@ export type NotificationKind =
   | "unsigned_note"
   | "retention_due"
   | "integrity_problem"
-  | "dossier_ready";
+  | "dossier_ready"
+  | "series_occurrence_skipped";
 
 export interface ProviderNotification {
   id: string;
@@ -486,7 +565,8 @@ export interface ProviderNotification {
   patientName: string | null;
   startsAt: string | null; // ISO instant
   exportId: string | null;
-  patientId?: string | null; // dossier_ready: the patient page that holds the dossier
+  patientId?: string | null; // dossier_ready / series_occurrence_skipped: the patient page
+  seriesId?: string | null; // series_occurrence_skipped: the series; startsAt is the start the session would have had
   createdAt: string;
   readAt: string | null;
 }

@@ -9,6 +9,12 @@ public static class NotificationKinds
 {
     public const string Confirmed = "appointment_confirmed";
     public const string AutoCancelled = "appointment_auto_cancelled";
+    // F-29 delivery 3: the daily extension could not create a series occurrence because its slot was taken. Subject:
+    // the series (SubjectType "appointment_series"); DedupeKey "series_skipped:{seriesId}:{index}".
+    public const string SeriesOccurrenceSkipped = "series_occurrence_skipped";
+    public const string SeriesSubject = "appointment_series";
+
+    public static string SkippedDedupeKey(Guid seriesId, int index) => $"series_skipped:{seriesId}:{index}";
 }
 
 // Called from Appointments (and the worker) before their single SaveChanges, so the outbox
@@ -40,6 +46,38 @@ public static class AppointmentNotifications
             db.Reminders.Add(NewReminder(appointment.Id, ReminderTemplates.Reminder1h, reminderAt, confirmation.Id));
         }
     }
+
+    // A series occurrence that was just generated (at creation, by the daily extension or by a split): an open
+    // confirmation whose request is sent at StartsAt - lead (or now, if closer) instead of immediately, and the usual
+    // 1 h reminder. lead is max(48 h, auto-cancel hours + 24 h), see ConfirmationRules.SeriesConfirmationLeadFor. No
+    // "scheduled" e-mail of its own (design/specs/2026-11-09-appointment-series-design.md §3 Notices). The deadline is
+    // set from the actual send time by the worker. Never saves.
+    public static void OnSeriesOccurrence(
+        AnamnysDbContext db, Appointment appointment, bool patientHasEmail, DateTimeOffset nowUtc, TimeSpan lead)
+    {
+        if (!patientHasEmail)
+        {
+            return;
+        }
+        var confirmation = new AppointmentConfirmation
+        {
+            Id = Guid.NewGuid(),
+            AppointmentId = appointment.Id,
+            CreatedAt = nowUtc,
+            ExpiresAt = appointment.StartsAt,
+        };
+        db.AppointmentConfirmations.Add(confirmation);
+        var sendAt = appointment.StartsAt - lead;
+        db.Reminders.Add(NewReminder(appointment.Id, ReminderTemplates.Confirmation, sendAt > nowUtc ? sendAt : nowUtc, confirmation.Id));
+        if (ConfirmationRules.ReminderAt(appointment.StartsAt, nowUtc) is { } reminderAt)
+        {
+            db.Reminders.Add(NewReminder(appointment.Id, ReminderTemplates.Reminder1h, reminderAt, confirmation.Id));
+        }
+    }
+
+    // One series notice (summary of a new pattern, or the series ended), attached to an occurrence of that series.
+    public static void QueueSeriesNotice(AnamnysDbContext db, Guid appointmentId, string template, DateTimeOffset nowUtc) =>
+        db.Reminders.Add(NewReminder(appointmentId, template, nowUtc, null));
 
     public static async Task OnConfirmedAsync(
         AnamnysDbContext db, Appointment appointment, string by, DateTimeOffset nowUtc, CancellationToken ct)
@@ -109,10 +147,12 @@ public static class AppointmentNotifications
         // ExpiresAt (Task 5).
     }
 
+    // The series notices only ride on an occurrence: what happens to that one occurrence does not withdraw them.
     private static async Task CancelPendingAsync(AnamnysDbContext db, Guid appointmentId, CancellationToken ct)
     {
         var pending = await db.Reminders
-            .Where(r => r.AppointmentId == appointmentId && r.DeliveryStatus == "pending")
+            .Where(r => r.AppointmentId == appointmentId && r.DeliveryStatus == "pending"
+                && !ReminderTemplates.Series.Contains(r.TemplateKey))
             .ToListAsync(ct);
         foreach (var reminder in pending)
         {
