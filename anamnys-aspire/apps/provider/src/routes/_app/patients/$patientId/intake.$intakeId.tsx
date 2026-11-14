@@ -18,6 +18,9 @@ import { formatDate } from "@/components/patients/format";
 import { errorCode, intakeKey, intakesKey, questionIdsOf, useDiscardIntake } from "@/components/intake/intakeModel";
 
 export const Route = createFileRoute("/_app/patients/$patientId/intake/$intakeId")({
+  // ?transfers=1 (after signing the Anamnese note) scrolls the "Levar para o prontuário" panel into view.
+  validateSearch: (search: Record<string, unknown>): { transfers?: 1 } =>
+    search.transfers === 1 || search.transfers === "1" ? { transfers: 1 } : {},
   component: IntakePage,
 });
 
@@ -34,6 +37,7 @@ class UnsavedAnswers extends Error {}
 function IntakePage() {
   const { t } = useTranslation();
   const { patientId, intakeId } = Route.useParams();
+  const { transfers: showTransfers } = Route.useSearch();
   const query = useQuery({ queryKey: intakeKey(intakeId), queryFn: () => intakeApi.get(intakeId) });
   const patient = useQuery({ queryKey: ["patient", patientId], queryFn: () => patientsApi.get(patientId) });
 
@@ -41,6 +45,7 @@ function IntakePage() {
     <Link
       to="/patients/$patientId"
       params={{ patientId }}
+      search={{ tab: "avaliacao" }}
       className="inline-flex items-center gap-1 self-start text-label-lg text-primary hover:underline"
     >
       <ArrowLeft size={16} />
@@ -74,6 +79,7 @@ function IntakePage() {
         patientName={patient.data ? `${patient.data.firstName} ${patient.data.lastName}` : ""}
         archived={archived}
         patientKnown={patientKnown}
+        focusTransfers={!!showTransfers}
         onStale={() => void query.refetch()}
       />
     </div>
@@ -85,9 +91,10 @@ function IntakeForm(props: {
   patientName: string;
   archived: boolean;
   patientKnown: boolean;
+  focusTransfers: boolean;
   onStale: () => void;
 }) {
-  const { intake, patientName, archived, patientKnown, onStale } = props;
+  const { intake, patientName, archived, patientKnown, focusTransfers, onStale } = props;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -213,7 +220,7 @@ function IntakeForm(props: {
 
   const discard = useDiscardIntake(patientId, () => {
     setConfirm(null);
-    void navigate({ to: "/patients/$patientId", params: { patientId } });
+    void navigate({ to: "/patients/$patientId", params: { patientId }, search: { tab: "avaliacao" } });
   });
 
   const statusText = (key: string) => {
@@ -284,7 +291,7 @@ function IntakeForm(props: {
       )}
       {draft && patientKnown && archived && <Banner>{t("intake.page.archivedReadOnly")}</Banner>}
 
-      {!draft && <IntakeTransfersPanel intakeId={intake.id} patientId={patientId} readOnly={archived} />}
+      {!draft && <IntakeTransfersPanel intakeId={intake.id} patientId={patientId} readOnly={archived} focus={focusTransfers} />}
 
       <nav aria-label={t("intake.page.navLabel")} className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         {intake.sections.map((s) => (

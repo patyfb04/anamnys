@@ -11,7 +11,7 @@ import { goToCard } from "@/components/patients/detail/cardAnchors";
 import GenerateDossierModal from "./GenerateDossierModal";
 
 const POLL_MS = 5_000;
-const CARD_ID = "dossiers";
+const CARD_ID = "patient-dossiers";
 // The server and the receipt use the practice's time zone, so the card does too.
 const dateFormat = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/Sao_Paulo" });
 const linkClass = "text-label-lg text-primary hover:underline disabled:opacity-50";
@@ -58,7 +58,7 @@ export default function DossiersCard({ patientId, readOnly }: { patientId: strin
   // The bell opens the patient page with #dossiers.
   const hash = useRouterState({ select: (s) => s.location.hash });
   useEffect(() => {
-    if (hash === CARD_ID) goToCard(CARD_ID);
+    if (hash === "dossiers") goToCard(CARD_ID);
   }, [hash]);
 
   const download = useMutation({
@@ -93,6 +93,7 @@ export default function DossiersCard({ patientId, readOnly }: { patientId: strin
   return (
     <DetailCard
       collapsibleId={CARD_ID}
+      defaultOpen
       title={t("dossier.title")}
       icon={<Archive size={20} />}
       action={

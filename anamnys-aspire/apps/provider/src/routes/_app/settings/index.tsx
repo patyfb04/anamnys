@@ -7,6 +7,7 @@ import DocumentSettingsSection from "../../../components/settings/DocumentSettin
 import RetentionSettingsSection from "../../../components/settings/RetentionSettingsSection";
 import AnalysisSettingsSection from "../../../components/settings/AnalysisSettingsSection";
 import IntakeTemplatesSection from "../../../components/settings/IntakeTemplatesSection";
+import FolderTabs from "../../../components/FolderTabs";
 
 type Tab = "agenda" | "prontuario" | "geral";
 const TABS: Tab[] = ["geral", "agenda", "prontuario"];
@@ -31,25 +32,12 @@ function SettingsPage() {
   return (
     <div className="p-4 md:p-8 flex flex-col gap-6">
       <h1 className="text-headline-sm text-onSurface">{t("settings.pageTitle")}</h1>
-      <div role="tablist" aria-label={t("settings.tabs.label")} className="flex flex-wrap gap-2">
-        {TABS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            onClick={() => void navigate({ to: "/settings", search: { tab: id } })}
-            className={`rounded-radii-full border px-4 py-1.5 text-label-lg ${
-              tab === id
-                ? "border-transparent bg-pastelLavender text-onSurface"
-                : "border-outlineVariant text-onSurfaceVariant hover:bg-pastelLavender"
-            }`}
-          >
-            {t(`settings.tabs.${id}`)}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel" className="flex flex-col gap-6">
+      <FolderTabs
+        label={t("settings.tabs.label")}
+        active={tab}
+        onSelect={(id) => void navigate({ to: "/settings", search: { tab: id } })}
+        tabs={TABS.map((id) => ({ id, label: t(`settings.tabs.${id}`) }))}
+      >
         {tab === "agenda" && (
           <>
             <AvailabilitySection />
@@ -65,7 +53,7 @@ function SettingsPage() {
           </>
         )}
         {tab === "geral" && <AccountExportSection />}
-      </div>
+      </FolderTabs>
     </div>
   );
 }

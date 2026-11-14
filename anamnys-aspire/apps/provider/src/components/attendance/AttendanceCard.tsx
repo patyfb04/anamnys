@@ -29,7 +29,7 @@ export default function AttendanceCard({ patientId }: { patientId: string }) {
 
   return (
     <DetailCard
-      collapsibleId="attendance"
+      collapsibleId="patient-attendance" defaultOpen
       title={t("attendance.title")}
       icon={<CalendarCheck size={20} />}
       action={

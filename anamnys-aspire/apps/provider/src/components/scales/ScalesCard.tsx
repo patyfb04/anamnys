@@ -42,7 +42,7 @@ export default function ScalesCard({ patientId, readOnly }: { patientId: string;
   const data = series.data ?? [];
 
   return (
-    <DetailCard collapsibleId="scales"
+    <DetailCard collapsibleId="patient-scales" defaultOpen
       title={t("scales.title")}
       icon={<Activity size={20} />}
       action={

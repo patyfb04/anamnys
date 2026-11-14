@@ -12,19 +12,19 @@ import { TRANSFERS_ANCHOR, errorCode, intakeKey, intakesKey, targetLabelKey } fr
 
 // "Levar para o prontuário": each answer with a record destination, confirmed or ignored one by one. Nothing is
 // written to the record before the provider presses Confirmar on that item.
-export default function IntakeTransfersPanel(props: { intakeId: string; patientId: string; readOnly: boolean }) {
-  const { intakeId, patientId, readOnly } = props;
+export default function IntakeTransfersPanel(props: { intakeId: string; patientId: string; readOnly: boolean; focus?: boolean }) {
+  const { intakeId, patientId, readOnly, focus } = props;
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const ref = useRef<HTMLDivElement>(null);
   const query = useQuery({ queryKey: ["intake-transfers", intakeId], queryFn: () => intakeApi.transfers(intakeId) });
 
-  // Arriving from the patient card's "N itens para levar ao prontuário".
+  // Arriving from the patient card's "N itens para levar ao prontuário" (hash) or right after signing the note (focus).
   useEffect(() => {
-    if (query.isSuccess && window.location.hash === `#${TRANSFERS_ANCHOR}`) {
+    if (query.isSuccess && (focus || window.location.hash === `#${TRANSFERS_ANCHOR}`)) {
       ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [query.isSuccess]);
+  }, [query.isSuccess, focus]);
 
   const decide = useMutation({
     mutationFn: ({ transfer, confirm }: { transfer: IntakeTransfer; confirm: boolean }) =>

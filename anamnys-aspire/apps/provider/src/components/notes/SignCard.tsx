@@ -14,10 +14,12 @@ import ConfirmDialog from "@/components/patients/ConfirmDialog";
 interface Props {
   note: NoteDetail;
   onSigned: () => unknown | Promise<unknown>;
+  // Only after a successful signing (not after an export refresh).
+  afterSign?: () => unknown | Promise<unknown>;
 }
 
 // Signing locks the note for good. Shown only once the note is ready for review.
-export default function SignCard({ note, onSigned }: Props) {
+export default function SignCard({ note, onSigned, afterSign }: Props) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export default function SignCard({ note, onSigned }: Props) {
     try {
       await notesApi.sign(note.id);
       onSigned();
+      void afterSign?.();
     } catch (e) {
       const reason = isAxiosError(e) ? (e.response?.data as { reason?: string } | undefined)?.reason : undefined;
       setError(reason === "locked" || reason === "no_sections" || reason === "missing_crp" ? reason : "generic");

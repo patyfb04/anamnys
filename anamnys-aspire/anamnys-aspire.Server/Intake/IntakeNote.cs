@@ -153,6 +153,7 @@ public static class IntakeNote
         // not signed as generated).
         var transfers = questions
             .Where(q => q.TargetField is not null && answers.ContainsKey(q.Id)
+                && IntakeNegativeAnswers.IsOfferable(q.TargetField, answers[q.Id])
                 && texts.TryGetValue(q.SectionKey, out var text)
                 && ContainsLine(text, Line(q.Label, q.AnswerType, answers[q.Id])))
             .OrderBy(q => q.Position)

@@ -2,9 +2,9 @@
 
 How the provider conducts a guided first-session intake (anamnese) from a questionnaire, turns it into a signed note of
 the format `Anamnese`, and then carries individual answers into the patient record (registration data, medication,
-diagnosis, treatment objective) one by one, without retyping. Last checked against the code on 2026-11-14 (branch
-`feature/structured-intake`, not yet merged; sections 4 to 7 and 12 were compared with the C# in `Intake/` after the
-final review). Design: `design/specs/2026-11-12-structured-intake-design.md`.
+diagnosis, treatment objective) one by one, without retyping. Last checked against the code on 2026-11-15 (branch
+`feature/structured-intake`, merged into `develop` on 2026-11-14; follow-up branch `fix/intake-transfers-ux`; sections 4
+to 7 and 12 were compared with the C# in `Intake/` after the final review). Design: `design/specs/2026-11-12-structured-intake-design.md`.
 
 What a future change has to respect: the intake is signed **through its note**, in the normal review and sign flow, so it
 is sealed in the integrity chain and appears in the dossier and in search like any note (section 5); answers are locked
@@ -152,7 +152,12 @@ transaction, before the status change, and:
 - marks the intake `signed` (`SignedAt`) and writes `intake_signed`;
 - creates one `IntakeTransfers` row (`pending`) per answered destination question **whose whole generated line
   ("Label: answer", as displayed) is still a line of its section's signed text**; a line the provider changed ("...: nega
-  TAG") or removed gives no transfer.
+  TAG") or removed gives no transfer;
+- creates no transfer for a `diagnosis` or `medication` answer that is a negative or empty statement
+  (`IntakeNegativeAnswers.IsNegative`): the answer is trimmed, lowercased, stripped of accents and trailing punctuation,
+  and is negative when it equals or starts with one of the whole words `nada`, `nenhum`, `nenhuma`, `nao`, `nega`,
+  `sem`, `n/a`, `na`, `-` ("Nada fora do normal.", "Não toma medicação", "Nega uso de medicamentos"; "Nadador" and
+  "Sertralina 50 mg" are not negative). Other destinations are never filtered. The answer stays in the signed note.
 
 The note is sealed (F-45) by the normal signing path, untouched by this feature. Signing therefore puts the intake in
 the integrity chain, the dossier (F-44) and record search like any signed note.
@@ -256,7 +261,10 @@ section `title`, and `origin.noteId` on the timeline. All routes are documented 
   the sections.
 - **"Levar para o prontuário"** (`IntakeTransfersPanel`): each transfer with destination, question and value; registration
   fields show "No cadastro hoje" against "Da anamnese"; Confirmar and Ignorar per pending item; decided items show a
-  badge. Confirm invalidates patient, patients, timeline, plan-adherence, intake and intakes queries.
+  badge. Confirm invalidates patient, patients, timeline, plan-adherence, intake and intakes queries. After the provider
+  signs a note of format Anamnese (`SignCard`, `afterSign`; not after an export refresh) and the intake has pending
+  transfers, the Note Editor navigates to the intake page with `?transfers=1`; the page passes `focus` to the panel,
+  which scrolls into view. With no pending transfers the provider stays on the note.
 - **Note Editor:** `IntakeShortcut` "Fazer a anamnese deste paciente" on `/note-editor/new` once a patient is chosen, and
   on an unsigned non-Anamnese note, when the patient has no intake and no signed note ("first session", section 14). The
   note page of an Anamnese note links "Ver as respostas da anamnese"; section headings use the server's `title`. Signing
