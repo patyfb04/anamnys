@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
 import { AlertCircle, ArrowLeft, ChevronDown, ClipboardList, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import { excerptsApi } from "@anamnys/shared/api/excerpts";
+import { intakeApi } from "@anamnys/shared/api/intake";
 import { patientsApi } from "@anamnys/shared/api/patients";
 import type { LiveNoteFormat, NoteDetail, QuoteSelection, ThemeSelection } from "@anamnys/shared/lib/types";
 import Avatar from "@anamnys/shared/ui/Avatar";
@@ -58,6 +59,7 @@ function NotePage() {
   });
 
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const patientId = query.data?.patientId;
   const patient = useQuery({
     queryKey: ["patient", patientId],
@@ -69,6 +71,27 @@ function NotePage() {
     return query.isError ? <p className="p-8 text-body-lg text-error">{t("noteView.notFound")}</p> : null;
   }
   const note = query.data;
+  // Signing an Anamnese note with answers for the record goes straight to "Levar para o prontuário".
+  const openTransfersAfterSigning = async () => {
+    if (note.format !== "Anamnese" || !note.intakeId) return;
+    const intakeId = note.intakeId;
+    try {
+      const intake = await queryClient.fetchQuery({
+        queryKey: intakeKey(intakeId),
+        queryFn: () => intakeApi.get(intakeId),
+        staleTime: 0,
+      });
+      if (intake.pendingTransfers > 0) {
+        await navigate({
+          to: "/patients/$patientId/intake/$intakeId",
+          params: { patientId: note.patientId, intakeId },
+          search: { transfers: 1 },
+        });
+      }
+    } catch {
+      // Staying on the signed note is fine; the patient card still offers the pending items.
+    }
+  };
   const hasSections = note.sections.length > 0;
   const editable = note.status === "ReadyForReview" && !note.signedAt && note.structureStatus !== "pending";
   const aiDraft = note.sectionsByAi && hasSections && !note.sections.some((s) => s.editedAt);
@@ -181,7 +204,7 @@ function NotePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => { void queryClient.invalidateQueries({ queryKey: ["plan-adherence", note.patientId] }); if (note.intakeId) { void queryClient.invalidateQueries({ queryKey: intakeKey(note.intakeId) }); void queryClient.invalidateQueries({ queryKey: intakesKey(note.patientId) }); } return query.refetch(); }} />}
+          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => { void queryClient.invalidateQueries({ queryKey: ["plan-adherence", note.patientId] }); if (note.intakeId) { void queryClient.invalidateQueries({ queryKey: intakeKey(note.intakeId) }); void queryClient.invalidateQueries({ queryKey: intakesKey(note.patientId) }); } return query.refetch(); }} afterSign={openTransfersAfterSigning} />}
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}

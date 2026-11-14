@@ -47,6 +47,26 @@ public class IntakeTransferTests(SharedAppHostFixture fixture)
     }
 
     [Fact]
+    public async Task Sign_NegativeDiagnosisAndMedicationAnswers_CreatesNoTransferForThem()
+    {
+        // Arrange
+        await using var s = await IntakeScene.CreateAsync(fixture, Ct);
+        var intake = await s.StartAsync(Ct);
+        await s.AnswerRequiredAndDestinationsAsync(intake, Ct);
+        await s.AnswerAsync(intake, Ct, ("diagnosticos_previos", "Nenhum diagnóstico."), ("medicacoes", "Nega uso de medicamentos"));
+        var noteId = await s.GenerateNoteAsync(intake, Ct);
+
+        // Act
+        var outcome = await s.SignAsync(noteId, Ct);
+
+        // Assert
+        outcome.Should().Be(Anamnys.Server.Notes.SignOutcome.Signed);
+        var transfers = await s.TransfersAsync(intake, Ct);
+        transfers.Select(t => t.TargetField).Should().BeEquivalentTo(
+            ["patient.dateOfBirth", "patient.phone", "patient.contactEmail", "plan.objective"]);
+    }
+
+    [Fact]
     public async Task Confirm_EachDestination_WritesTheRecordWithAuditAndExcerpt()
     {
         // Arrange
