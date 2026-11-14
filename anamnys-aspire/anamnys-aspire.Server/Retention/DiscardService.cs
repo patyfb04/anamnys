@@ -259,6 +259,10 @@ public static class DiscardService
                 ("SubjectType" = 'note' AND "SubjectId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
                 OR ("SubjectType" = 'document' AND "SubjectId" IN (SELECT "Id" FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v})))
             """, ct);
+        // F-31: the intakes go with their answers and transfers (the transfers' excerpt references went above).
+        await Run("intakeTransfers", $"""DELETE FROM "IntakeTransfers" WHERE "IntakeId" IN (SELECT "Id" FROM "Intakes" WHERE "PatientId" = {p} AND "ProviderId" = {v})""");
+        await Run("intakeResponses", $"""DELETE FROM "IntakeResponses" WHERE "PatientId" = {p}""");
+        await Run("intakes", $"""DELETE FROM "Intakes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("clinicalDocuments", $"""DELETE FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("notes", $"""DELETE FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("medications", $"""DELETE FROM "MedicationEntries" WHERE "PatientId" = {p}""");
@@ -270,7 +274,6 @@ public static class DiscardService
         await Run("planObjectives", $"""DELETE FROM "PlanObjectives" WHERE "PlanId" IN (SELECT "Id" FROM "TreatmentPlans" WHERE "PatientId" = {p})""");
         await Run("recordingConsents", $"""DELETE FROM "RecordingConsents" WHERE "PatientId" = {p}""");
         await Run("treatmentPlans", $"""DELETE FROM "TreatmentPlans" WHERE "PatientId" = {p}""");
-        await Run("intakeResponses", $"""DELETE FROM "IntakeResponses" WHERE "PatientId" = {p}""");
         await Run("dossiers", $"""DELETE FROM "Dossiers" WHERE "PatientId" = {p}""");
         await Run("insurerAuthorizations", $"""DELETE FROM "InsurerAuthorizations" WHERE "PatientId" = {p}""");
         await Run("bookingHolds", $"""DELETE FROM "BookingHolds" WHERE "PatientId" = {p}""");

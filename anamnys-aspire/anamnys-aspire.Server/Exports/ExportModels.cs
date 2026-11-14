@@ -191,7 +191,7 @@ public static class ExportViews
             pdf,
             data.SectionsByNote[note.Id]
                 .OrderBy(s => s.Position)
-                .Select(s => new SecaoJson(s.Key, NotePdfModel.SectionTitle(s.Key), s.Content.Trim(), s.EditedAt is not null))
+                .Select(s => new SecaoJson(s.Key, data.SectionTitle(note.Id, s.Key),s.Content.Trim(), s.EditedAt is not null))
                 .ToList(),
             data.ThemesByNote[note.Id]
                 .Select(t => new TemaJson(

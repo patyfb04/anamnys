@@ -213,7 +213,8 @@ public static class DossierBuilder
             Id = note.Id, Format = note.Format, SignedAt = note.SignedAt, SignedByCrp = note.SignedByCrp, CreatedAt = note.CreatedAt,
         };
         var session = note.SessionId is { } id ? data.Sessions.GetValueOrDefault(id) : null;
-        return NotePdfModel.From(entity, data.SectionsByNote[note.Id].ToList(), data.Patient, data.Provider, session);
+        return NotePdfModel.From(
+            entity, data.SectionsByNote[note.Id].ToList(), data.Patient, data.Provider, session, data.SectionTitles.GetValueOrDefault(note.Id));
     }
 
     private static DossierPdfModel PdfModel(

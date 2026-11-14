@@ -11,23 +11,26 @@ interface Props {
   className?: string;
   /** When set, the card starts collapsed and remembers its state in this browser under this id. */
   collapsibleId?: string;
+  /** For a collapsible card with no remembered state: whether it starts open (default: collapsed). */
+  defaultOpen?: boolean;
 }
 
 const storageKey = (id: string) => `anamnys.card.${id}.open`;
 
-function readOpen(id: string | undefined): boolean {
+function readOpen(id: string | undefined, defaultOpen: boolean): boolean {
   if (!id) return true;
   try {
-    return localStorage.getItem(storageKey(id)) === "1";
+    const stored = localStorage.getItem(storageKey(id));
+    return stored === null ? defaultOpen : stored === "1";
   } catch {
-    return false;
+    return defaultOpen;
   }
 }
 
-export default function DetailCard({ title, icon, action, children, className, collapsibleId }: Props) {
+export default function DetailCard({ title, icon, action, children, className, collapsibleId, defaultOpen = false }: Props) {
   const { t } = useTranslation();
   const footer = useContext(CardFooterContext);
-  const [open, setOpen] = useState(() => readOpen(collapsibleId));
+  const [open, setOpen] = useState(() => readOpen(collapsibleId, defaultOpen));
 
   const remember = (next: boolean) => {
     setOpen(next);

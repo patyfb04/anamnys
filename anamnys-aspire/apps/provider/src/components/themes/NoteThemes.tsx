@@ -15,7 +15,7 @@ interface Props {
   noteId: string;
   patientId: string;
   structureStatus?: string;
-  sections: { key: string; content: string }[];
+  sections: { key: string; title?: string | null; content: string }[];
   activeExcerptId: string | null;
   onActivate: (excerptId: string | null) => void;
   selection: ThemeSelection | null;
@@ -252,7 +252,7 @@ export default function NoteThemes({
                 <select className={inputClass} value={sectionKey} onChange={(e) => setChosenSection(e.target.value)}>
                   {filled.map((s) => (
                     <option key={s.key} value={s.key}>
-                      {t(`noteView.sections.${s.key}`, { defaultValue: s.key })}
+                      {s.title ?? t(`noteView.sections.${s.key}`, { defaultValue: s.key })}
                     </option>
                   ))}
                 </select>

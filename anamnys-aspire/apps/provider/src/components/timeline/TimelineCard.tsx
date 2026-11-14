@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { GanttChartSquare, X } from "lucide-react";
 import { medicationTimelineApi } from "@anamnys/shared/api/medicationTimeline";
@@ -145,11 +146,13 @@ function Details({
     const origin =
       o.kind === "manual"
         ? t("timeline.originManual")
-        : o.kind === "document_deleted"
-          ? t("timeline.originDeleted")
-          : o.page
-            ? t("timeline.originDocumentPage", { kind, date, page: o.page })
-            : t("timeline.originDocument", { kind, date });
+        : o.kind === "intake"
+          ? t("timeline.originIntake")
+          : o.kind === "document_deleted"
+            ? t("timeline.originDeleted")
+            : o.page
+              ? t("timeline.originDocumentPage", { kind, date, page: o.page })
+              : t("timeline.originDocument", { kind, date });
     title = selection.drug;
     body = (
       <>
@@ -168,6 +171,16 @@ function Details({
           >
             {t("timeline.viewInDocument")}
           </button>
+        )}
+        {o.kind === "intake" && o.noteId && (
+          <Link
+            to="/notes/$noteId"
+            params={{ noteId: o.noteId }}
+            search={{ excerpt: o.excerptId ?? undefined }}
+            className="self-start text-label-lg text-primary hover:underline"
+          >
+            {t("timeline.viewInIntakeNote")}
+          </Link>
         )}
       </>
     );

@@ -799,3 +799,98 @@ POST {{Server_HostAddress}}/api/phi/providers/me/appointment-series/00000000-000
 Content-Type: application/json
 
 { "fromDate": "2026-12-08" }
+
+###
+### F-31: structured intake (design/specs/2026-11-12-structured-intake-design.md). Templates: the system default (read-only) and the provider's own.
+### 200 { defaultTemplateId, templates: [{ id, name, version, isDefault, basedOnTemplateId, archived, inUse }] }.
+GET {{Server_HostAddress}}/api/phi/providers/me/intake-templates
+
+###
+### 200 { id, name, version, isDefault, basedOnTemplateId, archived, inUse, sections: [{ key, title, questions: [{ id, key, label, helpText,
+### answerType: "text" | "number" | "date" | "boolean" | "choice", choices, required, targetField, disabled, position }] }] }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/intake-templates/0f310000-0000-4000-8000-000000000001
+
+###
+### Copies a template into a new own one (version 1, basedOnTemplateId = source). Body optional; without a name: "Minha anamnese" (or "<name> (cópia)"), numbered when taken.
+### 201 template (as GET); 400 validation problem; 404; 409 { code: "name_taken" }. Audited intake_template_adapted.
+POST {{Server_HostAddress}}/api/phi/providers/me/intake-templates/0f310000-0000-4000-8000-000000000001/adapt
+Content-Type: application/json
+
+{ "name": "Anamnese adulto" }
+
+###
+### Replaces an own template's questions (order = position; sections in order of first appearance; a section's title is its first question's).
+### Unused template: edited in place (questions matched by key). Used by an intake: a new version (version + 1) is created and the old one archived.
+### targetField: null | "patient.dateOfBirth" (answerType date) | "patient.phone" | "patient.contactEmail" | "medication" | "diagnosis" | "plan.objective" (text).
+### 200 template (as GET, possibly a new id); 400 validation problem; 403 { code: "template_read_only" } (system default); 404; 409 { code: "template_archived" | "name_taken" }.
+PUT {{Server_HostAddress}}/api/phi/providers/me/intake-templates/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{ "name": "Anamnese adulto", "questions": [
+  { "key": "queixa_principal", "sectionKey": "queixa", "sectionTitle": "Queixa principal", "label": "Queixa principal", "helpText": null,
+    "answerType": "text", "choices": null, "required": true, "targetField": null, "disabled": false },
+  { "key": "medicacoes", "sectionKey": "saude", "sectionTitle": "Saúde", "label": "Medicações em uso", "helpText": null,
+    "answerType": "text", "choices": null, "required": false, "targetField": "medication", "disabled": false }
+] }
+
+###
+### Archives an own template (no longer offered; the default choice falls back to the system default). 200 summary; 403 system default; 404.
+POST {{Server_HostAddress}}/api/phi/providers/me/intake-templates/00000000-0000-0000-0000-000000000000/archive
+
+###
+### The provider's default template (null = the system default). 200 { defaultTemplateId }; 404; 409 { code: "template_archived" }.
+PUT {{Server_HostAddress}}/api/phi/providers/me/intake-settings
+Content-Type: application/json
+
+{ "defaultTemplateId": null }
+
+###
+### The patient's intakes, newest first: 200 [{ id, status: "draft" | "signed", createdAt, signedAt, noteId, pendingTransfers }]; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/intakes
+
+###
+### Starts an intake with the provider's default template. 201 { id }; 400 { code: "patient_archived" }; 404; 409 { code: "intake_in_progress" }. Audited intake_started.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/intakes
+
+###
+### 200 { id, patientId, status, createdAt, updatedAt, signedAt, noteId, noteStatus, pendingTransfers, template: { id, name, version },
+### sections (enabled questions only, as in the template), answers: [{ questionId, answer, updatedAt }] }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000
+
+###
+### Upserts answers (empty or null answer clears it). Stored forms: number invariant ("7.5"; "7,5" accepted), date "yyyy-MM-dd", boolean "true"/"false",
+### choice one of the choices exactly. 200 [{ questionId, answer, updatedAt }] (all answers); 400 { code: "invalid_answer", questionIds } (nothing saved);
+### 404; 409 { code: "not_draft" | "answers_locked" (the note was generated: unlock first) | "patient_archived" }.
+PUT {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/answers
+Content-Type: application/json
+
+[ { "questionId": "00000000-0000-0000-0000-000000000000", "answer": "Ansiedade antes de reuniões" } ]
+
+###
+### Creates the Anamnese note (one section per template section, "Label: answer" lines) and locks the answers; when the note exists already,
+### returns it unchanged. Review and sign it through the notes endpoints; signing marks the intake signed and creates the transfers (audited intake_signed).
+### 200 { noteId }; 400 { code: "required_missing", questionIds }; 404; 409 { code: "not_draft" | "patient_archived" }.
+POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/note
+
+###
+### "Editar respostas": deletes the unsigned note (its edits are lost) and unlocks the answers. 200 intake (as GET); 404; 409 { code: "not_draft" }.
+### Audited intake_answers_unlocked (when there was a note).
+POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/unlock
+
+###
+### Discards a draft intake with its answers and unsigned note. 204; 404; 409 { code: "not_draft" }. Audited intake_discarded.
+DELETE {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000
+
+###
+### Answers with a record destination (signed intakes only; [] before signing).
+### 200 [{ id, questionId, questionLabel, sectionKey, targetField, value, currentValue (registration fields), status, decidedAt, resultId }]; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/transfers
+
+###
+### Writes the answer to the record (patient field, medication, diagnosis or plan objective) with an excerpt reference into the note. 200 transfer;
+### 404; 409 { code: "not_signed" | "not_pending" | "patient_archived" }. Audited intake_transfer_confirmed.
+POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/transfers/00000000-0000-0000-0000-000000000000/confirm
+
+###
+### Writes nothing to the record. 200 transfer; 404; 409 { code: "not_signed" | "not_pending" }. Audited intake_transfer_ignored.
+POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/transfers/00000000-0000-0000-0000-000000000000/ignore

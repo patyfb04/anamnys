@@ -6,6 +6,7 @@ import AccountExportSection from "../../../components/settings/AccountExportSect
 import DocumentSettingsSection from "../../../components/settings/DocumentSettingsSection";
 import RetentionSettingsSection from "../../../components/settings/RetentionSettingsSection";
 import AnalysisSettingsSection from "../../../components/settings/AnalysisSettingsSection";
+import IntakeTemplatesSection from "../../../components/settings/IntakeTemplatesSection";
 
 type Tab = "agenda" | "prontuario" | "geral";
 const TABS: Tab[] = ["geral", "agenda", "prontuario"];
@@ -60,6 +61,7 @@ function SettingsPage() {
             <DocumentSettingsSection />
             <RetentionSettingsSection />
             <AnalysisSettingsSection />
+            <IntakeTemplatesSection />
           </>
         )}
         {tab === "geral" && <AccountExportSection />}

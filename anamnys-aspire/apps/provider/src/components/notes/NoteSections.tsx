@@ -48,6 +48,8 @@ export default function NoteSections({ sections, editable, noteId, onSaved, high
 
 function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote }: Omit<Props, "sections"> & { section: NoteSectionView }) {
   const { t } = useTranslation();
+  // Anamnese notes carry their template's section titles (F-31); the fixed formats use the translated key.
+  const title = section.title ?? t(`noteView.sections.${section.key}`, { defaultValue: section.key });
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(section.content);
@@ -151,7 +153,7 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, o
       className={`rounded-radii-lg bg-surfaceContainerLow p-4 ${active && !exact ? "ring-2 ring-primary" : ""}`}
     >
       <div className="mb-1 flex flex-wrap items-center gap-2">
-        <h3 className="text-label-lg uppercase tracking-wide text-primary">{t(`noteView.sections.${section.key}`)}</h3>
+        <h3 className="text-label-lg uppercase tracking-wide text-primary">{title}</h3>
         {edited && (
           <span className="rounded-radii-full bg-primaryFixed px-2 py-0.5 text-label-sm text-onPrimaryFixedVariant">
             {t("noteView.editedByYou")}
@@ -177,7 +179,7 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, o
             maxLength={20000}
             rows={3}
             disabled={saving}
-            aria-label={t(`noteView.sections.${section.key}`)}
+            aria-label={title}
             className="w-full resize-none overflow-hidden rounded-radii-md border border-outlineVariant bg-surfaceContainerLowest p-3 text-body-md text-onSurface focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {error && (

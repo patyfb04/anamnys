@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
-import { AlertCircle, ArrowLeft, ChevronDown, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChevronDown, ClipboardList, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import { excerptsApi } from "@anamnys/shared/api/excerpts";
 import { patientsApi } from "@anamnys/shared/api/patients";
@@ -18,6 +18,8 @@ import NoteThemes from "@/components/themes/NoteThemes";
 import NoteFollowUps from "@/components/notes/NoteFollowUps";
 import NoteQuotes from "@/components/notes/NoteQuotes";
 import SessionScalesCard from "@/components/scales/SessionScalesCard";
+import IntakeShortcut from "@/components/intake/IntakeShortcut";
+import { intakeKey, intakesKey } from "@/components/intake/intakeModel";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -105,6 +107,22 @@ function NotePage() {
         </div>
       </header>
 
+      {note.intakeId ? (
+        <Link
+          to="/patients/$patientId/intake/$intakeId"
+          params={{ patientId: note.patientId, intakeId: note.intakeId }}
+          className="inline-flex items-center gap-1 self-start text-label-lg text-primary hover:underline"
+        >
+          <ClipboardList size={16} aria-hidden />
+          {t("intake.note.viewIntake")}
+        </Link>
+      ) : (
+        !note.signedAt &&
+        note.status !== "Failed" && (
+          <IntakeShortcut patientId={note.patientId} enabled={!!patient.data && !patient.data.archivedAt} />
+        )
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <DetailCard title={t("noteView.note")} icon={<FileText size={20} />}>
@@ -163,7 +181,7 @@ function NotePage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => { void queryClient.invalidateQueries({ queryKey: ["plan-adherence", note.patientId] }); return query.refetch(); }} />}
+          {(note.status === "ReadyForReview" || !!note.signedAt) && <SignCard note={note} onSigned={() => { void queryClient.invalidateQueries({ queryKey: ["plan-adherence", note.patientId] }); if (note.intakeId) { void queryClient.invalidateQueries({ queryKey: intakeKey(note.intakeId) }); void queryClient.invalidateQueries({ queryKey: intakesKey(note.patientId) }); } return query.refetch(); }} />}
           {canRestructure && (
             <RestructureControl noteId={noteId} format={note.format} onRequested={() => void query.refetch()} />
           )}

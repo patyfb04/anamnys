@@ -262,7 +262,9 @@
     "originDocument": "{{kind}} de {{date}}",
     "originDocumentPage": "{{kind}} de {{date}}, página {{page}}",
     "originDeleted": "documento excluído",
-    "viewInDocument": "Ver no documento"
+    "originIntake": "da anamnese",
+    "viewInDocument": "Ver no documento",
+    "viewInIntakeNote": "Ver na nota da anamnese"
   },
   "dossier": {
     "title": "Dossiês",
@@ -694,7 +696,8 @@
     "formats": {
       "DAP": "DAP",
       "SOAP": "SOAP",
-      "Biopsychosocial": "Biopsicossocial"
+      "Biopsychosocial": "Biopsicossocial",
+      "Anamnese": "Anamnese"
     },
     "formatHelp": {
       "DAP": "Dados, Avaliação e Plano.",
@@ -935,7 +938,13 @@
       "objective": "Objetivo",
       "biological": "Biológico",
       "psychological": "Psicológico",
-      "social": "Social"
+      "social": "Social",
+      "identificacao": "Identificação",
+      "queixa": "Queixa principal",
+      "historia": "História pessoal e familiar",
+      "saude": "Saúde",
+      "contexto": "Contexto atual",
+      "objetivos": "Objetivos"
     },
     "notFound": "Nota não encontrada.",
     "markTheme": "Marcar tema neste trecho",
@@ -2550,5 +2559,166 @@
       "endBody": "As sessões marcadas a partir de {{date}} serão canceladas. Se o paciente tiver e-mail cadastrado, recebe um único aviso."
     },
     "repeatIcon": "Sessão de uma série"
+  },
+  "intake": {
+    "status": {
+      "draft": "Em preenchimento",
+      "signed": "Assinada"
+    },
+    "targets": {
+      "patient_dateOfBirth": "Data de nascimento (cadastro)",
+      "patient_phone": "Telefone (cadastro)",
+      "patient_contactEmail": "E-mail de contato (cadastro)",
+      "medication": "Medicações",
+      "diagnosis": "Diagnósticos",
+      "plan_objective": "Objetivo do plano terapêutico"
+    },
+    "types": {
+      "text": "Texto",
+      "number": "Número",
+      "date": "Data",
+      "boolean": "Sim ou não",
+      "choice": "Opções"
+    },
+    "card": {
+      "title": "Anamnese",
+      "start": "Iniciar anamnese",
+      "none": "Este paciente ainda não tem anamnese.",
+      "loadFailed": "Não foi possível carregar as anamneses.",
+      "startedOn": "Iniciada em {{date}}",
+      "signedOn": "Assinada em {{date}}",
+      "open": "Abrir",
+      "continue": "Continuar",
+      "history": "Anteriores",
+      "pending_one": "{{count}} item para levar ao prontuário",
+      "pending_other": "{{count}} itens para levar ao prontuário",
+      "discardDraft": "Descartar rascunho",
+      "startFailed": "Não foi possível iniciar a anamnese.",
+      "inProgress": "Já existe uma anamnese em preenchimento para este paciente.",
+      "patientArchived": "Paciente arquivado: não é possível iniciar uma anamnese."
+    },
+    "discard": {
+      "title": "Descartar o rascunho da anamnese?",
+      "body": "As respostas e a nota ainda não assinada desta anamnese serão apagadas. Esta ação não pode ser desfeita.",
+      "confirm": "Descartar rascunho",
+      "done": "Rascunho descartado.",
+      "failed": "Não foi possível descartar o rascunho."
+    },
+    "page": {
+      "title": "Anamnese",
+      "backToPatient": "Voltar ao paciente",
+      "notFound": "Anamnese não encontrada.",
+      "template": "Modelo: {{name}} (versão {{version}})",
+      "navLabel": "Seções da anamnese",
+      "saving": "Salvando…",
+      "saved": "Salvo",
+      "saveFailed": "Não salvo",
+      "required": "obrigatória",
+      "requiredLegend": "Perguntas marcadas com * são obrigatórias para gerar a nota.",
+      "invalidAnswer": "Resposta inválida para esta pergunta.",
+      "requiredField": "Resposta obrigatória para gerar a nota.",
+      "yes": "Sim",
+      "no": "Não",
+      "noAnswer": "Sem resposta",
+      "choose": "Selecione…",
+      "generate": "Gerar nota para revisão",
+      "generateHint": "A nota abre no editor para você revisar, editar e assinar. Nada vai para o prontuário antes disso.",
+      "generateFailed": "Não foi possível gerar a nota.",
+      "unsavedAnswers": "Há respostas que não foram salvas. Corrija os campos marcados antes de gerar a nota.",
+      "requiredMissing_one": "Falta responder {{count}} pergunta obrigatória.",
+      "requiredMissing_other": "Faltam responder {{count}} perguntas obrigatórias.",
+      "noteExists": "A nota desta anamnese já foi gerada e está em revisão. Para mudar respostas, use Editar respostas.",
+      "openNote": "Abrir nota",
+      "viewSignedNote": "Ver nota assinada",
+      "editAnswers": "Editar respostas",
+      "unlockTitle": "Editar as respostas?",
+      "unlockBody": "A nota gerada será apagada, com todas as alterações que você fez nela. Depois de editar as respostas, gere a nota novamente.",
+      "unlockFailed": "Não foi possível liberar as respostas.",
+      "signedReadOnly": "Anamnese assinada em {{date}}. As respostas não podem mais ser alteradas.",
+      "archivedReadOnly": "Paciente arquivado: as respostas não podem ser alteradas.",
+      "locked": "As respostas foram bloqueadas porque a nota já existe. A página foi atualizada."
+    },
+    "transfers": {
+      "title": "Levar para o prontuário",
+      "description": "Confirme cada item para gravá-lo no prontuário. Nada é gravado sem a sua confirmação.",
+      "loadFailed": "Não foi possível carregar os itens.",
+      "empty": "Nenhuma resposta desta anamnese tem destino no prontuário.",
+      "confirm": "Confirmar",
+      "ignore": "Ignorar",
+      "confirmed": "Levado ao prontuário",
+      "ignored": "Ignorado",
+      "current": "No cadastro hoje",
+      "new": "Da anamnese",
+      "empty_value": "(vazio)",
+      "failed": "Não foi possível concluir. Tente novamente.",
+      "patientArchived": "Paciente arquivado: não é possível gravar no prontuário."
+    },
+    "shortcut": {
+      "title": "Primeira sessão",
+      "hint": "Este paciente ainda não tem anamnese. Você pode conduzi-la com o roteiro estruturado e gerar a nota a partir das respostas.",
+      "action": "Fazer a anamnese deste paciente"
+    },
+    "note": {
+      "viewIntake": "Ver as respostas da anamnese"
+    },
+    "settings": {
+      "title": "Modelos de anamnese",
+      "description": "O roteiro de perguntas usado nas novas anamneses. O modelo do Anamnys não muda; adapte-o para criar o seu.",
+      "loadFailed": "Não foi possível carregar os modelos.",
+      "systemTemplate": "Modelo do Anamnys",
+      "ownTemplates": "Meus modelos",
+      "noOwn": "Você ainda não adaptou nenhum modelo.",
+      "version": "versão {{version}}",
+      "default": "Usado nas novas anamneses",
+      "useAsDefault": "Usar nas novas anamneses",
+      "defaultSaved": "Modelo das novas anamneses atualizado.",
+      "defaultFailed": "Não foi possível mudar o modelo das novas anamneses.",
+      "view": "Ver perguntas",
+      "hide": "Ocultar perguntas",
+      "adapt": "Adaptar",
+      "adapted": "Modelo criado. Edite as perguntas abaixo.",
+      "adaptFailed": "Não foi possível adaptar o modelo.",
+      "edit": "Editar",
+      "archive": "Arquivar",
+      "archiveTitle": "Arquivar o modelo?",
+      "archiveBody": "O modelo \"{{name}}\" deixa de ser oferecido. As anamneses já feitas com ele não mudam.",
+      "archived": "Modelo arquivado.",
+      "archiveFailed": "Não foi possível arquivar o modelo.",
+      "nameTaken": "Já existe um modelo com este nome.",
+      "requiredBadge": "obrigatória",
+      "disabledBadge": "desligada",
+      "destinationBadge": "vai para: {{target}}",
+      "editor": {
+        "title": "Editar modelo",
+        "name": "Nome do modelo",
+        "inUseHint": "Este modelo já foi usado em anamneses. Ao salvar, uma nova versão é criada; as anamneses existentes mantêm as perguntas que tinham.",
+        "sectionTitle": "Título da seção",
+        "addSection": "Adicionar seção",
+        "newSection": "Nova seção",
+        "addQuestion": "Adicionar pergunta",
+        "label": "Pergunta",
+        "help": "Ajuda (opcional)",
+        "type": "Tipo de resposta",
+        "choices": "Opções (uma por linha)",
+        "choicesRequired": "Informe ao menos uma opção.",
+        "required": "Obrigatória",
+        "enabled": "Ativa",
+        "destination": "Destino no prontuário",
+        "noDestination": "Nenhum",
+        "destinationTypeHint": "Este destino pede uma resposta do tipo {{type}}.",
+        "moveUp": "Subir",
+        "moveDown": "Descer",
+        "moveSectionUp": "Subir seção",
+        "moveSectionDown": "Descer seção",
+        "remove": "Remover pergunta",
+        "save": "Salvar modelo",
+        "cancel": "Cancelar",
+        "saved": "Modelo salvo.",
+        "savedNewVersion": "Modelo salvo como versão {{version}}.",
+        "saveFailed": "Não foi possível salvar o modelo. Confira os campos marcados.",
+        "readOnly": "O modelo do Anamnys não pode ser editado; use Adaptar.",
+        "archivedTemplate": "Este modelo foi arquivado e não pode ser editado."
+      }
+    }
   }
 }

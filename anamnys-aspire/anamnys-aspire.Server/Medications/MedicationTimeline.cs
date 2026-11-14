@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Anamnys.Server.Medications;
 
 public sealed record TimelineOrigin(
-    string Kind, Guid? DocumentId = null, string? DocumentKind = null, DateOnly? DocumentDate = null, int? Page = null, Guid? ExcerptId = null);
+    string Kind, Guid? DocumentId = null, string? DocumentKind = null, DateOnly? DocumentDate = null, int? Page = null, Guid? ExcerptId = null,
+    Guid? NoteId = null);
 
 public sealed record TimelineSegment(
     Guid MedicationId, string? Dose, string? Posology, DateOnly StartedOn, DateOnly? EndedOn, TimelineOrigin Origin);
@@ -28,6 +29,8 @@ public static class MedicationTimeline
     public const string Manual = "manual";
     public const string Document = "document";
     public const string DocumentDeleted = "document_deleted";
+    // F-31: taken from an intake answer; NoteId is the signed Anamnese note, ExcerptId the answer in it ("da anamnese").
+    public const string Intake = "intake";
 
     public static async Task<PatientTimeline?> GetAsync(
         AnamnysDbContext db, Guid providerId, Guid patientId, DateOnly? from, DateOnly? to, CancellationToken ct, DateTimeOffset? now = null)
@@ -54,8 +57,20 @@ public static class MedicationTimeline
                 select new { f.Id, DocumentId = d.Id, DocumentKind = d.Kind, d.DocumentDate, d.UploadedAt, Page = f.PageRef, ExcerptId = f.ExcerptRefId })
                 .ToDictionaryAsync(r => r.Id, ct);
 
+        var intakeIds = entries.Where(m => m.SourceNoteId != null).Select(m => m.Id).ToList();
+        var intakeExcerpts = intakeIds.Count == 0
+            ? []
+            : await db.IntakeTransfers.AsNoTracking()
+                .Where(t => t.ResultId != null && intakeIds.Contains(t.ResultId.Value) && t.TargetField == "medication")
+                .Select(t => new { Id = t.ResultId!.Value, t.ExcerptRefId })
+                .ToDictionaryAsync(t => t.Id, t => t.ExcerptRefId, ct);
+
         TimelineOrigin OriginOf(Data.Entities.MedicationEntry m)
         {
+            if (m.SourceNoteId is { } noteId)
+            {
+                return new TimelineOrigin(Intake, ExcerptId: intakeExcerpts.GetValueOrDefault(m.Id), NoteId: noteId);
+            }
             if (!m.FromDocument)
             {
                 return new TimelineOrigin(Manual);

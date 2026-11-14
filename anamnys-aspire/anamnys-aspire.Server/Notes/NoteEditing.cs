@@ -2,6 +2,7 @@ using Anamnys.Server.Integrity;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Excerpts;
+using Anamnys.Server.Intakes;
 using Anamnys.Server.NoteStructuring;
 using Anamnys.Server.Retention;
 using Microsoft.EntityFrameworkCore;
@@ -174,6 +175,12 @@ public static class NoteEditing
                 outcome = SignOutcome.Locked;
                 return;
             }
+            // F-31: an Anamnese note carries its intake template's section keys instead of a fixed format's.
+            if ((note.Format == NoteFormats.Anamnese) != (note.IntakeId is not null))
+            {
+                outcome = SignOutcome.Locked;
+                return;
+            }
             var provider = await db.Providers.AsNoTracking()
                 .Where(p => p.Id == providerId)
                 .Select(p => new { p.CrpNumber, p.CrpRegion })
@@ -181,6 +188,13 @@ public static class NoteEditing
             if (provider?.CrpNumber is null || provider.CrpRegion is null)
             {
                 outcome = SignOutcome.MissingCrp;
+                return;
+            }
+
+            // The intake is marked signed and its transfers created in this transaction; nothing reaches the record yet.
+            if (note.IntakeId is not null && !await IntakeNote.SignAsync(db, providerId, note, keys, now, ct))
+            {
+                outcome = SignOutcome.Locked;
                 return;
             }
 

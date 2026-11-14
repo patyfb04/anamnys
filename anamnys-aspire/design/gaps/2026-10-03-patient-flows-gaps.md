@@ -602,6 +602,24 @@ Patient dossier (F-44; chapter `documentation/39-patient-dossier.md`).
 - **Provider UI minors:** no `keepPreviousData` (pager flicker), the page is not reset to 1 after a request, a second bell click on `#dossiers` does not re-trigger, a `dossier_ready` notice without a patient id falls back to the calendar link, no pending state on the receipt and token buttons, no UI tests, not exercised in a browser.
 - **The dossier token is a separate download** from the receipt; it is not embedded in the ZIP.
 
+## Anamnese estruturada
+
+Structured intake (F-31; chapter `documentation/43-structured-intake.md`).
+
+- **Patient-filled intake (second phase).** Only the provider fills the intake today; the patient portal version (the patient answers before the first session, the provider reviews) is not built.
+- **No AI suggestions from the transcript.** Answers are typed; nothing proposes them from a session recording.
+- **No templates per approach.** Only the Anamnys default (6 sections, 36 questions) and the provider's own copies exist; ready-made CBT or child templates are not provided.
+- **Draft intakes are not in the account export.** A signed intake is exported through its note (with the template's section titles); the answers of a draft intake (and its unsigned note's link to it) are not, because a draft is not part of the record (ruling 2026-11-14).
+- **Unlock and discard leave audit rows not keyed to the deleted note.** Points "para retomar" marked on the deleted draft are deleted with it and those resolved in it are reopened, but any audit row that is not note-keyed survives; the unlock warning mentions only note edits.
+- **"First session" is approximated as "no signed note".** The Note Editor shortcut appears when the patient has no intake and no signed note (one extra notes query per view); the server has no notion of a first session.
+- **No unsaved-text warning on tab close.** Answers save on blur; closing the tab with a field still being typed loses it (no `beforeunload` guard).
+- **Unlock and discard lose the edit history of the unsigned note.** Its note audit rows are deleted with it (they hold note text and block the deletion); the intake audit row (ids only) records the event.
+- **Transfers build the medication, diagnosis and objective inline** instead of through shared constructors with the record's own routes; a rule change there has to be repeated in `IntakeTransfers`.
+- **The shortcut for an archived patient on `/note-editor/new` depends on the picker** (which patients it lists), not on a check of its own.
+- **No provider component tests exist** for the intake pages or the template editor.
+- **Dev database:** `2026-11-12-structured-intake.sql` is not applied there yet; the note-related dev-database suites (41 failures in the first round) fail until it is, and must be re-run with Aspire stopped. Full suite pending.
+- **Not exercised in a browser or against a live server;** build, lint and scratch-database tests only. The Confluence page is pending.
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

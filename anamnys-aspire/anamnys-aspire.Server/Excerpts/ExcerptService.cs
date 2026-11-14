@@ -203,7 +203,7 @@ public static class ExcerptService
             join p in db.Patients.AsNoTracking() on n.PatientId equals p.Id
             where r.Id == id && r.SourceType == "note" && r.ProviderId == providerId
                   && n.ProviderId == providerId && p.ProviderId == providerId
-            select new { r.Kind, r.Quote, r.SectionKey, r.OffsetStart, r.OffsetEnd, r.DatedAt, NoteId = n.Id, PatientId = p.Id, n.SessionId })
+            select new { r.Kind, r.Quote, r.SectionKey, r.OffsetStart, r.OffsetEnd, r.DatedAt, NoteId = n.Id, PatientId = p.Id, n.SessionId, n.IntakeId })
             .SingleOrDefaultAsync(ct);
         if (row?.SectionKey is not { } key)
         {
@@ -223,9 +223,11 @@ public static class ExcerptService
             : null;
         var exact = row.Kind == "exact" && row.OffsetStart is { } a && row.OffsetEnd is { } b && a >= 0 && b > a && b <= text.Length
             && string.Equals(text[a..b], row.Quote, StringComparison.Ordinal);
+        // An Anamnese note's sections carry its intake template's titles (F-31).
+        var titles = await Intakes.IntakeNote.SectionTitlesAsync(db, providerId, row.IntakeId, ct);
         return new ExcerptPassage(
             id, exact ? "exact" : "section", row.NoteId, row.PatientId, session?.ActualStart ?? session?.ScheduledStart, row.DatedAt,
-            key, NotePdfModel.SectionTitle(key), text, exact ? row.OffsetStart : null, exact ? row.OffsetEnd : null);
+            key, titles?.GetValueOrDefault(key) ?? NotePdfModel.SectionTitle(key), text, exact ? row.OffsetStart : null, exact ? row.OffsetEnd : null);
     }
 
     // A document page passage: the reference, the document (not deleted) and its patient all belong to the

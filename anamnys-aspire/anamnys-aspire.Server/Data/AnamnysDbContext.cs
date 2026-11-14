@@ -61,6 +61,12 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<AvailabilityRule> AvailabilityRules => Set<AvailabilityRule>();
     public DbSet<AvailabilityException> AvailabilityExceptions => Set<AvailabilityException>();
     public DbSet<ProviderHolidaySettings> ProviderHolidaySettings => Set<ProviderHolidaySettings>();
+    public DbSet<IntakeTemplate> IntakeTemplates => Set<IntakeTemplate>();
+    public DbSet<IntakeQuestion> IntakeQuestions => Set<IntakeQuestion>();
+    public DbSet<Intake> Intakes => Set<Intake>();
+    public DbSet<IntakeResponse> IntakeResponses => Set<IntakeResponse>();
+    public DbSet<IntakeTransfer> IntakeTransfers => Set<IntakeTransfer>();
+    public DbSet<ProviderIntakeSettings> ProviderIntakeSettings => Set<ProviderIntakeSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -175,6 +181,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasKey(x => x.Id);
             e.Property(x => x.CreatedAt).HasDefaultValueSql("now()");
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Note>().WithMany().HasForeignKey(x => x.SourceNoteId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<TreatmentPlan>(e =>
@@ -339,6 +346,49 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
         modelBuilder.Entity<ProviderHolidaySettings>(e =>
         {
             e.ToTable("ProviderHolidaySettings");
+            e.HasKey(x => x.ProviderId);
+        });
+
+        // F-31 (design/specs/2026-11-12-structured-intake-design.md §2). The foreign keys mirror the schema's, so a
+        // template and its questions, or an intake and its responses, saved together are inserted in order.
+        modelBuilder.Entity<IntakeTemplate>(e =>
+        {
+            e.ToTable("IntakeTemplates");
+            e.HasKey(x => x.Id);
+            e.HasOne<IntakeTemplate>().WithMany().HasForeignKey(x => x.BasedOnTemplateId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<IntakeQuestion>(e =>
+        {
+            e.ToTable("IntakeQuestions");
+            e.HasKey(x => x.Id);
+            e.HasOne<IntakeTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Intake>(e =>
+        {
+            e.ToTable("Intakes");
+            e.HasKey(x => x.Id);
+            e.HasOne<IntakeTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<IntakeResponse>(e =>
+        {
+            e.ToTable("IntakeResponses");
+            e.HasKey(x => x.Id);
+            e.HasOne<Intake>().WithMany().HasForeignKey(x => x.IntakeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IntakeTransfer>(e =>
+        {
+            e.ToTable("IntakeTransfers");
+            e.HasKey(x => x.Id);
+            e.HasOne<Intake>().WithMany().HasForeignKey(x => x.IntakeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProviderIntakeSettings>(e =>
+        {
+            e.ToTable("ProviderIntakeSettings");
             e.HasKey(x => x.ProviderId);
         });
 

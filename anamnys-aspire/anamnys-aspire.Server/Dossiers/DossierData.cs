@@ -2,6 +2,7 @@ using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Exports;
 using Anamnys.Server.ExternalDocuments;
+using Anamnys.Server.Intakes;
 using Anamnys.Server.Integrity;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,6 +59,10 @@ public sealed record DossierData(
     IReadOnlyList<DossierIntegrity> Integrity,
     IReadOnlyList<DossierAnchor> Anchors)
 {
+    // An Anamnese note's own section titles (F-31), by note id then section key; notes without an intake are absent.
+    public IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>> SectionTitles { get; init; } =
+        new Dictionary<Guid, IReadOnlyDictionary<string, string>>();
+
     // True when every signed note and document verified intact (an unsealed one counts as not verified).
     public bool IntegrityVerified => Integrity.All(i => i.Result.Status == SubjectStatus.Intact);
 
@@ -91,6 +96,7 @@ public sealed record DossierData(
             join n in db.Notes on s.NoteId equals n.Id
             where n.ProviderId == providerId && n.PatientId == patientId && noteIds.Contains(s.NoteId)
             select s).ToListAsync(ct);
+        var sectionTitles = await IntakeNote.SectionTitlesByNoteAsync(db, providerId, noteIds, ct);
         var sessionIds = notes.Where(n => n.SessionId != null).Select(n => n.SessionId!.Value).Distinct().ToList();
         var sessions = await db.Sessions.AsNoTracking()
             .Where(s => s.ProviderId == providerId && sessionIds.Contains(s.Id))
@@ -177,7 +183,10 @@ public sealed record DossierData(
 
         return new DossierData(
             provider, patient, notes, sections.ToLookup(s => s.NoteId), sessions, documents, signedDocumentIds, rulesets, externals, authorizations,
-            disclosedKinds, links, accesses.ToLookup(a => a.LinkId), compliance, hasDisposalTerm, integrity, anchors);
+            disclosedKinds, links, accesses.ToLookup(a => a.LinkId), compliance, hasDisposalTerm, integrity, anchors)
+        {
+            SectionTitles = sectionTitles,
+        };
     }
 
     // The practice-local day of the instant within the requested period (bounds included; none means no bound).
