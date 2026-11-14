@@ -1603,6 +1603,13 @@
       "phone": "Telefone",
       "visits": "Atendimentos",
       "recentNotes": "Notas recentes",
+      "tabs": {
+        "label": "Seções do paciente",
+        "resumo": "Resumo",
+        "avaliacao": "Avaliação",
+        "historico": "Agenda e histórico",
+        "documentos": "Documentos"
+      },
       "noNotes": "Nenhuma nota ainda.",
       "startSession": "Iniciar sessão",
       "schedule": "Agendar consulta",

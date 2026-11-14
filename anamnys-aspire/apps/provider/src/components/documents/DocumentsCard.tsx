@@ -21,7 +21,7 @@ export default function DocumentsCard({ patientId, readOnly }: { patientId: stri
   const items = list.data ?? [];
 
   return (
-    <DetailCard collapsibleId="documents"
+    <DetailCard collapsibleId="patient-documents" defaultOpen
       title={t("documents.title")}
       icon={<FileSignature size={20} />}
       action={

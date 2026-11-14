@@ -58,8 +58,11 @@ export default function TimelineCard({ patientId, period: fixedPeriod }: { patie
       period === p ? "bg-primary text-onPrimary" : "text-onSurfaceVariant hover:bg-pastelLavender"
     }`;
 
+  // The Análises page (fixed period) keeps its collapsed "timeline" card, which its nav targets; the patient page opens it.
   return (
-    <DetailCard collapsibleId="timeline"
+    <DetailCard
+      collapsibleId={fixedPeriod ? "timeline" : "patient-timeline"}
+      defaultOpen={!fixedPeriod}
       title={t("timeline.title")}
       icon={<GanttChartSquare size={20} />}
       action={

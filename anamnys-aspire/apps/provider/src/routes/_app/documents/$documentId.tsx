@@ -136,6 +136,7 @@ function DocumentEditor({ detail, kind }: { detail: DocumentDetail; kind: Docume
       <Link
         to="/patients/$patientId"
         params={{ patientId: detail.patientId }}
+        search={{ tab: "documentos" }}
         className="inline-flex items-center gap-1 self-start text-label-lg text-primary hover:underline"
       >
         <ArrowLeft size={16} />

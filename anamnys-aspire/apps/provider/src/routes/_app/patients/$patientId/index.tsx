@@ -27,6 +27,7 @@ import { notesApi } from "@anamnys/shared/api/notes";
 import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
+import FolderTabs from "@/components/FolderTabs";
 import { DiagnosesCard, MedicationsCard, ObjectivesCard } from "@/components/patients/detail/ClinicalCards";
 import ScalesCard from "@/components/scales/ScalesCard";
 import AttendanceCard from "@/components/attendance/AttendanceCard";
@@ -35,6 +36,7 @@ import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
 import DossiersCard from "@/components/dossiers/DossiersCard";
 import IntakeCard from "@/components/intake/IntakeCard";
+import { usePatientIntakes } from "@/components/intake/intakeModel";
 import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
 import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
@@ -46,7 +48,13 @@ import NoteStatusBadge from "@/components/patients/NoteStatusBadge";
 import PortalAccessBlock from "@/components/patients/detail/PortalAccessBlock";
 import { ageFrom, formatDate, formatDay, formatTime } from "@/components/patients/format";
 
+export type PatientTab = "resumo" | "avaliacao" | "historico" | "documentos";
+const TABS: PatientTab[] = ["resumo", "avaliacao", "historico", "documentos"];
+
 export const Route = createFileRoute("/_app/patients/$patientId/")({
+  validateSearch: (search: Record<string, unknown>): { tab?: PatientTab } => ({
+    tab: TABS.includes(search.tab as PatientTab) ? (search.tab as PatientTab) : undefined,
+  }),
   component: PatientDetailPage,
 });
 
@@ -56,6 +64,11 @@ type Confirm = "archive" | "delete" | null;
 // design/specs/2026-10-01-patient-records-design.md §6.
 function PatientDetailPage() {
   const { patientId } = Route.useParams();
+  // The bell links to #dossiers, which lives on the Documentos tab.
+  const hash = useRouterState({ select: (s) => s.location.hash });
+  const tab = Route.useSearch().tab ?? (hash === "dossiers" ? "documentos" : "resumo");
+  // Shared with IntakeCard's query, so the tab badge costs no extra request.
+  const pendingTransfers = (usePatientIntakes(patientId).data ?? []).reduce((sum, i) => sum + i.pendingTransfers, 0);
   // Set by the create modal when it could not send the invitation it was asked to send.
   const inviteError = useRouterState({ select: (s) => s.location.state.inviteError });
   const { t, i18n } = useTranslation();
@@ -208,6 +221,29 @@ function PatientDetailPage() {
       {creatingDocument && <NewDocumentModal patientId={patientId} onClose={() => setCreatingDocument(false)} />}
       {uploading && <UploadExternalDocumentModal patientId={patientId} onClose={() => setUploading(false)} />}
 
+      <FolderTabs
+        label={t("patients.detail.tabs.label")}
+        active={tab}
+        onSelect={(id) => void navigate({ to: "/patients/$patientId", params: { patientId }, search: { tab: id } })}
+        tabs={TABS.map((id) => ({
+          id,
+          label: (
+            <>
+              {t(`patients.detail.tabs.${id}`)}
+              {id === "avaliacao" && pendingTransfers > 0 && (
+                <span
+                  className="rounded-radii-full bg-primary px-2 text-label-sm text-onPrimary"
+                  aria-label={t("intake.card.pending", { count: pendingTransfers })}
+                >
+                  {pendingTransfers}
+                </span>
+              )}
+            </>
+          ),
+        }))}
+      >
+      {tab === "resumo" && (
+      <>
       <div className="grid gap-6 lg:grid-cols-3">
         <DetailCard title={t("patients.detail.contact")} icon={<UserRound size={20} />}>
           <dl className="flex flex-col gap-3">
@@ -250,26 +286,34 @@ function PatientDetailPage() {
         <MedicationsCard patientId={patientId} items={patient.medications} readOnly={archived} onChanged={refresh} />
         <ObjectivesCard patientId={patientId} items={patient.objectives} readOnly={archived} onChanged={refresh} />
       </div>
+      </>
+      )}
 
-      {/* Full width, right above the scales. */}
-      <IntakeCard patientId={patientId} readOnly={archived} />
+      {tab === "avaliacao" && (
+        <>
+          <IntakeCard patientId={patientId} readOnly={archived} />
+          {/* Full width: each instrument's series gets its own column inside the card. */}
+          <ScalesCard patientId={patientId} readOnly={archived} />
+          <DeclaredFactsCard patientId={patientId} />
+        </>
+      )}
 
-      {/* Full width: each instrument's series gets its own column inside the card. */}
-      <ScalesCard patientId={patientId} readOnly={archived} />
+      {tab === "historico" && (
+        <>
+          <PatientSeriesCard patientId={patientId} readOnly={archived} />
+          <AttendanceCard patientId={patientId} />
+          <TimelineCard patientId={patientId} />
+        </>
+      )}
 
-      <PatientSeriesCard patientId={patientId} readOnly={archived} />
-
-      <AttendanceCard patientId={patientId} />
-
-      <TimelineCard patientId={patientId} />
-
-      <DocumentsCard patientId={patientId} readOnly={archived} />
-
-      <ExternalDocumentsCard patientId={patientId} readOnly={archived} />
-
-      <DeclaredFactsCard patientId={patientId} />
-
-      <DossiersCard patientId={patientId} readOnly={archived} />
+      {tab === "documentos" && (
+        <>
+          <DocumentsCard patientId={patientId} readOnly={archived} />
+          <ExternalDocumentsCard patientId={patientId} readOnly={archived} />
+          <DossiersCard patientId={patientId} readOnly={archived} />
+        </>
+      )}
+      </FolderTabs>
 
       {editing && (
         <PatientFormModal mode={{ kind: "edit", patient }} onClose={() => setEditing(false)} onSaved={() => setEditing(false)} />
