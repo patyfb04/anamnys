@@ -12,6 +12,7 @@ import SafeguardsCard from "@/components/live-session/SafeguardsCard";
 import ProcessingStep from "@/components/live-session/ProcessingStep";
 import { useLiveRecorder } from "@/hooks/useLiveRecorder";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
+import IntakeShortcut from "@/components/intake/IntakeShortcut";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -93,6 +94,9 @@ function LiveSessionPage() {
       {recorder.error === "too_long" && processing && (
         <p className="text-body-md text-onSurfaceVariant">{t("liveSession.errors.too_long")}</p>
       )}
+
+      {/* Not while recording: starting the intake leaves this page. */}
+      {patient && !locked && <IntakeShortcut key={patient.id} patientId={patient.id} />}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">

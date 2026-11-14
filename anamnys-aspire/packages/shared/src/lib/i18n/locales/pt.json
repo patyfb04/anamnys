@@ -2661,8 +2661,8 @@
       "patientArchived": "Paciente arquivado: não é possível gravar no prontuário."
     },
     "shortcut": {
-      "title": "Primeira sessão",
-      "hint": "Este paciente ainda não tem anamnese. Você pode conduzi-la com o roteiro estruturado e gerar a nota a partir das respostas.",
+      "title": "Este paciente ainda não tem anamnese",
+      "hint": "A anamnese vem antes das notas de sessão. Você pode conduzi-la com o roteiro estruturado e gerar a nota a partir das respostas, ou seguir sem ela.",
       "action": "Fazer a anamnese deste paciente"
     },
     "note": {
