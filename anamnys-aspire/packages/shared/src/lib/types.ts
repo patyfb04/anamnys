@@ -649,6 +649,8 @@ export type StructureFailure = "model_error" | "too_long" | "server_restart";
 
 export interface NoteSectionView {
   key: string;
+  // The template section title for Anamnese notes (F-31); null for the fixed formats.
+  title?: string | null;
   content: string;
   position: number;
   generatedAt: string;
@@ -675,6 +677,8 @@ export interface NoteDetail {
   providerHasCrp: boolean;
   sectionsByAi: boolean;
   exportedAt: string | null;
+  // Set on an Anamnese note generated from an intake (F-31).
+  intakeId?: string | null;
 }
 
 export type NoteListFilter = "pending" | "signed" | "failed";
@@ -1058,8 +1062,10 @@ export interface MedicationFromFactRequest {
 }
 
 export interface TimelineOrigin {
-  kind: "manual" | "document" | "document_deleted";
+  kind: "manual" | "document" | "document_deleted" | "intake";
   documentId: string | null;
+  // The signed Anamnese note an intake medication came from (kind "intake").
+  noteId?: string | null;
   documentKind: ExternalDocumentKind | null;
   documentDate: string | null;
   page: number | null;
@@ -1392,4 +1398,131 @@ export interface IntegritySummary {
   firstProblem: { sequence: number; subjectType: string | null; kind: string } | null;
   lastAnchor: { sequence: number; anchoredAt: string; tsaUrl: string } | null;
   verifiedAt: string;
+}
+
+// Structured intake (F-31, design/specs/2026-11-12-structured-intake-design.md §4).
+export type IntakeAnswerType = "text" | "number" | "date" | "boolean" | "choice";
+export type IntakeTargetField =
+  | "patient.dateOfBirth"
+  | "patient.phone"
+  | "patient.contactEmail"
+  | "medication"
+  | "diagnosis"
+  | "plan.objective";
+export const INTAKE_ANSWER_TYPES: IntakeAnswerType[] = ["text", "number", "date", "boolean", "choice"];
+export const INTAKE_TARGET_FIELDS: IntakeTargetField[] = [
+  "patient.dateOfBirth",
+  "patient.phone",
+  "patient.contactEmail",
+  "medication",
+  "diagnosis",
+  "plan.objective",
+];
+
+export interface IntakeQuestion {
+  id: string;
+  key: string;
+  label: string;
+  helpText: string | null;
+  answerType: IntakeAnswerType;
+  choices: string[] | null;
+  required: boolean;
+  targetField: IntakeTargetField | null;
+  disabled: boolean;
+  position: number;
+}
+
+export interface IntakeSection {
+  key: string;
+  title: string;
+  questions: IntakeQuestion[];
+}
+
+export interface IntakeTemplateSummary {
+  id: string;
+  name: string;
+  version: string;
+  isDefault: boolean;
+  basedOnTemplateId: string | null;
+  archived: boolean;
+  inUse: boolean;
+}
+
+export interface IntakeTemplateList {
+  defaultTemplateId: string;
+  templates: IntakeTemplateSummary[];
+}
+
+export interface IntakeTemplateDetail extends IntakeTemplateSummary {
+  sections: IntakeSection[];
+}
+
+export interface IntakeTemplateQuestionInput {
+  key: string;
+  sectionKey: string;
+  sectionTitle: string;
+  label: string;
+  helpText: string | null;
+  answerType: IntakeAnswerType;
+  choices: string[] | null;
+  required: boolean;
+  targetField: IntakeTargetField | null;
+  disabled: boolean;
+}
+
+export interface UpdateIntakeTemplateRequest {
+  name?: string;
+  questions: IntakeTemplateQuestionInput[];
+}
+
+export type IntakeStatus = "draft" | "signed";
+
+export interface IntakeListItem {
+  id: string;
+  status: IntakeStatus;
+  createdAt: string;
+  signedAt: string | null;
+  noteId: string | null;
+  pendingTransfers: number;
+}
+
+export interface IntakeAnswer {
+  questionId: string;
+  answer: string;
+  updatedAt: string;
+}
+
+export interface IntakeDetail {
+  id: string;
+  patientId: string;
+  status: IntakeStatus;
+  createdAt: string;
+  updatedAt: string;
+  signedAt: string | null;
+  noteId: string | null;
+  noteStatus: string | null;
+  pendingTransfers: number;
+  template: { id: string; name: string; version: string };
+  sections: IntakeSection[];
+  answers: IntakeAnswer[];
+}
+
+export interface IntakeAnswerInput {
+  questionId: string;
+  answer: string | null;
+}
+
+export type IntakeTransferStatus = "pending" | "confirmed" | "ignored";
+
+export interface IntakeTransfer {
+  id: string;
+  questionId: string;
+  questionLabel: string;
+  sectionKey: string;
+  targetField: IntakeTargetField;
+  value: string;
+  currentValue: string | null;
+  status: IntakeTransferStatus;
+  decidedAt: string | null;
+  resultId: string | null;
 }

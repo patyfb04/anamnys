@@ -12,6 +12,7 @@ import FormatCards from "@/components/live-session/FormatCards";
 import NoteTargetCard, { type PickedPatient } from "@/components/notes/NoteTargetCard";
 import NoteModeCards from "@/components/notes/NoteModeCards";
 import { inputClass } from "@/components/patients/FormField";
+import IntakeShortcut from "@/components/intake/IntakeShortcut";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TEXT = 20_000;
@@ -99,6 +100,7 @@ function NewNotePage() {
         onAppointmentChange={setAppointmentId}
         error={errors.patientId}
       />
+      {patient && <IntakeShortcut key={patient.id} patientId={patient.id} />}
       <FormatCards value={format} onChange={setFormat} />
       <section className="flex flex-col gap-2">
         <h2 className="text-title-md text-onSurface">{t("notes.create.mode")}</h2>

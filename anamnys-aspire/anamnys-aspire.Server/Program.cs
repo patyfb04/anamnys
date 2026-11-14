@@ -12,6 +12,7 @@ using Anamnys.Server.Documents;
 using Anamnys.Server.Dossiers;
 using Anamnys.Server.Exports;
 using Anamnys.Server.Integrity;
+using Anamnys.Server.Intakes;
 using Anamnys.Server.ExternalDocuments;
 using Anamnys.Server.Excerpts;
 using Anamnys.Server.Email;
@@ -202,6 +203,7 @@ phi.MapProviderNotificationEndpoints();
 phi.MapShareEndpoints();
 phi.MapIntegrityEndpoints();
 phi.MapDossierEndpoints();
+phi.MapIntakeEndpoints();
 app.MapConfirmationEndpoints(phi);
 app.MapPublicShareEndpoints();
 

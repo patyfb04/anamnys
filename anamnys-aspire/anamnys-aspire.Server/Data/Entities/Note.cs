@@ -22,6 +22,8 @@ public class Note
     public string? PdfObjectKey { get; set; }
     public string? PdfSha256 { get; set; }
     public DateTimeOffset? ExportedAt { get; set; }
+    // F-31: set on the Anamnese note generated from an intake (design/specs/2026-11-12-structured-intake-design.md §2).
+    public Guid? IntakeId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

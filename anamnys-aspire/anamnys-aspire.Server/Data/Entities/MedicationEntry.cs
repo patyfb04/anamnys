@@ -16,5 +16,7 @@ public class MedicationEntry
     public Guid? SourceFactId { get; set; }
     public Guid TreatmentId { get; set; }
     public bool FromDocument { get; set; }
+    // F-31: the intake's signed note the record was taken from ("da anamnese"); cleared if the note is deleted.
+    public Guid? SourceNoteId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

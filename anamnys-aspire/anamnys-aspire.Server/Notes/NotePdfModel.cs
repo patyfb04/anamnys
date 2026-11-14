@@ -16,6 +16,9 @@ public sealed record NotePdfModel(
         ["data"] = "Dados", ["assessment"] = "Avaliação", ["plan"] = "Plano",
         ["subjective"] = "Subjetivo", ["objective"] = "Objetivo",
         ["biological"] = "Biológico", ["psychological"] = "Psicológico", ["social"] = "Social",
+        // The default intake template's sections (F-31); an own template's other sections show their key.
+        ["identificacao"] = "Identificação", ["queixa"] = "Queixa principal", ["historia"] = "História pessoal e familiar",
+        ["saude"] = "Saúde", ["contexto"] = "Contexto atual", ["objetivos"] = "Objetivos",
     };
 
     public string FileName => FileNameFor(Code);
@@ -28,7 +31,10 @@ public sealed record NotePdfModel(
 
     private static string FileNameFor(string code) => $"nota-{code}.pdf";
 
-    public static NotePdfModel From(Note note, IReadOnlyList<NoteSection> sections, Patient patient, Provider provider, Session? session) =>
+    // titles: an intake note's own section titles (F-31); other keys use the fixed titles.
+    public static NotePdfModel From(
+        Note note, IReadOnlyList<NoteSection> sections, Patient patient, Provider provider, Session? session,
+        IReadOnlyDictionary<string, string>? titles = null) =>
         new(
             provider.Name,
             note.SignedByCrp ?? "",
@@ -37,7 +43,7 @@ public sealed record NotePdfModel(
             session?.ScheduledStart ?? session?.ActualStart ?? note.CreatedAt,
             note.Format == "Biopsychosocial" ? "Biopsicossocial" : note.Format,
             sections.OrderBy(s => s.Position)
-                .Select(s => new NotePdfSection(SectionTitle(s.Key), s.Content.Trim()))
+                .Select(s => new NotePdfSection(titles?.GetValueOrDefault(s.Key) ?? SectionTitle(s.Key), s.Content.Trim()))
                 .ToList(),
             note.SignedAt!.Value,
             CodeFor(note.Id));

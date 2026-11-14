@@ -1,5 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
+using Anamnys.Server.Intakes;
+using Anamnys.Server.Notes;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Exports;
@@ -54,7 +56,16 @@ public sealed record AccountData(
     ILookup<Guid, ExportScale> ScalesByPatient,
     IReadOnlyList<Appointment> Appointments,
     IReadOnlyList<ExportAudit> Audit,
-    IReadOnlyList<ExportTerm> Terms);
+    IReadOnlyList<ExportTerm> Terms)
+{
+    // An Anamnese note's own section titles (F-31), by note id then section key; notes without an intake are absent.
+    public IReadOnlyDictionary<Guid, IReadOnlyDictionary<string, string>> SectionTitles { get; init; } =
+        new Dictionary<Guid, IReadOnlyDictionary<string, string>>();
+
+    // The title of one section of a note: its intake template's title, else the fixed title.
+    public string SectionTitle(Guid noteId, string key) =>
+        SectionTitles.GetValueOrDefault(noteId)?.GetValueOrDefault(key) ?? NotePdfModel.SectionTitle(key);
+}
 
 // Everything the export shows, read once and scoped to the provider on every query. PDFs are not
 // loaded here: the builder reads or renders them one at a time.
@@ -217,7 +228,10 @@ public static class ExportData
             scales.ToLookup(s => s.PatientId),
             appointments,
             audit,
-            terms);
+            terms)
+        {
+            SectionTitles = await IntakeNote.SectionTitlesByNoteAsync(db, providerId, notes.Select(n => n.Id).ToList(), ct),
+        };
     }
 
     // NNN = position by name, XX = initials: the folder never carries the patient's name.

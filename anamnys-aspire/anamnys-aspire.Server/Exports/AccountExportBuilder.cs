@@ -102,7 +102,8 @@ public sealed class AccountExportBuilder(AnamnysDbContext db, INoteFileStore sto
             Id = note.Id, Format = note.Format, SignedAt = note.SignedAt, SignedByCrp = note.SignedByCrp, CreatedAt = note.CreatedAt,
         };
         var session = note.SessionId is { } id ? data.Sessions.GetValueOrDefault(id) : null;
-        return NotePdfModel.From(entity, data.SectionsByNote[note.Id].ToList(), patient, data.Provider, session);
+        return NotePdfModel.From(
+            entity, data.SectionsByNote[note.Id].ToList(), patient, data.Provider, session, data.SectionTitles.GetValueOrDefault(note.Id));
     }
 
     internal static DocumentPdfModel DocumentModel(AccountData data, Patient patient, ClinicalDocument document) =>

@@ -49,7 +49,8 @@ public static class NoteExport
                 var session = note.SessionId is { } sessionId
                     ? await db.Sessions.AsNoTracking().SingleOrDefaultAsync(s => s.Id == sessionId && s.ProviderId == providerId, ct)
                     : null;
-                var bytes = NotePdf.Render(NotePdfModel.From(note, sections, patient, provider, session));
+                var titles = await Intakes.IntakeNote.SectionTitlesAsync(db, providerId, note.IntakeId, ct);
+                var bytes = NotePdf.Render(NotePdfModel.From(note, sections, patient, provider, session, titles));
                 var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
                 var objectKey = $"notes/{providerId}/{noteId}.pdf";
                 try

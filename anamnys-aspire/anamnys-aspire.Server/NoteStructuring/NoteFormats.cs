@@ -3,6 +3,10 @@ namespace Anamnys.Server.NoteStructuring;
 // Section keys per note format, in display order (design/specs/2026-10-12-note-structuring-design.md §4).
 public static class NoteFormats
 {
+    // F-31: a note generated from an intake. Not structurable: its section keys are the intake template's sections
+    // (design/specs/2026-11-12-structured-intake-design.md §3), checked at signing by Intake.IntakeNote.
+    public const string Anamnese = "Anamnese";
+
     private static readonly Dictionary<string, string[]> Keys = new(StringComparer.Ordinal)
     {
         ["DAP"] = ["data", "assessment", "plan"],

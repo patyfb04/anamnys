@@ -406,7 +406,7 @@ public static class PatientRecords
     private static Task<bool> OwnsAsync(AnamnysDbContext db, Guid providerId, Guid patientId, CancellationToken cancellationToken) =>
         db.Patients.AnyAsync(p => p.Id == patientId && p.ProviderId == providerId, cancellationToken);
 
-    private static Task<TreatmentPlan?> OpenPlanAsync(AnamnysDbContext db, Guid patientId, CancellationToken cancellationToken) =>
+    internal static Task<TreatmentPlan?> OpenPlanAsync(AnamnysDbContext db, Guid patientId, CancellationToken cancellationToken) =>
         db.TreatmentPlans
             .Where(t => t.PatientId == patientId && t.ClosedAt == null)
             .OrderByDescending(t => t.CreatedAt)
@@ -427,6 +427,7 @@ public static class PatientRecords
                 OR EXISTS (SELECT 1 FROM "DisposalRecords" WHERE "PatientId" = {patientId})
                 OR EXISTS (SELECT 1 FROM "ScaleApplications" WHERE "PatientId" = {patientId})
                 OR EXISTS (SELECT 1 FROM "IntakeResponses" WHERE "PatientId" = {patientId})
+                OR EXISTS (SELECT 1 FROM "Intakes" WHERE "PatientId" = {patientId})
                 OR EXISTS (SELECT 1 FROM "RecordingConsents" WHERE "PatientId" = {patientId})
                 AS "Value"
             """).SingleAsync(cancellationToken);

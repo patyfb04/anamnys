@@ -34,6 +34,7 @@ import PatientSeriesCard from "@/components/calendar/PatientSeriesCard";
 import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
 import DossiersCard from "@/components/dossiers/DossiersCard";
+import IntakeCard from "@/components/intake/IntakeCard";
 import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
 import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
 import NewDocumentModal from "@/components/documents/NewDocumentModal";
@@ -249,6 +250,9 @@ function PatientDetailPage() {
         <MedicationsCard patientId={patientId} items={patient.medications} readOnly={archived} onChanged={refresh} />
         <ObjectivesCard patientId={patientId} items={patient.objectives} readOnly={archived} onChanged={refresh} />
       </div>
+
+      {/* Full width, right above the scales. */}
+      <IntakeCard patientId={patientId} readOnly={archived} />
 
       {/* Full width: each instrument's series gets its own column inside the card. */}
       <ScalesCard patientId={patientId} readOnly={archived} />
