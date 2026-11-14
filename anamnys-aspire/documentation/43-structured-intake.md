@@ -32,7 +32,7 @@ transcript; ready-made templates per approach (CBT, child).
 | Who fills it | The provider, conducting the first session. |
 | Questions | A default Anamnys template (6 sections, 36 questions in Portuguese) the provider can adapt into their own versioned copy: switch questions off, add, remove, reorder, edit text, type and destination. |
 | Result | A signed note of the new format `Anamnese` (one section per template section), through the normal review and sign flow. Answers with a record destination are listed after signing for one-by-one confirmation ("Levar para o prontuário"); nothing is written to the record without it. |
-| Where, how often | "Iniciar anamnese" on the patient page (highlighted when there is none) and a shortcut in the Note Editor for the patient's first session. Saved as a draft and resumable; a patient can have several intakes over time (re-assessment), each with its own note; at most one draft at a time. |
+| Where, how often | "Iniciar anamnese" on the patient page (highlighted when there is none) and a reminder with a shortcut in the Note Editor and Sessão ao vivo while the patient has no intake (2026-11-15; never blocks). Saved as a draft and resumable; a patient can have several intakes over time (re-assessment), each with its own note; at most one draft at a time. |
 | Draft discard (ruling) | A draft intake can be discarded (`DELETE`): its answers and its unsigned note go. A stale draft must not block the patient. A signed intake is never deleted by this route. |
 | Locking (ruling) | Once the note is generated, the answers are locked. "Editar respostas" unlocks them and **deletes the unsigned note** (the UI warns that its edits are lost); the note is then generated again from the answers. So the transfers always match the signed text: the record never receives a value the provider did not sign. |
 | Transfers (ruling) | Created at signing only for answers still present in the signed section text. An answer the provider edited out of the note is not offered for the record. |
@@ -266,7 +266,9 @@ section `title`, and `origin.noteId` on the timeline. All routes are documented 
   transfers, the Note Editor navigates to the intake page with `?transfers=1`; the page passes `focus` to the panel,
   which scrolls into view. With no pending transfers the provider stays on the note.
 - **Note Editor:** `IntakeShortcut` "Fazer a anamnese deste paciente" on `/note-editor/new` once a patient is chosen, and
-  on an unsigned non-Anamnese note, when the patient has no intake and no signed note ("first session", section 14). The
+  on an unsigned non-Anamnese note, and on Sessão ao vivo once a patient is chosen (not while recording), whenever the patient
+  has no intake ("Este paciente ainda não tem anamnese"; since 2026-11-15 not limited to the first session; it never blocks
+  the note or the session). The
   note page of an Anamnese note links "Ver as respostas da anamnese"; section headings use the server's `title`. Signing
   an Anamnese note invalidates the intake queries.
 - **Timeline card:** origin "da anamnese" with the link "Ver na nota da anamnese".
