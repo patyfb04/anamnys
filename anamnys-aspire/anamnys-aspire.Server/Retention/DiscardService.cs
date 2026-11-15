@@ -195,6 +195,8 @@ public static class DiscardService
             SELECT "ObjectKey" FROM "Dossiers" WHERE "PatientId" = {patientId} AND "ObjectKey" IS NOT NULL
             UNION
             SELECT "TermObjectKey" FROM "DisclosureAuthorizations" WHERE "PatientId" = {patientId} AND "ProviderId" = {providerId} AND "TermObjectKey" IS NOT NULL
+            UNION
+            SELECT "DocumentObjectKey" FROM "RecordingConsents" WHERE "PatientId" = {patientId} AND "ProviderId" = {providerId} AND "DocumentObjectKey" IS NOT NULL
             """).ToListAsync(ct);
 
     // Children first, so no RESTRICT foreign key stops a parent; each count goes into the term. Rows that only
@@ -215,7 +217,8 @@ public static class DiscardService
                 OR ("SubjectType" = 'note' AND "SubjectId" IN (SELECT "Id" FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
                 OR ("SubjectType" = 'appointment' AND "SubjectId" IN (SELECT "Id" FROM "Appointments" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
                 OR ("SubjectType" = 'dossier' AND "SubjectId" IN (SELECT "Id" FROM "Dossiers" WHERE "PatientId" = {p}))
-                OR ("SubjectType" = 'appointment_series' AND "SubjectId" IN (SELECT "Id" FROM "AppointmentSeries" WHERE "PatientId" = {p} AND "ProviderId" = {v})))
+                OR ("SubjectType" = 'appointment_series' AND "SubjectId" IN (SELECT "Id" FROM "AppointmentSeries" WHERE "PatientId" = {p} AND "ProviderId" = {v}))
+                OR ("SubjectType" = 'recording_consent' AND "SubjectId" IN (SELECT "Id" FROM "RecordingConsents" WHERE "PatientId" = {p} AND "ProviderId" = {v})))
             """);
         await Run("excerptRefs", $"""
             DELETE FROM "ExcerptRefs" WHERE "ProviderId" = {v} AND (
@@ -272,6 +275,7 @@ public static class DiscardService
         await Run("scaleApplications", $"""DELETE FROM "ScaleApplications" WHERE "PatientId" = {p}""");
         await Run("diagnoses", $"""DELETE FROM "PatientDiagnoses" WHERE "PatientId" = {p}""");
         await Run("planObjectives", $"""DELETE FROM "PlanObjectives" WHERE "PlanId" IN (SELECT "Id" FROM "TreatmentPlans" WHERE "PatientId" = {p})""");
+        // F-23: the consents go with their events (cascade); the signed PDFs are among the object keys above.
         await Run("recordingConsents", $"""DELETE FROM "RecordingConsents" WHERE "PatientId" = {p}""");
         await Run("treatmentPlans", $"""DELETE FROM "TreatmentPlans" WHERE "PatientId" = {p}""");
         await Run("dossiers", $"""DELETE FROM "Dossiers" WHERE "PatientId" = {p}""");

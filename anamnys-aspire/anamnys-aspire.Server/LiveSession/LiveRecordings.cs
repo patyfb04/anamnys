@@ -1,11 +1,15 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Notes;
+using Anamnys.Server.RecordingConsents;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.LiveSession;
 
-public enum BeginCheck { Ok, Invalid, NotFound, Archived }
+public enum BeginCheck { Ok, Invalid, NotFound, Archived, ConsentRequired, DictationNotConfirmed }
+
+// Reason: the CanRecordSession reason when the check is ConsentRequired, otherwise null.
+public sealed record BeginResult(BeginCheck Check, string? Reason = null);
 
 public enum FinalizeStatus { Ok, Expired }
 
@@ -14,32 +18,59 @@ public sealed record FinalizeResult(FinalizeStatus Status, Guid? NoteId);
 // Database side of a live recording (design/specs/2026-10-10-live-session-transcription-design.md §5).
 public static class LiveRecordings
 {
-    public static async Task<BeginCheck> CheckBeginAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, Guid? appointmentId, string format, string language, CancellationToken ct)
+    public const string SessionMode = "session";
+    public const string DictationMode = "dictation";
+
+    // design/specs/2026-11-15-recording-consent-design.md §4–§5: a session recording needs a signed recording consent
+    // (and the assent of a minor); a dictation needs the provider's confirmation that only they speak, audited.
+    public static async Task<BeginResult> CheckBeginAsync(
+        AnamnysDbContext db, Guid providerId, Guid patientId, Guid? appointmentId, string format, string language,
+        string mode, bool dictationConfirmed, DateTimeOffset now, CancellationToken ct)
     {
-        if (!LiveSessionRules.IsValid(format, language))
+        if (!LiveSessionRules.IsValid(format, language) || mode is not (SessionMode or DictationMode))
         {
-            return BeginCheck.Invalid;
+            return new BeginResult(BeginCheck.Invalid);
         }
         // A discarded record (F-06) is gone; an archived one takes no new notes.
         var patient = await db.Patients.AsNoTracking()
             .Where(p => p.Id == patientId && p.ProviderId == providerId && p.DiscardedAt == null)
-            .Select(p => new { p.ArchivedAt })
             .SingleOrDefaultAsync(ct);
         if (patient is null)
         {
-            return BeginCheck.NotFound;
+            return new BeginResult(BeginCheck.NotFound);
         }
         if (patient.ArchivedAt is not null)
         {
-            return BeginCheck.Archived;
+            return new BeginResult(BeginCheck.Archived);
         }
         if (appointmentId is { } id
             && !await db.Appointments.AnyAsync(a => a.Id == id && a.ProviderId == providerId && a.PatientId == patientId, ct))
         {
-            return BeginCheck.NotFound;
+            return new BeginResult(BeginCheck.NotFound);
         }
-        return BeginCheck.Ok;
+
+        if (mode == SessionMode)
+        {
+            var consent = await RecordingConsentService.GetEffectiveAsync(db, providerId, patientId, now, ct);
+            var (allowed, reason) = ConsentRules.CanRecordSession(consent, patient, now);
+            return allowed ? new BeginResult(BeginCheck.Ok) : new BeginResult(BeginCheck.ConsentRequired, reason);
+        }
+
+        if (!dictationConfirmed)
+        {
+            return new BeginResult(BeginCheck.DictationNotConfirmed);
+        }
+        db.AuditEntries.Add(new AuditEntry
+        {
+            Id = Guid.NewGuid(),
+            ActorId = providerId,
+            Action = RecordingConsentService.DictationAction,
+            FieldChanged = RecordingConsentService.AuditField,
+            NewValue = patientId.ToString(),
+            At = now,
+        });
+        await db.SaveChangesAsync(ct);
+        return new BeginResult(BeginCheck.Ok);
     }
 
     public static async Task<FinalizeResult> FinalizeAsync(

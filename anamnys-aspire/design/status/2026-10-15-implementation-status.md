@@ -89,7 +89,7 @@ the schema still carries every table, but only the features below have code.
 
 | ID | State | Notes |
 |---|---|---|
-| F-23, F-24 | schema only | `RecordingConsents`, `ConsentEvents` |
+| F-23, F-24 | done (2026-11-15, built with the D-03 caveat: no lawyer review) | `RecordingConsents`, `ConsentEvents`; versioned term, signing link and PDF, state machine (none/sent/signed/revoked/expired), minors with guardian and assent, server-enforced capture rule, Sessão ao vivo modes "Gravar a sessão" / "Ditar resumo"; chapter 44 |
 | F-25 Captura de áudio da aba | not started | the live session captures the provider's microphone, not a tab |
 | F-26 Áudio transitório | partial | live-session audio is kept only in memory buffers and dropped after transcription; `AudioDestructionLogs` is not written and there is no test proving nothing survives |
 | F-27 Pseudonimização | not started | |
@@ -224,3 +224,4 @@ Verified 2026-11-12 (F-31): `-class "*Intake*"` 41/41 and `-class "*MigrationTes
 2026-11-15: intake follow-ups — negative answers not offered for diagnosis/medication (a bare "na" only as the whole answer); the transfer panel opens after signing.
 2026-11-15: patient page split into tabs (`?tab=`): Resumo (contact, visits, recent notes, diagnoses, medications, objectives), Avaliação (intake, scales, declared facts; badge with pending transfers), Agenda e histórico (series, attendance, timeline), Documentos (documents, external documents, dossiers).
 2026-11-15: intake reminder — the Note Editor and Sessão ao vivo show "Este paciente ainda não tem anamnese" with a shortcut whenever the patient has no intake (no longer only the first session); never blocks.
+2026-11-15: G1 recording consent (F-23, F-24) built on feature/recording-consent (not merged); provider and patient build and lint clean. `2026-11-15-recording-consent.sql` must be applied to any persistent environment before the new server starts (until then archiving, the bell list and the live-session begin fail); applied to the dev database on 2026-11-15. Full suite with Aspire stopped: 2224 tests, 1 failure (a migration test still counting 6 audit actions instead of 7, fixed and re-run green). Built without lawyer review (D-03 caveat). Chapter 44.

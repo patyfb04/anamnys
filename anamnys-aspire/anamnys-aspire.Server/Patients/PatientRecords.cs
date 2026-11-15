@@ -192,31 +192,35 @@ public static class PatientRecords
         }
     }
 
-    public static async Task<bool> SetArchivedAsync(
-        AnamnysDbContext db, Guid providerId, Guid patientId, bool archived, DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var patient = await FindPatientAsync(db, providerId, patientId, cancellationToken);
-        if (patient is null)
+    // One transaction: archiving (discharge) expires the recording consent under its row lock, so a signature committing
+    // at the same moment is either seen (and expired after it) or waits and then finds the consent expired.
+    public static Task<bool> SetArchivedAsync(
+        AnamnysDbContext db, Guid providerId, Guid patientId, bool archived, DateTimeOffset now, CancellationToken cancellationToken) =>
+        db.InTransactionAsync(async ct =>
         {
-            return false;
-        }
+            var patient = await FindPatientAsync(db, providerId, patientId, ct);
+            if (patient is null)
+            {
+                return false;
+            }
 
-        var nowUtc = now.ToUniversalTime();
-        if (archived && patient.ArchivedAt is null)
-        {
-            patient.ArchivedAt = nowUtc;
-            patient.UpdatedAt = nowUtc;
-            // An archived record cannot be invited, so its pending link stops working too.
-            await PatientInvitations.RevokePendingAsync(db, patientId, nowUtc, cancellationToken);
-        }
-        else if (!archived && patient.ArchivedAt is not null)
-        {
-            patient.ArchivedAt = null;
-            patient.UpdatedAt = nowUtc;
-        }
-        await db.SaveChangesAsync(cancellationToken);
-        return true;
-    }
+            var nowUtc = now.ToUniversalTime();
+            if (archived && patient.ArchivedAt is null)
+            {
+                patient.ArchivedAt = nowUtc;
+                patient.UpdatedAt = nowUtc;
+                // An archived record cannot be invited, so its pending link stops working too.
+                await PatientInvitations.RevokePendingAsync(db, patientId, nowUtc, ct);
+                await RecordingConsents.RecordingConsentService.ExpireOnArchiveAsync(db, providerId, patientId, nowUtc, ct);
+            }
+            else if (!archived && patient.ArchivedAt is not null)
+            {
+                patient.ArchivedAt = null;
+                patient.UpdatedAt = nowUtc;
+            }
+            await db.SaveChangesAsync(ct);
+            return true;
+        }, cancellationToken);
 
     public static async Task<Guid?> AddDiagnosisAsync(
         AnamnysDbContext db, Guid providerId, Guid patientId, DiagnosisInput input, DateTimeOffset now, CancellationToken cancellationToken)

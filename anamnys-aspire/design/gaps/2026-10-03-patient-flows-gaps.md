@@ -620,6 +620,26 @@ Structured intake (F-31; chapter `documentation/43-structured-intake.md`).
 - **Dev database:** `2026-11-12-structured-intake.sql` is not applied there yet; the note-related dev-database suites (41 failures in the first round) fail until it is, and must be re-run with Aspire stopped. Full suite pending.
 - **Not exercised in a browser or against a live server;** build, lint and scratch-database tests only. The Confluence page is pending.
 
+## Consentimento para gravação
+
+Recording consent (F-23 + F-24; spec `design/specs/2026-11-15-recording-consent-design.md`).
+
+- **The signed copy cannot be sent again.** The revocation link exists only in the signed-copy e-mail; when that e-mail
+  fails (logged with the consent id) or no sender is configured, nothing reissues it. The patient can still revoke by
+  asking the provider ("Registrar revogação"). A "reenviar cópia" action (new revocation token, new e-mail) is not built.
+- **Signed copy is a link, not the PDF.** `EmailMessage` has no attachments and the PDF holds the date of birth, so the e-mail links to the revocation page (signed term with the date of birth masked, hash). The patient never receives the PDF itself.
+- **No heads-up before a minor turns 18.** The consent expires (`adulthood`, lazily) with no notice to the provider; a new one must be asked afterwards.
+- **Consent per patient, not per treatment plan.** `TreatmentPlanId` stays null.
+- **No signing without e-mail (paper term).** Sending needs the patient's contact e-mail; a patient without one cannot sign.
+- **Lawyer review of the term (D-03).** The text of `v1` was written without legal review (built with the caveat of 2026-11-03).
+- **Dictation audit row per begin.** A reconnect of the hub calls begin again and writes another `dictation_confirmed` row.
+- **Revocation mid-recording.** A consent revoked while a session is being recorded does not stop that recording; only a reconnect is refused (`consent_required`), which drops the audio held by the client.
+- **No background expiry job (deviation from spec §3, "lazily and by job").** Expiry (link, discharge, adulthood) is evaluated lazily on every read and at capture; between reads a stale state is not persisted, though the capture rule always evaluates it, so nothing user-visible depends on the persistence.
+- **Consents and the signed term are not in the dossier (F-44) nor the account export.** The term is "filed in the record" and clause 7 tells the patient they may ask for access, but neither `DossierData` nor `AccountExportBuilder` includes consents or the signed PDF.
+- **The signed-copy e-mail is skipped, with a warning log (consent id), when the patient's contact e-mail was removed after sending;** the revocation token is then lost (see the first item).
+- **Tab audio capture (F-25)** is G2; **transient-audio proof (F-26)**, pseudonymisation (F-27) and transcript as source (F-28) are G2 to G4.
+- **Not exercised in a browser or against a live server;** the migration is not applied to the dev database, so a few dev-database suites fail until it is. The Confluence page is pending.
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

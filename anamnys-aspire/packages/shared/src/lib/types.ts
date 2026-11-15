@@ -556,7 +556,9 @@ export type NotificationKind =
   | "retention_due"
   | "integrity_problem"
   | "dossier_ready"
-  | "series_occurrence_skipped";
+  | "series_occurrence_skipped"
+  | "consent_signed"
+  | "consent_revoked";
 
 export interface ProviderNotification {
   id: string;

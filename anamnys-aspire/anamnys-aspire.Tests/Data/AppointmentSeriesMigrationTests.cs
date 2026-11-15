@@ -37,6 +37,7 @@ public class AppointmentSeriesMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, MigrationFile);
             await RunMigrationAsync(db, MigrationFile);
             await RunMigrationAsync(db, "2026-11-12-structured-intake.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-11-15-recording-consent.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LiveLanguage, LiveNoteFormat } from "@anamnys/shared/lib/types";
-import { liveSessionHub } from "@/lib/signalr";
+import { liveSessionHub, type LiveMode } from "@/lib/signalr";
 import { ChunkLog } from "@/lib/chunkLog";
 
 export type LiveState = "idle" | "recording" | "paused" | "finalizing" | "done" | "error";
-export type LiveError = "permission" | "device" | "connect" | "invalid" | "not_found" | "forbidden" | "archived" | "too_long" | "finalize";
+export type LiveError = "permission" | "device" | "connect" | "invalid" | "not_found" | "forbidden" | "archived" | "too_long" | "consent_required" | "dictation_not_confirmed" | "finalize";
 
 export interface StartOptions {
   patientId: string;
   appointmentId: string | null;
   format: LiveNoteFormat;
   language: LiveLanguage;
+  mode: LiveMode;
+  // The provider's confirmation that the patient is not being recorded (dictation mode only).
+  dictationConfirmed: boolean;
 }
 
 const SAMPLES_PER_MS = 16;
@@ -19,9 +22,10 @@ export const WARN_AT_MS = 85 * 60 * 1000;
 export const MAX_MS = 90 * 60 * 1000;
 const MAX_AUDIO_BYTES = 90 * 60 * 16000 * 2;
 
-type FatalCode = "invalid" | "not_found" | "forbidden" | "archived";
+type FatalCode = "invalid" | "not_found" | "forbidden" | "archived" | "consent_required" | "dictation_not_confirmed";
 const codeOf = (e: unknown): string | undefined => (e as { code?: string } | null)?.code;
-const isFatal = (c: string | undefined): c is FatalCode => c === "invalid" || c === "not_found" || c === "forbidden" || c === "archived";
+const isFatal = (c: string | undefined): c is FatalCode =>
+  c === "invalid" || c === "not_found" || c === "forbidden" || c === "archived" || c === "consent_required" || c === "dictation_not_confirmed";
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // Mic -> worklet (PCM 16 kHz) -> ChunkLog -> TranscriptionHub, resending after reconnects.
@@ -51,7 +55,7 @@ export function useLiveRecorder() {
 
   const begin = useCallback(async () => {
     const o = opts.current!;
-    const ack = await liveSessionHub.begin(recordingId.current, o.patientId, o.appointmentId, o.format, o.language);
+    const ack = await liveSessionHub.begin(recordingId.current, o.patientId, o.appointmentId, o.format, o.language, o.mode, o.dictationConfirmed);
     if (ack.status !== "ok") throw Object.assign(new Error(ack.status), { code: ack.status });
   }, []);
 

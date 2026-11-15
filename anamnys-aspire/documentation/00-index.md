@@ -96,6 +96,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 41. Availability, Blocks and Month View (F-29, delivery 2)
 42. Recurring Appointments (F-29, delivery 3)
 43. Structured Intake (F-31)
+44. Recording Consent (F-23, F-24)
 
 ## Building a single PDF from these files
 

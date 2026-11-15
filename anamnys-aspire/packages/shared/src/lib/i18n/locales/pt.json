@@ -733,6 +733,8 @@
       "forbidden": "Acesso negado a esta gravação.",
       "archived": "Paciente arquivado: desarquive o cadastro para gravar.",
       "too_long": "Limite de 90 minutos atingido.",
+      "consent_required": "A gravação da sessão foi recusada: não há consentimento válido. Envie o termo ao paciente ou use o ditado do resumo.",
+      "dictation_not_confirmed": "A confirmação do ditado não foi registrada. Marque a confirmação e tente de novo.",
       "finalize": "Não foi possível concluir a gravação."
     }
   },
@@ -1354,7 +1356,190 @@
       }
     }
   },
+  "recordingConsent": {
+    "state": {
+      "none": "Sem termo",
+      "sent": "Aguardando assinatura",
+      "signed": "Assinado",
+      "revoked": "Revogado",
+      "expired": "Expirado"
+    },
+    "badge": "Gravação autorizada",
+    "card": {
+      "title": "Consentimento para gravação",
+      "loadFailed": "Não foi possível carregar o consentimento.",
+      "none": "Ainda não há termo de consentimento para gravar as sessões deste paciente. Sem ele, a gravação da sessão fica bloqueada; o ditado do resumo continua disponível.",
+      "send": "Enviar termo",
+      "resend": "Reenviar link",
+      "renew": "Pedir de novo",
+      "revoke": "Registrar revogação",
+      "download": "Baixar termo assinado",
+      "downloadFailed": "Não foi possível baixar o termo.",
+      "newVersion": "Nova versão do termo disponível (a assinada é a {{version}}, a atual é a {{current}}). A gravação continua permitida até você pedir de novo.",
+      "sentAt": "Enviado em {{date}}",
+      "signedAt": "Assinado em {{date}}",
+      "linkUntil": "O link vale até {{date}}.",
+      "linkExpired": "O link expirou. Reenvie para o paciente assinar.",
+      "signer": "Assinado por {{name}} ({{role}})",
+      "signerGuardian": "responsável: {{relationship}}",
+      "signerPatient": "o(a) próprio(a) paciente",
+      "revokedAt": "Revogado em {{date}}",
+      "revokedBy": {
+        "patient": "O paciente revogou pelo link.",
+        "provider": "Você registrou a revogação."
+      },
+      "revokeReason": "Motivo: {{reason}}",
+      "providerNote": "Observações do profissional: {{note}}",
+      "history": "Histórico",
+      "resent": "Novo link enviado por e-mail.",
+      "sent": "Termo enviado por e-mail.",
+      "actionFailed": "Não foi possível concluir a ação.",
+      "capture": {
+        "ok": "A gravação da sessão está liberada.",
+        "none": "A gravação da sessão está bloqueada: não há termo assinado.",
+        "sent": "A gravação da sessão está bloqueada até o termo ser assinado.",
+        "revoked": "A gravação da sessão está bloqueada: o consentimento foi revogado.",
+        "expired": "A gravação da sessão está bloqueada: o termo expirou.",
+        "assent_missing": "A gravação da sessão está bloqueada: falta registrar o assentimento do(a) paciente menor de idade.",
+        "archived": "A gravação da sessão está bloqueada: o paciente está arquivado."
+      }
+    },
+    "expired": {
+      "link": "O link de assinatura expirou sem ser usado.",
+      "discharge": "O termo expirou porque o paciente recebeu alta (arquivado).",
+      "adulthood": "O termo expirou porque o paciente completou 18 anos. Peça um novo termo ao próprio paciente.",
+      "new_version": "Substituído por uma nova versão do termo."
+    },
+    "event": {
+      "sent": "Termo enviado",
+      "signed": "Termo assinado",
+      "revoked": "Consentimento revogado",
+      "expired": "Termo expirado",
+      "assent": "Assentimento registrado",
+      "other": "{{from}} para {{to}}",
+      "by": {
+        "provider": "pelo profissional",
+        "signer": "pelo signatário",
+        "system": "automático"
+      }
+    },
+    "blocked": {
+      "profile_incomplete": "Preencha seu nome e o CRP (com o conselho regional) no perfil para enviar o termo.",
+      "patient_email_missing": "Informe o e-mail de contato do paciente para enviar o termo.",
+      "patient_birthdate_missing": "Informe a data de nascimento do paciente para enviar o termo.",
+      "patient_archived": "Paciente arquivado: o termo não pode ser enviado."
+    },
+    "send": {
+      "title": "Enviar termo de consentimento",
+      "intro": "Este é o texto que o paciente (ou o responsável) vai ler e assinar. O link chega pelo e-mail de contato do paciente e vale por 7 dias.",
+      "loading": "Carregando o termo…",
+      "loadFailed": "Não foi possível carregar o termo.",
+      "noteLabel": "Observações do profissional (opcional)",
+      "noteHint": "Entra no fim do termo, como último parágrafo. Máximo de 1000 caracteres. O texto aparece para quem abre o link; não inclua informação clínica.",
+      "noteHeading": "Observações do profissional",
+      "confirm": "Enviar por e-mail",
+      "sending": "Enviando…",
+      "errors": {
+        "profile_incomplete": "Preencha seu nome e o CRP no perfil antes de enviar o termo.",
+        "patient_email_missing": "Informe o e-mail de contato do paciente antes de enviar o termo.",
+        "patient_birthdate_missing": "Informe a data de nascimento do paciente antes de enviar o termo.",
+        "patient_archived": "Paciente arquivado: o termo não pode ser enviado.",
+        "invalid_note": "As observações são longas demais.",
+        "consent_active": "Este paciente já tem um termo enviado ou assinado.",
+        "email_not_configured": "O envio de e-mails não está configurado neste ambiente.",
+        "send_failed": "O e-mail não pôde ser enviado. Nada foi registrado; tente de novo.",
+        "storage_unavailable": "O armazenamento está indisponível. Tente novamente em instantes.",
+        "invalid_state": "Esta ação não é possível no estado atual do termo.",
+        "not_outdated": "Este termo já está na versão atual.",
+        "outdated_version": "Este termo é de uma versão antiga. Envie o termo novamente.",
+        "unknown": "Não foi possível concluir a ação."
+      }
+    },
+    "assent": {
+      "title": "Assentimento do(a) paciente menor de idade",
+      "hint": "O paciente é menor de 18 anos. Além do responsável, a gravação exige que o próprio paciente concorde. Registre aqui quando ele concordou, em sessão.",
+      "date": "Data do assentimento",
+      "note": "Observação (opcional)",
+      "save": "Registrar assentimento",
+      "recorded": "Assentimento registrado em {{date}}.",
+      "update": "Atualizar",
+      "saved": "Assentimento registrado.",
+      "errors": {
+        "invalid_date": "Informe a data do assentimento, entre o pedido do termo e hoje.",
+        "not_minor": "O assentimento só é registrado para paciente menor de 18 anos.",
+        "invalid_state": "O assentimento só pode ser registrado com o termo enviado ou assinado."
+      }
+    },
+    "revoke": {
+      "title": "Registrar revogação do consentimento",
+      "body": "As próximas gravações ficam bloqueadas imediatamente. As notas já assinadas não são alteradas. Esta ação não pode ser desfeita; para voltar a gravar, será preciso enviar um novo termo.",
+      "reason": "Motivo (opcional)",
+      "confirm": "Revogar consentimento",
+      "done": "Consentimento revogado."
+    },
+    "session": {
+      "modeLabel": "O que você vai fazer",
+      "record": "Gravar a sessão",
+      "recordHint": "Grava a conversa da sessão. Exige termo de consentimento assinado.",
+      "dictation": "Ditar resumo (só eu falo)",
+      "dictationHint": "Só a sua voz, depois da sessão. Não grava o paciente.",
+      "checking": "Verificando o consentimento…",
+      "sendTerm": "Enviar termo",
+      "confirmDictation": "Confirmo que o paciente não está sendo gravado: só a minha voz será captada. Esta confirmação fica registrada.",
+      "confirmRequired": "Marque a confirmação para iniciar o ditado."
+    },
+    "public": {
+      "dead": "Este link não é mais válido.",
+      "loading": "Carregando…",
+      "loadFailed": "Não foi possível carregar a página agora. Tente de novo.",
+      "retry": "Tentar de novo",
+      "sign": {
+        "title": "Consentimento para gravação de sessões",
+        "intro": "{{provider}} pede o seu consentimento. Leia o termo com atenção. Você só assina se concordar; recusar não muda o seu atendimento.",
+        "termHeading": "Termo",
+        "identityHeading": "Para assinar",
+        "birthDate": "Data de nascimento do(a) paciente",
+        "birthDateHint": "Digite a data de nascimento do(a) paciente, como está no cadastro. Ela confirma que o link chegou à pessoa certa.",
+        "signerName": "Seu nome completo",
+        "signerNameHint": "Seu nome completo vale como assinatura.",
+        "guardianNote": "O(a) paciente é menor de idade. Quem assina é o pai, a mãe ou o(a) responsável legal.",
+        "relationship": "Sua relação com o(a) paciente",
+        "relationshipHint": "Por exemplo: mãe, pai, responsável legal.",
+        "accept": "Li e concordo",
+        "submit": "Assinar",
+        "submitting": "Enviando…",
+        "signed": "Termo assinado. Obrigado! Enviamos uma cópia para o seu e-mail, com o link para revogar o consentimento quando quiser.",
+        "errors": {
+          "invalid": "Preencha todos os campos e marque \"Li e concordo\".",
+          "birthdate_mismatch": "A data de nascimento não confere com o cadastro. Confira e tente de novo.",
+          "unavailable": "Não foi possível registrar agora. Tente de novo em alguns minutos.",
+          "signer_name_single_line": "Escreva o nome em uma só linha.",
+          "relationship_single_line": "Escreva a relação em uma só linha.",
+          "unknown": "Não foi possível assinar agora. Tente de novo."
+        }
+      },
+      "revoke": {
+        "title": "Revogar consentimento para gravação",
+        "intro": "Este é o termo assinado por {{signer}} em {{date}}. Ao revogar, {{provider}} deixa de poder gravar as sessões a partir de agora.",
+        "effect": "As notas já assinadas não são apagadas. Sua decisão não muda o seu atendimento.",
+        "hash": "Impressão digital do texto (SHA-256): {{hash}}",
+        "birthDate": "Data de nascimento do(a) paciente",
+        "birthDateHint": "Digite a data de nascimento do(a) paciente, como está no cadastro, para confirmar.",
+        "submit": "Revogar consentimento",
+        "submitting": "Enviando…",
+        "done": "Consentimento revogado. As próximas sessões não serão gravadas.",
+        "errors": {
+          "invalid": "Informe a data de nascimento.",
+          "birthdate_mismatch": "A data de nascimento não confere com o cadastro. Confira e tente de novo.",
+          "unavailable": "Não foi possível registrar agora. Tente de novo em alguns minutos.",
+          "unknown": "Não foi possível revogar agora. Tente de novo."
+        }
+      }
+    }
+  },
   "notifications": {
+    "consentSigned": "{{patient}} assinou o termo de consentimento para gravação",
+    "consentRevoked": "{{patient}} revogou o consentimento para gravação",
     "title": "Avisos",
     "empty": "Nenhum aviso.",
     "markAll": "Marcar todas como lidas",

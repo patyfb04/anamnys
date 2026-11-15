@@ -13,6 +13,9 @@ import ProcessingStep from "@/components/live-session/ProcessingStep";
 import { useLiveRecorder } from "@/hooks/useLiveRecorder";
 import ConfirmDialog from "@/components/patients/ConfirmDialog";
 import IntakeShortcut from "@/components/intake/IntakeShortcut";
+import SessionModeChoice from "@/components/recordingConsent/SessionModeChoice";
+import { consentKey, useRecordingConsent } from "@/components/recordingConsent/consentModel";
+import type { LiveMode } from "@/lib/signalr";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +39,14 @@ function LiveSessionPage() {
   const [patient, setPatient] = useState<PickedPatient | null>(null);
   const [appointmentId, setAppointmentId] = useState("");
   const [format, setFormat] = useState<LiveNoteFormat>("DAP");
+  // Recording consent (F-23/F-24): the session mode needs a valid consent; the server enforces it too.
+  const consentQuery = useRecordingConsent(patient?.id);
+  const consent = consentQuery.data;
+  const [chosenMode, setChosenMode] = useState<LiveMode>("session");
+  const [dictationConfirmed, setDictationConfirmed] = useState(false);
+  const sessionAllowed = !!consent?.canRecord;
+  const mode: LiveMode = sessionAllowed ? chosenMode : "dictation";
+  const canStart = !!patient && (mode === "session" || dictationConfirmed);
   const holdsAudio = recorder.state === "recording" || recorder.state === "paused" || recorder.state === "finalizing";
   const processing = recorder.state === "finalizing" || recorder.state === "done";
   const locked = recorder.state !== "idle" && recorder.state !== "error";
@@ -47,6 +58,13 @@ function LiveSessionPage() {
     void queryClient.invalidateQueries({ queryKey: ["attendance", patient.id] });
     void queryClient.invalidateQueries({ queryKey: ["timeline", patient.id] });
   }, [recorder.noteId, patient, queryClient]);
+
+  // The server refused a session recording: the consent changed under this page, so look at it again.
+  useEffect(() => {
+    if (recorder.error === "consent_required" && patient) {
+      void queryClient.invalidateQueries({ queryKey: consentKey(patient.id) });
+    }
+  }, [recorder.error, patient, queryClient]);
 
   // Opened from a patient's page: preselect that patient once.
   const preselected = useQuery({
@@ -102,19 +120,46 @@ function LiveSessionPage() {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <PatientCard
             patient={patient}
-            onPatientChange={setPatient}
+            onPatientChange={(p) => {
+              setPatient(p);
+              setDictationConfirmed(false);
+            }}
             appointmentId={appointmentId}
             onAppointmentChange={setAppointmentId}
             locked={locked}
           />
+          {patient && (
+            <SessionModeChoice
+              patientId={patient.id}
+              consent={consent}
+              loadFailed={consentQuery.isError}
+              mode={mode}
+              onModeChange={setChosenMode}
+              dictationConfirmed={dictationConfirmed}
+              onDictationConfirmedChange={setDictationConfirmed}
+              locked={locked}
+            />
+          )}
           <RecordingCard
             state={recorder.state}
             connection={recorder.connection}
             elapsedMs={recorder.elapsedMs}
             level={recorder.level}
-            canStart={!!patient}
+            canStart={canStart}
+            startHint={patient && !canStart ? t("recordingConsent.session.confirmRequired") : undefined}
             onStart={() =>
-              patient && void recorder.start({ patientId: patient.id, appointmentId: appointmentId || null, format, language: "pt" })
+              patient &&
+              canStart &&
+              (void recorder.start({
+                patientId: patient.id,
+                appointmentId: appointmentId || null,
+                format,
+                language: "pt",
+                mode,
+                dictationConfirmed: mode === "dictation" && dictationConfirmed,
+              }),
+              // The confirmation is an attestation for this one recording: it must be given again for the next.
+              setDictationConfirmed(false))
             }
             onPause={recorder.pause}
             onResume={recorder.resume}

@@ -90,8 +90,16 @@ public static class ProviderNotifications
             where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == NotificationKinds.SeriesSubject
                 && s.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
             select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = p.FirstName + " " + p.LastName, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt, PatientId = p.Id, SeriesId = s.Id, DedupeKey = n.DedupeKey };
+        // A recording consent was signed or revoked by the patient (F-23): it opens the patient page.
+        var consentItems =
+            from n in db.Notifications.AsNoTracking()
+            join c in db.RecordingConsents.AsNoTracking() on n.SubjectId equals c.Id
+            join p in db.Patients.AsNoTracking() on c.PatientId equals p.Id
+            where n.ProviderId == providerId && n.Channel == InApp && n.SubjectType == RecordingConsents.RecordingConsentService.SubjectType
+                && c.ProviderId == providerId && p.ProviderId == providerId && p.DiscardedAt == null
+            select new Row { Id = n.Id, Kind = n.Kind, AppointmentId = null, PatientName = p.FirstName + " " + p.LastName, StartsAt = null, ExportId = null, CreatedAt = n.ScheduledFor, ReadAt = n.ReadAt, PatientId = p.Id, SeriesId = null, DedupeKey = null };
         var rows = await appointmentItems.Concat(exportItems).Concat(retentionItems).Concat(noteItems).Concat(integrityItems).Concat(dossierItems)
-            .Concat(seriesItems)
+            .Concat(seriesItems).Concat(consentItems)
             .OrderByDescending(i => i.CreatedAt).ThenBy(i => i.Id)
             .Skip((page - 1) * PageSize).Take(PageSize)
             .ToListAsync(ct);

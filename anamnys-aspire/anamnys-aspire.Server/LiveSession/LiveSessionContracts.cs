@@ -1,6 +1,6 @@
 namespace Anamnys.Server.LiveSession;
 
-public sealed record BeginAck(string Status);
+public sealed record BeginAck(string Status, string? Reason = null);
 
 public sealed record ChunkAck(string Status, int LastSeq);
 

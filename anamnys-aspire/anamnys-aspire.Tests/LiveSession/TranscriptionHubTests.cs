@@ -56,7 +56,7 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
         var recordingId = Guid.NewGuid();
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", recordingId, patient, (Guid?)null, "DAP", "pt", Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", recordingId, patient, (Guid?)null, "DAP", "pt", "dictation", true, Ct);
         var first = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 0, new byte[3200], Ct);
         var again = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 0, new byte[3200], Ct);
         var gap = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 5, new byte[3200], Ct);
@@ -80,9 +80,38 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         var stranger = await seed.AddPatientAsync("Outro", "Paciente", cancellationToken: Ct);
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), stranger, (Guid?)null, "DAP", "pt", Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), stranger, (Guid?)null, "DAP", "pt", "dictation", true, Ct);
 
         begin.GetProperty("status").GetString().Should().Be("not_found");
+    }
+
+    [Fact]
+    public async Task BeginRecording_SessionWithoutConsent_IsRefusedWithReason()
+    {
+        using var session = await LoginAsProviderAsync();
+        var providerId = await ProviderIdAsync(session);
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Hub", "SemTermo", providerId: providerId, cancellationToken: Ct);
+        await using var hub = await ConnectAsync(session, "/hubs/transcription");
+
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "session", false, Ct);
+
+        begin.GetProperty("status").GetString().Should().Be("consent_required");
+        begin.GetProperty("reason").GetString().Should().Be("none");
+    }
+
+    [Fact]
+    public async Task BeginRecording_DictationNotConfirmed_IsRefused()
+    {
+        using var session = await LoginAsProviderAsync();
+        var providerId = await ProviderIdAsync(session);
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Hub", "Ditado", providerId: providerId, cancellationToken: Ct);
+        await using var hub = await ConnectAsync(session, "/hubs/transcription");
+
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "dictation", false, Ct);
+
+        begin.GetProperty("status").GetString().Should().Be("dictation_not_confirmed");
     }
 
     [Fact]

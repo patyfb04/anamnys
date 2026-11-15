@@ -85,6 +85,11 @@ shows as *Este link não é mais válido.* The same `status` also drives *Presen
 Both API routes need no login and are limited to 30 requests per minute per IP. The
 server stores only the token's SHA-256.
 
+Two more routes outside the gate, `routes/consentimento.$token.tsx` and `routes/consentimento.revogar.$token.tsx`,
+are the recording-consent pages behind the links in the consent e-mails (`/patient/consentimento/{token}` to sign,
+`/patient/consentimento/revogar/{token}` to revoke). They call `/api/public/recording-consents/…`, ask for the patient's
+date of birth, and show *Este link não é mais válido.* for any dead link (Chapter 44).
+
 A patient with a portal account does not need the e-mail: upcoming `scheduled` sessions in
 the provider's session list (`SessionLine.tsx`) have a *Confirmar* button that calls
 `POST /api/phi/patients/me/appointments/{id}/confirm`. It answers `404` unless the
