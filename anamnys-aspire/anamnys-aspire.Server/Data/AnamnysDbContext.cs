@@ -67,6 +67,8 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<IntakeResponse> IntakeResponses => Set<IntakeResponse>();
     public DbSet<IntakeTransfer> IntakeTransfers => Set<IntakeTransfer>();
     public DbSet<ProviderIntakeSettings> ProviderIntakeSettings => Set<ProviderIntakeSettings>();
+    public DbSet<RecordingConsent> RecordingConsents => Set<RecordingConsent>();
+    public DbSet<ConsentEvent> ConsentEvents => Set<ConsentEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -543,6 +545,21 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasKey(x => x.Id);
             e.HasOne<ThemeTerm>().WithMany().HasForeignKey(x => x.TermId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Staff>().WithMany().HasForeignKey(x => x.StaffId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<RecordingConsent>(e =>
+        {
+            e.ToTable("RecordingConsents");
+            e.HasKey(x => x.Id);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ConsentEvent>(e =>
+        {
+            e.ToTable("ConsentEvents");
+            e.HasKey(x => x.Id);
+            e.HasOne<RecordingConsent>().WithMany().HasForeignKey(x => x.ConsentId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

@@ -13,12 +13,21 @@ public sealed class TranscriptionHub(
 {
     private Guid ProviderId => Context.User!.LocalId();
 
-    public async Task<BeginAck> BeginRecording(Guid recordingId, Guid patientId, Guid? appointmentId, string format, string language)
+    public async Task<BeginAck> BeginRecording(Guid recordingId, Guid patientId, Guid? appointmentId, string format, string language,
+        string mode, bool dictationConfirmed)
     {
-        var check = await LiveRecordings.CheckBeginAsync(db, ProviderId, patientId, appointmentId, format, language, Context.ConnectionAborted);
-        if (check != BeginCheck.Ok)
+        var result = await LiveRecordings.CheckBeginAsync(
+            db, ProviderId, patientId, appointmentId, format, language, mode, dictationConfirmed, clock.GetUtcNow(), Context.ConnectionAborted);
+        if (result.Check != BeginCheck.Ok)
         {
-            return new BeginAck(check switch { BeginCheck.Invalid => "invalid", BeginCheck.Archived => "archived", _ => "not_found" });
+            return new BeginAck(result.Check switch
+            {
+                BeginCheck.Invalid => "invalid",
+                BeginCheck.Archived => "archived",
+                BeginCheck.ConsentRequired => "consent_required",
+                BeginCheck.DictationNotConfirmed => "dictation_not_confirmed",
+                _ => "not_found",
+            }, result.Reason);
         }
         var meta = new RecordingMeta(ProviderId, patientId, appointmentId, format, language, clock.GetUtcNow());
         return new BeginAck(buffers.Begin(recordingId, meta) == BeginStatus.Forbidden ? "forbidden" : "ok");

@@ -21,7 +21,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", Ct)).Should().Be(BeginCheck.Ok);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.Ok);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", providerId: other, cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", Ct)).Should().Be(BeginCheck.NotFound);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var appointment = await db.Appointments.Where(a => a.PatientId == bia).Select(a => a.Id).SingleAsync(Ct);
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, ana, appointment, "DAP", "pt", Ct)).Should().Be(BeginCheck.NotFound);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, ana, appointment, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "XYZ", "pt", Ct)).Should().Be(BeginCheck.Invalid);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "XYZ", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.Invalid);
     }
 
     [Fact]

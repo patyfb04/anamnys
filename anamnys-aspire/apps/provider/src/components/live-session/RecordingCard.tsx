@@ -11,6 +11,8 @@ interface Props {
   elapsedMs: number;
   level: number;
   canStart: boolean;
+  // Why the start button is off, when it is not simply "no patient yet".
+  startHint?: string;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -29,7 +31,7 @@ function clock(ms: number): string {
 
 // The recording panel: status pill, large timer, a rolling level meter and the controls.
 export default function RecordingCard(props: Props) {
-  const { state, connection, elapsedMs, level, canStart, onStart, onPause, onResume, onStop, processing } = props;
+  const { state, connection, elapsedMs, level, canStart, startHint, onStart, onPause, onResume, onStop, processing } = props;
   const { t } = useTranslation();
   const live = state === "recording" || state === "paused";
   const [history, setHistory] = useState<number[]>(() => Array(BARS).fill(0));
@@ -125,7 +127,7 @@ export default function RecordingCard(props: Props) {
               </button>
             )}
             {!live && !canStart && (
-              <span className="text-body-sm text-onSurfaceVariant">{t("liveSession.choosePatientFirst")}</span>
+              <span className="text-body-sm text-onSurfaceVariant">{startHint ?? t("liveSession.choosePatientFirst")}</span>
             )}
           </div>
         )}

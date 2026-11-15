@@ -59,6 +59,9 @@ export default function NotificationBell({ className }: { className?: string }) 
     }
     if (n.kind === "dossier_ready") return t("notifications.dossierReady", { patient: n.patientName ?? "" });
     if (n.kind === "integrity_problem") return t("notifications.integrityProblem");
+    if (n.kind === "consent_signed" || n.kind === "consent_revoked") {
+      return t(n.kind === "consent_signed" ? "notifications.consentSigned" : "notifications.consentRevoked", { patient: n.patientName ?? "" });
+    }
     // Links to the calendar day the session would have had (the default branch below).
     if (n.kind === "series_occurrence_skipped") {
       return t("notifications.seriesSkipped", {
@@ -124,6 +127,18 @@ export default function NotificationBell({ className }: { className?: string }) 
                     >
                       {label(n)}
                     </Link>
+                  ) : (n.kind === "consent_signed" || n.kind === "consent_revoked") && n.patientId ? (
+                    <Link
+                      to="/patients/$patientId"
+                      params={{ patientId: n.patientId }}
+                      search={{ tab: "avaliacao" }}
+                      className={itemClass(n)}
+                      onClick={onItemClick(n)}
+                    >
+                      {label(n)}
+                    </Link>
+                  ) : n.kind === "consent_signed" || n.kind === "consent_revoked" ? (
+                    <span className={itemClass(n)}>{label(n)}</span>
                   ) : n.kind === "account_export_ready" ? (
                     <Link to="/settings" hash="exportar-dados" className={itemClass(n)} onClick={onItemClick(n)}>
                       {label(n)}

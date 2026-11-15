@@ -36,6 +36,8 @@ import TimelineCard from "@/components/timeline/TimelineCard";
 import DocumentsCard from "@/components/documents/DocumentsCard";
 import DossiersCard from "@/components/dossiers/DossiersCard";
 import IntakeCard from "@/components/intake/IntakeCard";
+import RecordingConsentCard from "@/components/recordingConsent/RecordingConsentCard";
+import { consentKey, useRecordingConsent } from "@/components/recordingConsent/consentModel";
 import { usePatientIntakes } from "@/components/intake/intakeModel";
 import DeclaredFactsCard from "@/components/externalDocuments/DeclaredFactsCard";
 import ExternalDocumentsCard from "@/components/externalDocuments/ExternalDocumentsCard";
@@ -69,6 +71,8 @@ function PatientDetailPage() {
   const tab = Route.useSearch().tab ?? (hash === "dossiers" ? "documentos" : "resumo");
   // Shared with IntakeCard's query, so the tab badge costs no extra request.
   const pendingTransfers = (usePatientIntakes(patientId).data ?? []).reduce((sum, i) => sum + i.pendingTransfers, 0);
+  // Shared with RecordingConsentCard's query: the header badge costs no extra request.
+  const consent = useRecordingConsent(patientId).data;
   // Set by the create modal when it could not send the invitation it was asked to send.
   const inviteError = useRouterState({ select: (s) => s.location.state.inviteError });
   const { t, i18n } = useTranslation();
@@ -87,6 +91,8 @@ function PatientDetailPage() {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
     await queryClient.invalidateQueries({ queryKey: ["patients"] });
+    // Archiving expires the consent on the server.
+    await queryClient.invalidateQueries({ queryKey: consentKey(patientId) });
     await queryClient.invalidateQueries({ queryKey: ["timeline", patientId] });
     await queryClient.invalidateQueries({ queryKey: ["attendance", patientId] });
   };
@@ -146,6 +152,7 @@ function PatientDetailPage() {
                 label={archived ? t("patients.detail.archived") : t("patients.detail.active")}
                 tone={archived ? "neutral" : "mint"}
               />
+              {consent?.canRecord && <Badge label={t("recordingConsent.badge")} tone="blue" icon={<Mic size={12} aria-hidden />} />}
             </div>
             <p className="text-body-md text-onSurfaceVariant mt-1">
               {patient.dateOfBirth
@@ -292,6 +299,7 @@ function PatientDetailPage() {
       {tab === "avaliacao" && (
         <>
           <IntakeCard patientId={patientId} readOnly={archived} />
+          <RecordingConsentCard patientId={patientId} readOnly={archived} />
           {/* Full width: each instrument's series gets its own column inside the card. */}
           <ScalesCard patientId={patientId} readOnly={archived} />
           <DeclaredFactsCard patientId={patientId} />

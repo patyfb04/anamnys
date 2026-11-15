@@ -23,6 +23,7 @@ using Anamnys.Server.Notifications;
 using Anamnys.Server.Patients;
 using Anamnys.Server.PatientPortal;
 using Anamnys.Server.Profile;
+using Anamnys.Server.RecordingConsents;
 using Anamnys.Server.Retention;
 using Anamnys.Server.Analysis;
 using Anamnys.Server.Attendance;
@@ -204,8 +205,10 @@ phi.MapShareEndpoints();
 phi.MapIntegrityEndpoints();
 phi.MapDossierEndpoints();
 phi.MapIntakeEndpoints();
+phi.MapRecordingConsentEndpoints();
 app.MapConfirmationEndpoints(phi);
 app.MapPublicShareEndpoints();
+app.MapPublicConsentEndpoints();
 
 // Owners-realm registration is open: an owners cookie proves identity, a staff role
 // in the token proves access. Missing role = 403; another realm's cookie stays 401

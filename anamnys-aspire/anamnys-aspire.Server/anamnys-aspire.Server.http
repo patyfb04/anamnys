@@ -894,3 +894,82 @@ POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000
 ###
 ### Writes nothing to the record. 200 transfer; 404; 409 { code: "not_signed" | "not_pending" }. Audited intake_transfer_ignored.
 POST {{Server_HostAddress}}/api/phi/providers/me/intakes/00000000-0000-0000-0000-000000000000/transfers/00000000-0000-0000-0000-000000000000/ignore
+
+###
+### Recording consent (F-23 + F-24, design/specs/2026-11-15-recording-consent-design.md §5). Provider-scoped, 404 for another provider's
+### patient or consent, every answer no-store. The consent view (also the 200/201 body of the actions below):
+### { id, state: none | sent | signed | revoked | expired, version, currentVersion, sentAt, signedAt, signerRole: patient | guardian, signerName,
+###   guardianRelationship, assentRecordedAt (yyyy-MM-dd), assentNote, revokedAt, revokedBy: patient | provider, revokeReason,
+###   expiredReason: link | discharge | adulthood | new_version, linkExpiresAt (while sent), providerNote, hasDocument, isMinor, canRecord,
+###   reason: ok | none | sent | revoked | expired | assent_missing | archived, sendBlockedBy: null | profile_incomplete | patient_email_missing |
+###   patient_birthdate_missing | patient_archived, events: [{ fromState, toState, at, actorKind: provider | signer | system, reason }] }.
+### Reading applies due expiries (link past 7 days, discharge, a guardian-signed patient now 18). 200; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/recording-consent
+
+###
+### The term as it would be sent, without the observations (the UI shows them as its last paragraph). 200 { version, text, sendBlockedBy }; 404.
+GET {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/recording-consent/preview
+
+###
+### Sends the term: e-mails a one-time signing link (7 days) to the patient's contact e-mail; a failed e-mail leaves nothing. providerNote <= 1000.
+### 201 view; 400 { code: "profile_incomplete" | "patient_email_missing" | "patient_birthdate_missing" | "patient_archived" | "invalid_note" };
+### 404; 409 { code: "consent_active" }; 502 { code: "send_failed" }; 503 { code: "email_not_configured" }. Audited consent_sent.
+POST {{Server_HostAddress}}/api/phi/providers/me/patients/00000000-0000-0000-0000-000000000000/recording-consent
+Content-Type: application/json
+
+{ "providerNote": "As sessões online também podem ser gravadas." }
+
+###
+### A sent consent, or one whose link expired: a new link (the old one stops working) and a new e-mail. 200 view; 400 (sending codes);
+### 404; 409 { code: "invalid_state" | "consent_active" }; 502; 503. Audited consent_sent.
+POST {{Server_HostAddress}}/api/phi/providers/me/recording-consents/00000000-0000-0000-0000-000000000000/resend
+
+###
+### The minor's assent, recorded in session (sent or signed consent of a patient under 18). date not after today; note <= 500.
+### 200 view; 400 { code: "invalid_date" | "invalid_note" | "not_minor" }; 404; 409 { code: "invalid_state" }. Audited consent_assent_recorded.
+POST {{Server_HostAddress}}/api/phi/providers/me/recording-consents/00000000-0000-0000-0000-000000000000/assent
+Content-Type: application/json
+
+{ "date": "2026-11-15", "note": "Concordou com a gravação." }
+
+###
+### The provider records a revocation (signed) or cancels the link (sent). reason <= 500, kept on the consent only. Signed notes are untouched.
+### 200 view; 400 { code: "invalid_note" }; 404; 409 { code: "invalid_state" }. Audited consent_revoked.
+POST {{Server_HostAddress}}/api/phi/providers/me/recording-consents/00000000-0000-0000-0000-000000000000/revoke
+Content-Type: application/json
+
+{ "reason": "Pediu em sessão para não gravar." }
+
+###
+### "Pedir de novo" after a new term version: the old consent expires (new_version) and the current version is sent. 201 view; 400 (sending codes);
+### 404; 409 { code: "not_outdated" | "invalid_state" }; 502; 503. Audited consent_expired + consent_sent.
+POST {{Server_HostAddress}}/api/phi/providers/me/recording-consents/00000000-0000-0000-0000-000000000000/renew
+
+###
+### The signed PDF, streamed (attachment termo-consentimento-gravacao-XXXXXXXX.pdf). 200 application/pdf; 404 (none yet); 503 { code: "storage_unavailable" }.
+GET {{Server_HostAddress}}/api/phi/providers/me/recording-consents/00000000-0000-0000-0000-000000000000/document
+
+###
+### Public signing link (no login, rate limited). Every dead, unknown, used or expired link: 410 { message: "Este link não é mais válido." }.
+### 200 { text (the term without the date of birth), guardianExpected, providerName }.
+GET {{Server_HostAddress}}/api/public/recording-consents/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+###
+### Signs. relationship required when a guardian signs (minor). 204 (PDF stored, signed-copy e-mail with the revocation link, bell consent_signed);
+### 400 { code: "invalid", fields: [accepted_required | birthdate_required | signer_name_required | relationship_required] } or
+### { code: "birthdate_mismatch" } (counted; the 5th kills the link); 410; 503 { code: "unavailable" }. Audited consent_signed.
+POST {{Server_HostAddress}}/api/public/recording-consents/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Content-Type: application/json
+
+{ "birthDate": "1990-05-04", "signerName": "Benedita Silva", "relationship": null, "accepted": true }
+
+###
+### Public revocation link (from the signed-copy e-mail). 200 { text (signed term without the date of birth), signedAt, signerName, termSha256, providerName }; 410.
+GET {{Server_HostAddress}}/api/public/recording-consents/revoke/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+###
+### Revokes. 204 (bell consent_revoked); 400 { code: "invalid" } or { code: "birthdate_mismatch" } (counted; the 5th kills the link); 410. Audited consent_revoked.
+POST {{Server_HostAddress}}/api/public/recording-consents/revoke/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Content-Type: application/json
+
+{ "birthDate": "1990-05-04" }

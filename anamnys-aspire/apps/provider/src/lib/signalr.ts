@@ -5,7 +5,13 @@ import type { LiveLanguage, LiveNoteFormat, NoteFailureReason, NoteSnapshot } fr
 // same-origin proxy to the server resource (see also api/client.ts).
 const SIGNALR_URL = import.meta.env.VITE_SIGNALR_URL ?? "/hubs";
 
-export interface BeginAck { status: "ok" | "invalid" | "not_found" | "forbidden" | "archived" }
+// consent_required carries the reason (none|sent|revoked|expired|assent_missing|archived); null for every other status.
+export interface BeginAck {
+  status: "ok" | "invalid" | "not_found" | "forbidden" | "archived" | "consent_required" | "dictation_not_confirmed";
+  reason: string | null;
+}
+// "session" records the session (needs a valid consent); "dictation" is the provider alone (needs the confirmation).
+export type LiveMode = "session" | "dictation";
 export interface ChunkAck {
   status: "accepted" | "duplicate" | "gap" | "buffer_expired" | "forbidden" | "too_long";
   lastSeq: number;
@@ -54,8 +60,16 @@ export const liveSessionHub = {
     await conn?.stop();
   },
   isConnected: (): boolean => live?.state === signalR.HubConnectionState.Connected,
-  begin: (recordingId: string, patientId: string, appointmentId: string | null, format: LiveNoteFormat, language: LiveLanguage) =>
-    live!.invoke<BeginAck>("BeginRecording", recordingId, patientId, appointmentId, format, language),
+  begin: (
+    recordingId: string,
+    patientId: string,
+    appointmentId: string | null,
+    format: LiveNoteFormat,
+    language: LiveLanguage,
+    mode: LiveMode,
+    dictationConfirmed: boolean,
+  ) =>
+    live!.invoke<BeginAck>("BeginRecording", recordingId, patientId, appointmentId, format, language, mode, dictationConfirmed),
   sendChunk: (recordingId: string, seq: number, bytes: Uint8Array) =>
     live!.invoke<ChunkAck>("SendAudioChunk", recordingId, seq, toBase64(bytes)),
   finalize: (recordingId: string) => live!.invoke<FinalizeAck>("FinalizeStream", recordingId),
