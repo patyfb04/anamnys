@@ -736,6 +736,58 @@
       "consent_required": "A gravação da sessão foi recusada: não há consentimento válido. Envie o termo ao paciente ou use o ditado do resumo.",
       "dictation_not_confirmed": "A confirmação do ditado não foi registrada. Marque a confirmação e tente de novo.",
       "finalize": "Não foi possível concluir a gravação."
+    },
+    "online": {
+      "placeLabel": "Onde acontece a sessão",
+      "place": {
+        "in_person": "Presencial",
+        "online": "Online"
+      },
+      "placeHint": {
+        "in_person": "O microfone grava você e o paciente na sala.",
+        "online": "Grava você e o áudio da chamada com o paciente."
+      },
+      "methodLabel": "Como captar a voz do paciente",
+      "method": {
+        "online_capture": "Captar o áudio da chamada",
+        "online_speaker": "Pelo viva-voz"
+      },
+      "methodHint": {
+        "online_capture": "O áudio vem direto da aba da chamada (Meet, Zoom ou Teams no navegador).",
+        "online_speaker": "A chamada toca no alto-falante e o microfone grava as duas vozes."
+      },
+      "unsupported": "Neste navegador o áudio da chamada é captado pelo alto-falante. Deixe a chamada no viva-voz, sem fone.",
+      "instructionsTitle": "Ao iniciar, o navegador pergunta o que compartilhar",
+      "instructionsTab": "Escolha a aba da chamada e marque \"Compartilhar áudio da aba\".",
+      "instructionsScreen": "Usa o app do Zoom ou do Teams? Escolha a tela inteira com \"Compartilhar áudio do sistema\" — todo som do computador será gravado; feche outros sons.",
+      "speakerBanner": "Deixe a chamada no viva-voz, sem fone.",
+      "informBanner": "Informe o paciente verbalmente que a sessão está sendo gravada.",
+      "meters": {
+        "you": "Você",
+        "call": "Chamada"
+      },
+      "currentMethod": "Método: {{method}}",
+      "switchTo": {
+        "online_capture": "Trocar para captar a chamada",
+        "online_speaker": "Trocar para o viva-voz"
+      },
+      "shareLost": {
+        "title": "O compartilhamento da chamada parou",
+        "body": "A gravação está pausada. Compartilhe de novo a aba ou a tela da chamada, troque para o viva-voz ou encerre a gravação.",
+        "reshare": "Compartilhar de novo",
+        "end": "Encerrar gravação"
+      },
+      "suspended": "A gravação foi pausada pelo navegador. Retomar?",
+      "titlePaused": "Gravação pausada",
+      "notifyShareLost": "O compartilhamento da chamada parou. Volte ao Anamnys para compartilhar de novo ou encerrar.",
+      "errors": {
+        "share_cancelled": "O compartilhamento foi cancelado. Escolha a aba ou a tela da chamada para gravar.",
+        "share_without_audio": "A chamada foi compartilhada sem áudio, e a gravação não começou. Na janela do navegador, marque \"Compartilhar áudio da aba\" (ou \"Compartilhar áudio do sistema\" na tela inteira) e tente de novo.",
+        "share_unsupported": "Este navegador não capta o áudio da chamada. Use \"Pelo viva-voz\".",
+        "permission": "É necessário acesso ao microfone.",
+        "device": "Não foi possível abrir o microfone.",
+        "switch_failed": "Não foi possível trocar o método nesta gravação."
+      }
     }
   },
   "planAdherence": {
@@ -1923,6 +1975,14 @@
       "notFound": "Nota não encontrada.",
       "uploadFailedTitle": "Falha no envio",
       "processingFailedTitle": "Falha no processamento"
+    },
+    "audio": {
+      "destroyed": {
+        "transcribed": "Áudio da sessão destruído em {{date}} às {{time}}, após a transcrição.",
+        "failed": "Áudio da sessão destruído em {{date}} às {{time}}, sem transcrição.",
+        "abandoned": "Áudio da sessão destruído em {{date}} às {{time}}, sem transcrição."
+      },
+      "online": "Sessão online"
     }
   },
   "audioRecorder": {

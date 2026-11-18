@@ -4,7 +4,9 @@ namespace Anamnys.Server.LiveSession;
 
 public abstract record NoteJob(Guid NoteId, Guid ProviderId);
 
-public sealed record TranscriptionJob(Guid NoteId, Guid ProviderId, string Language, PcmAudio Audio) : NoteJob(NoteId, ProviderId);
+// RecordingId and Meta go to the destruction record once the audio is zeroed (F-26).
+public sealed record TranscriptionJob(Guid NoteId, Guid ProviderId, string Language, PcmAudio Audio, Guid RecordingId, RecordingMeta Meta)
+    : NoteJob(NoteId, ProviderId);
 
 public sealed record StructureJob(Guid NoteId, Guid ProviderId, string Format) : NoteJob(NoteId, ProviderId);
 

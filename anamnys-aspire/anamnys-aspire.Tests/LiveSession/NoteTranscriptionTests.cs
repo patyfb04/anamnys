@@ -93,9 +93,9 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
         var queue = new TranscriptionQueue();
         var id = Guid.NewGuid();
-        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10)));
+        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10), "session", [RecordingSources.InPerson]));
         buffers.Append(id, seed.ProviderId, 0, [1, 0, 2, 0]);
-        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct);
+        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct, NullLogger.Instance);
         queue.Reader.TryRead(out var read).Should().BeTrue();
         var queued = read.Should().BeOfType<TranscriptionJob>().Subject;
         var bytes = new byte[] { 1, 0, 2, 0 };

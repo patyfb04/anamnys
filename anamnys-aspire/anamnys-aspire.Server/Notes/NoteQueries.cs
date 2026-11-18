@@ -11,7 +11,8 @@ public sealed record NoteDetail(
     string? RawTranscript, string? FailureReason, DateTimeOffset CreatedAt,
     string? StructureStatus, string? StructureFailure, IReadOnlyList<NoteSectionDto> Sections,
     DateTimeOffset? SignedAt, string? SignedByCrp, bool ProviderHasCrp, bool SectionsByAi,
-    DateTimeOffset? ExportedAt, Guid? SessionId, Guid? IntakeId = null);
+    DateTimeOffset? ExportedAt, Guid? SessionId, Guid? IntakeId = null,
+    DateTimeOffset? AudioDestroyedAt = null, string? AudioOutcome = null, IReadOnlyList<string>? AudioSources = null);
 
 public static class NoteQueries
 {
@@ -46,8 +47,16 @@ public static class NoteQueries
             sections = [.. sections.Select(s => s with { Title = titles.GetValueOrDefault(s.Key) })];
         }
 
+        // F-26: the latest destruction record of the note's recording (none for a typed note or one from before F-26).
+        var audio = await db.AudioDestructionLogs.AsNoTracking()
+            .Where(a => a.NoteId == noteId && a.ProviderId == providerId)
+            .OrderByDescending(a => a.DestroyedAt)
+            .Select(a => new { a.DestroyedAt, a.Outcome, a.Sources })
+            .FirstOrDefaultAsync(ct);
+
         return new NoteDetail(note.Id, note.PatientId, note.PatientName, note.Status, note.InputMode, note.Format,
             note.RawTranscript, note.FailureReason, note.CreatedAt, note.StructureStatus, note.StructureFailure, sections,
-            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi, note.ExportedAt, note.SessionId, note.IntakeId);
+            note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi, note.ExportedAt, note.SessionId, note.IntakeId,
+            audio?.DestroyedAt, audio?.Outcome, audio?.Sources);
     }
 }

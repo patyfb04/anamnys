@@ -200,8 +200,8 @@ public static class DiscardService
             """).ToListAsync(ct);
 
     // Children first, so no RESTRICT foreign key stops a parent; each count goes into the term. Rows that only
-    // cascade (billing codes, conformity checks, share accesses, consent events, denials, speech markers, audio
-    // destruction logs, appointment confirmations and tokens, reminders, room sessions) go with their parent.
+    // cascade (billing codes, conformity checks, share accesses, consent events, denials, speech markers, appointment
+    // confirmations and tokens, reminders, room sessions) go with their parent.
     private static async Task<Dictionary<string, int>> DeleteContentAsync(
         AnamnysDbContext db, Guid providerId, Guid patientId, Guid? accountId, DateTimeOffset now, CancellationToken ct)
     {
@@ -266,6 +266,8 @@ public static class DiscardService
         await Run("intakeTransfers", $"""DELETE FROM "IntakeTransfers" WHERE "IntakeId" IN (SELECT "Id" FROM "Intakes" WHERE "PatientId" = {p} AND "ProviderId" = {v})""");
         await Run("intakeResponses", $"""DELETE FROM "IntakeResponses" WHERE "PatientId" = {p}""");
         await Run("intakes", $"""DELETE FROM "Intakes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
+        // F-26: the audio destruction records of the patient's recordings (ids and codes only; the audio never existed here).
+        await Run("audioDestructionLogs", $"""DELETE FROM "AudioDestructionLogs" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("clinicalDocuments", $"""DELETE FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("notes", $"""DELETE FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("medications", $"""DELETE FROM "MedicationEntries" WHERE "PatientId" = {p}""");

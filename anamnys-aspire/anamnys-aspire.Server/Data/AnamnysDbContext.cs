@@ -69,6 +69,7 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<ProviderIntakeSettings> ProviderIntakeSettings => Set<ProviderIntakeSettings>();
     public DbSet<RecordingConsent> RecordingConsents => Set<RecordingConsent>();
     public DbSet<ConsentEvent> ConsentEvents => Set<ConsentEvent>();
+    public DbSet<AudioDestructionLog> AudioDestructionLogs => Set<AudioDestructionLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -560,6 +561,16 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.ToTable("ConsentEvents");
             e.HasKey(x => x.Id);
             e.HasOne<RecordingConsent>().WithMany().HasForeignKey(x => x.ConsentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AudioDestructionLog>(e =>
+        {
+            e.ToTable("AudioDestructionLogs");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Sources).HasColumnType("text[]");
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Note>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

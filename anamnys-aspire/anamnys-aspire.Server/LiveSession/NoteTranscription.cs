@@ -23,6 +23,10 @@ public static class NoteTranscription
         {
             // Exception type only: messages from native code could echo input.
             logger.LogError("Transcription failed for note {NoteId}: {ExceptionType}", job.NoteId, e.GetType().Name);
+            Array.Clear(samples);
+            job.Audio.Destroy();
+            // The record first: the note page stops polling once the note is Failed, and must then show the destruction.
+            await RecordDestructionAsync(db, job, AudioDestruction.Failed, clock, logger, ct);
             await FailAsync(db, job.NoteId, "transcription_error", clock.GetUtcNow(), ct);
             return TranscriptionOutcome.Error;
         }
@@ -34,6 +38,7 @@ public static class NoteTranscription
 
         if (text.Length == 0)
         {
+            await RecordDestructionAsync(db, job, AudioDestruction.Failed, clock, logger, ct);
             await FailAsync(db, job.NoteId, "no_speech", clock.GetUtcNow(), ct);
             return TranscriptionOutcome.NoSpeech;
         }
@@ -43,8 +48,14 @@ public static class NoteTranscription
                 .SetProperty(n => n.RawTranscript, text)
                 .SetProperty(n => n.Status, "ReadyForReview")
                 .SetProperty(n => n.UpdatedAt, clock.GetUtcNow()), ct);
+        await RecordDestructionAsync(db, job, AudioDestruction.Transcribed, clock, logger, ct);
         return TranscriptionOutcome.Ready;
     }
+
+    // F-26: the audio is already zeroed here; the record never throws but on shutdown.
+    private static Task RecordDestructionAsync(
+        AnamnysDbContext db, TranscriptionJob job, string outcome, TimeProvider clock, ILogger logger, CancellationToken ct) =>
+        AudioDestruction.TryRecordAsync(db, job.RecordingId, job.Meta, job.NoteId, outcome, clock.GetUtcNow(), logger, ct);
 
     private static Task<int> FailAsync(AnamnysDbContext db, Guid noteId, string reason, DateTimeOffset now, CancellationToken ct) =>
         db.Notes

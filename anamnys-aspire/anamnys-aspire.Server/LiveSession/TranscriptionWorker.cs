@@ -34,6 +34,8 @@ public sealed class TranscriptionWorker(
     {
         var group = progress.Clients.Group(ProgressHub.Group(job.NoteId));
         var ready = false;
+        // ProcessAsync records the destruction whenever it returns; any earlier failure is recorded below.
+        var recorded = false;
         try
         {
             await group.SendAsync("NoteProgress", job.NoteId, "transcribing", 0, stoppingToken);
@@ -42,6 +44,7 @@ public sealed class TranscriptionWorker(
                 scope.ServiceProvider.GetRequiredService<AnamnysDbContext>(),
                 scope.ServiceProvider.GetRequiredService<ITranscriber>(),
                 job, clock, logger, stoppingToken);
+            recorded = true;
             ready = outcome == TranscriptionOutcome.Ready;
             await (outcome switch
             {
@@ -52,12 +55,19 @@ public sealed class TranscriptionWorker(
         }
         catch (Exception e) when (!stoppingToken.IsCancellationRequested)
         {
+            // The audio goes before any more I/O that can fail (the finally destroys it again, harmlessly).
+            job.Audio.Destroy();
             logger.LogError("Transcription job for note {NoteId} failed: {ExceptionType}", job.NoteId, e.GetType().Name);
             await FailBestEffortAsync(job, scopes, group, clock, logger, stoppingToken);
         }
         finally
         {
             job.Audio.Destroy();
+        }
+
+        if (!recorded)
+        {
+            await RecordFailedBestEffortAsync(job, scopes, clock, logger, stoppingToken);
         }
 
         // The audio is already destroyed: structuring reads only the stored transcript.
@@ -99,6 +109,22 @@ public sealed class TranscriptionWorker(
         {
             logger.LogError("Structuring job for note {NoteId} failed: {ExceptionType}", noteId, e.GetType().Name);
             await StructureFailBestEffortAsync(noteId, providerId, scopes, group, clock, logger, ct);
+        }
+    }
+
+    // F-26: the job failed before the transcription could record the destruction (e.g. the first notification threw).
+    private static async Task RecordFailedBestEffortAsync(
+        TranscriptionJob job, IServiceScopeFactory scopes, TimeProvider clock, ILogger logger, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = scopes.CreateScope();
+            await AudioDestruction.TryRecordAsync(scope.ServiceProvider.GetRequiredService<AnamnysDbContext>(),
+                job.RecordingId, job.Meta, job.NoteId, AudioDestruction.Failed, clock.GetUtcNow(), logger, ct);
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested)
+        {
+            logger.LogError("Audio destruction record failed for recording {RecordingId}: {ExceptionType}", job.RecordingId, e.GetType().Name);
         }
     }
 

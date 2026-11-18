@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { isAxiosError } from "axios";
-import { AlertCircle, ArrowLeft, ChevronDown, ClipboardList, FileText, Loader2, PenLine, ScrollText } from "lucide-react";
+import { AlertCircle, ArrowLeft, ChevronDown, ClipboardList, FileText, Loader2, PenLine, ScrollText, ShieldCheck } from "lucide-react";
 import { notesApi } from "@anamnys/shared/api/notes";
 import { excerptsApi } from "@anamnys/shared/api/excerpts";
 import { intakeApi } from "@anamnys/shared/api/intake";
@@ -127,6 +127,20 @@ function NotePage() {
               <Badge label={t("noteView.inReview")} tone="blue" />
             )}
           </div>
+          {note.audioDestroyedAt && note.audioOutcome && (
+            <p className="mt-2 flex flex-wrap items-center gap-2 text-body-sm text-onSurfaceVariant">
+              <ShieldCheck size={16} className="shrink-0 text-primary" aria-hidden />
+              <span>
+                {t(`notes.audio.destroyed.${note.audioOutcome}`, {
+                  date: new Date(note.audioDestroyedAt).toLocaleDateString("pt-BR"),
+                  time: new Date(note.audioDestroyedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+                })}
+              </span>
+              {note.audioSources?.some((s) => s === "online_capture" || s === "online_speaker") && (
+                <Badge label={t("notes.audio.online")} tone="blue" />
+              )}
+            </p>
+          )}
         </div>
       </header>
 

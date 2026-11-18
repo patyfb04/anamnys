@@ -9,15 +9,16 @@ namespace Anamnys.Server.LiveSession;
 // other realm is not an authenticated principal here (401), as on /api/phi.
 [Authorize(AuthenticationSchemes = AuthSchemes.ProviderCookie)]
 public sealed class TranscriptionHub(
-    RecordingBuffers buffers, TranscriptionQueue queue, AnamnysDbContext db, TimeProvider clock) : Hub
+    RecordingBuffers buffers, TranscriptionQueue queue, AnamnysDbContext db, TimeProvider clock, ILogger<TranscriptionHub> logger) : Hub
 {
     private Guid ProviderId => Context.User!.LocalId();
 
     public async Task<BeginAck> BeginRecording(Guid recordingId, Guid patientId, Guid? appointmentId, string format, string language,
-        string mode, bool dictationConfirmed)
+        string mode, bool dictationConfirmed, string source)
     {
         var result = await LiveRecordings.CheckBeginAsync(
-            db, ProviderId, patientId, appointmentId, format, language, mode, dictationConfirmed, clock.GetUtcNow(), Context.ConnectionAborted);
+            db, ProviderId, patientId, appointmentId, format, language, mode, dictationConfirmed, source, clock.GetUtcNow(),
+            Context.ConnectionAborted);
         if (result.Check != BeginCheck.Ok)
         {
             return new BeginAck(result.Check switch
@@ -29,8 +30,27 @@ public sealed class TranscriptionHub(
                 _ => "not_found",
             }, result.Reason);
         }
-        var meta = new RecordingMeta(ProviderId, patientId, appointmentId, format, language, clock.GetUtcNow());
-        return new BeginAck(buffers.Begin(recordingId, meta) == BeginStatus.Forbidden ? "forbidden" : "ok");
+        var meta = LiveRecordings.NewMeta(ProviderId, patientId, appointmentId, format, language, mode, source, clock.GetUtcNow());
+        return new BeginAck(buffers.Begin(recordingId, meta) switch
+        {
+            BeginStatus.Forbidden => "forbidden",
+            BeginStatus.ModeMismatch => "invalid",
+            _ => "ok",
+        });
+    }
+
+    // Changes the call's audio method inside the same recording (design/specs/2026-11-16-transient-audio-tab-capture-design.md §2.2).
+    public async Task<SwitchAck> SwitchSource(Guid recordingId, string source)
+    {
+        var status = await LiveRecordings.SwitchSourceAsync(
+            db, buffers, ProviderId, recordingId, source, clock.GetUtcNow(), Context.ConnectionAborted);
+        return new SwitchAck(status switch
+        {
+            SwitchStatus.Ok => "ok",
+            SwitchStatus.Invalid => "invalid",
+            SwitchStatus.Expired => "expired",
+            _ => "forbidden",
+        });
     }
 
     public ChunkAck SendAudioChunk(Guid recordingId, int seq, byte[] chunk)
@@ -50,7 +70,7 @@ public sealed class TranscriptionHub(
 
     public async Task<FinalizeAck> FinalizeStream(Guid recordingId)
     {
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, ProviderId, recordingId, clock.GetUtcNow(), Context.ConnectionAborted);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, ProviderId, recordingId, clock.GetUtcNow(), Context.ConnectionAborted, logger);
         return result.Status == FinalizeStatus.Ok
             ? new FinalizeAck("ok", result.NoteId)
             : new FinalizeAck("buffer_expired", null);
