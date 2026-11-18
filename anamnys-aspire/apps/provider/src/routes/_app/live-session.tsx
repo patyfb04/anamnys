@@ -16,6 +16,19 @@ import IntakeShortcut from "@/components/intake/IntakeShortcut";
 import SessionModeChoice from "@/components/recordingConsent/SessionModeChoice";
 import { consentKey, useRecordingConsent } from "@/components/recordingConsent/consentModel";
 import type { LiveMode } from "@/lib/signalr";
+import OnlineMethodChoice from "@/components/live-session/OnlineMethodChoice";
+import CaptureStatusPanel, { InformPatientBanner } from "@/components/live-session/CaptureStatusPanel";
+import { PRACTICE_ZONE, todayIn } from "@/components/calendar/calendarTime";
+import { useAppointmentsQuery } from "@/hooks/useAppointments";
+import {
+  captureSupport,
+  defaultMethod,
+  isOnlineSource,
+  placeFromModality,
+  sourceFor,
+  type OnlineMethod,
+  type SessionPlace,
+} from "@/lib/audioCapture";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -47,7 +60,39 @@ function LiveSessionPage() {
   const sessionAllowed = !!consent?.canRecord;
   const mode: LiveMode = sessionAllowed ? chosenMode : "dictation";
   const canStart = !!patient && (mode === "session" || dictationConfirmed);
-  const holdsAudio = recorder.state === "recording" || recorder.state === "paused" || recorder.state === "finalizing";
+  // Online sessions (F-25): "Presencial / Online", preselected from the linked appointment's modality; dictation is
+  // always the microphone alone.
+  const [support] = useState(captureSupport);
+  const [place, setPlace] = useState<SessionPlace>("in_person");
+  const [method, setMethod] = useState<OnlineMethod>(() => defaultMethod(support));
+  const source = sourceFor(mode, place, support.tab ? method : "speaker");
+  const today = useAppointmentsQuery([todayIn(PRACTICE_ZONE)]);
+  const holdsAudio =
+    recorder.state === "recording" || recorder.state === "paused" || recorder.state === "suspended" ||
+    recorder.state === "share_lost" || recorder.state === "finalizing";
+  const capturing =
+    recorder.state === "recording" || recorder.state === "paused" || recorder.state === "suspended" || recorder.state === "share_lost";
+  const pausedByBrowser = recorder.state === "share_lost" || recorder.state === "suspended";
+
+  // The provider is usually in the call's tab when the share stops: the tab title says the recording paused.
+  useEffect(() => {
+    if (!pausedByBrowser) return;
+    const original = document.title;
+    document.title = `${t("liveSession.online.titlePaused")} · ${original}`;
+    return () => { document.title = original; };
+  }, [pausedByBrowser, t]);
+
+  // And, only where notifications were already allowed (never asked here), a system notification.
+  useEffect(() => {
+    if (recorder.state !== "share_lost" || document.visibilityState === "visible") return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    try {
+      const n = new Notification(t("liveSession.online.titlePaused"), { body: t("liveSession.online.notifyShareLost"), tag: "live-session-paused" });
+      return () => n.close();
+    } catch {
+      // Some browsers (Android) only notify through a service worker: the title is the cue there.
+    }
+  }, [recorder.state, t]);
   const processing = recorder.state === "finalizing" || recorder.state === "done";
   const locked = recorder.state !== "idle" && recorder.state !== "error";
 
@@ -89,6 +134,7 @@ function LiveSessionPage() {
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-8">
+      {capturing && recorder.source && isOnlineSource(recorder.source) && <InformPatientBanner />}
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-headline-lg text-onSurface">{t("liveSession.title")}</h1>
@@ -107,7 +153,11 @@ function LiveSessionPage() {
       </header>
 
       {recorder.error && recorder.error !== "too_long" && (
-        <p className="text-body-md text-error">{t(`liveSession.errors.${recorder.error}`)}</p>
+        <p className="text-body-md text-error">
+          {recorder.error.startsWith("share_")
+            ? t(`liveSession.online.errors.${recorder.error}`)
+            : t(`liveSession.errors.${recorder.error}`)}
+        </p>
       )}
       {recorder.error === "too_long" && processing && (
         <p className="text-body-md text-onSurfaceVariant">{t("liveSession.errors.too_long")}</p>
@@ -125,7 +175,10 @@ function LiveSessionPage() {
               setDictationConfirmed(false);
             }}
             appointmentId={appointmentId}
-            onAppointmentChange={setAppointmentId}
+            onAppointmentChange={(id) => {
+              setAppointmentId(id);
+              setPlace(placeFromModality(today.data?.find((a) => a.id === id)?.modality));
+            }}
             locked={locked}
           />
           {patient && (
@@ -140,6 +193,28 @@ function LiveSessionPage() {
               locked={locked}
             />
           )}
+          {patient && mode === "session" && (
+            <OnlineMethodChoice
+              place={place}
+              onPlaceChange={setPlace}
+              method={method}
+              onMethodChange={setMethod}
+              support={support}
+              locked={locked}
+            />
+          )}
+          <CaptureStatusPanel
+            state={recorder.state}
+            source={recorder.source}
+            levels={recorder.levels}
+            sourceError={recorder.sourceError}
+            busy={recorder.busy}
+            support={support}
+            onReshare={() => void recorder.reshare()}
+            onSwitch={(target) => void recorder.switchMethod(target)}
+            onResume={() => void recorder.resume()}
+            onEnd={() => void recorder.stop()}
+          />
           <RecordingCard
             state={recorder.state}
             connection={recorder.connection}
@@ -157,12 +232,13 @@ function LiveSessionPage() {
                 language: "pt",
                 mode,
                 dictationConfirmed: mode === "dictation" && dictationConfirmed,
+                source,
               }),
               // The confirmation is an attestation for this one recording: it must be given again for the next.
               setDictationConfirmed(false))
             }
             onPause={recorder.pause}
-            onResume={recorder.resume}
+            onResume={() => void recorder.resume()}
             onStop={() => void recorder.stop()}
             processing={processing ? <ProcessingStep noteId={recorder.noteId} onRecordAgain={recorder.reset} /> : undefined}
           />

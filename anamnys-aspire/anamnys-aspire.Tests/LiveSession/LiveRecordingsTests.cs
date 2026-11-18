@@ -4,6 +4,7 @@ using Anamnys.Tests.Patients;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 
 namespace Anamnys.Tests.LiveSession;
@@ -21,7 +22,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.Ok);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, "in_person", Now, Ct)).Check.Should().Be(BeginCheck.Ok);
     }
 
     [Fact]
@@ -32,7 +33,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", providerId: other, cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "DAP", "pt", "dictation", true, "in_person", Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var appointment = await db.Appointments.Where(a => a.PatientId == bia).Select(a => a.Id).SingleAsync(Ct);
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, ana, appointment, "DAP", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, ana, appointment, "DAP", "pt", "dictation", true, "in_person", Now, Ct)).Check.Should().Be(BeginCheck.NotFound);
     }
 
     [Fact]
@@ -55,7 +56,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
 
-        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "XYZ", "pt", "dictation", true, Now, Ct)).Check.Should().Be(BeginCheck.Invalid);
+        (await LiveRecordings.CheckBeginAsync(db, seed.ProviderId, patient, null, "XYZ", "pt", "dictation", true, "in_person", Now, Ct)).Check.Should().Be(BeginCheck.Invalid);
     }
 
     [Fact]
@@ -66,7 +67,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
 
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
 
         result.Status.Should().Be(FinalizeStatus.Ok);
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == result.NoteId, Ct);
@@ -94,7 +95,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var appointment = await db.Appointments.AsNoTracking().SingleAsync(a => a.PatientId == patient, Ct);
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, appointment.Id);
 
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
 
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == result.NoteId, Ct);
         var session = await db.Sessions.AsNoTracking().SingleAsync(s => s.Id == note.SessionId, Ct);
@@ -115,7 +116,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, appointmentId);
 
         // Act
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
 
         // Assert
         await using var check = seed.CreateDbContext();
@@ -135,10 +136,10 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var appointment = await db.Appointments.AsNoTracking().SingleAsync(a => a.PatientId == patient, Ct);
         var first = Recording(seed.ProviderId, patient, appointment.Id);
-        var firstNote = (await LiveRecordings.FinalizeAsync(db, first.Buffers, first.Queue, seed.ProviderId, first.RecordingId, Now, Ct)).NoteId;
+        var firstNote = (await LiveRecordings.FinalizeAsync(db, first.Buffers, first.Queue, seed.ProviderId, first.RecordingId, Now, Ct, NullLogger.Instance)).NoteId;
         var second = Recording(seed.ProviderId, patient, appointment.Id);
 
-        var secondNote = (await LiveRecordings.FinalizeAsync(db, second.Buffers, second.Queue, seed.ProviderId, second.RecordingId, Now.AddMinutes(5), Ct)).NoteId;
+        var secondNote = (await LiveRecordings.FinalizeAsync(db, second.Buffers, second.Queue, seed.ProviderId, second.RecordingId, Now.AddMinutes(5), Ct, NullLogger.Instance)).NoteId;
 
         var sessions = await db.Notes.AsNoTracking().Where(n => n.Id == firstNote || n.Id == secondNote).Select(n => n.SessionId).Distinct().ToListAsync(Ct);
         sessions.Should().ContainSingle();
@@ -152,8 +153,8 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
 
-        var first = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
-        var second = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+        var first = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
+        var second = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
 
         second.Should().Be(first);
         (await db.Notes.CountAsync(n => n.RecordingId == recordingId, Ct)).Should().Be(1);
@@ -166,7 +167,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         await using var db = seed.CreateDbContext();
         var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
 
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, new TranscriptionQueue(), seed.ProviderId, Guid.NewGuid(), Now, Ct);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, new TranscriptionQueue(), seed.ProviderId, Guid.NewGuid(), Now, Ct, NullLogger.Instance);
 
         result.Should().Be(new FinalizeResult(FinalizeStatus.Expired, null));
     }
@@ -178,7 +179,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
-        var noteId = (await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct)).NoteId;
+        var noteId = (await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance)).NoteId;
 
         await LiveRecordings.FailOrphansAsync(db, Now.AddMinutes(1), Ct);
 
@@ -194,7 +195,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Ana", "Silva", cancellationToken: Ct);
         await using var db = seed.CreateDbContext();
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
-        var noteId = (await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct)).NoteId;
+        var noteId = (await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance)).NoteId;
         await db.Notes.Where(n => n.Id == noteId)
             .ExecuteUpdateAsync(s => s
                 .SetProperty(n => n.Status, "ReadyForReview")
@@ -218,7 +219,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, Guid.NewGuid());
 
         // Act
-        var act = () => LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct);
+        var act = () => LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, Ct, NullLogger.Instance);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -239,7 +240,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
 
         // Act
-        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, aborted.Token);
+        var result = await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, aborted.Token, NullLogger.Instance);
 
         // Assert
         aborted.IsCancellationRequested.Should().BeTrue("the token was cancelled mid-finalize");
@@ -260,7 +261,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
         var (buffers, queue, recordingId) = Recording(seed.ProviderId, patient, null);
 
         // Act
-        var act = () => LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, new CancellationToken(true));
+        var act = () => LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, recordingId, Now, new CancellationToken(true), NullLogger.Instance);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -283,7 +284,7 @@ public class LiveRecordingsTests(SharedAppHostFixture fixture)
     {
         var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
         var id = Guid.NewGuid();
-        buffers.Begin(id, new RecordingMeta(provider, patient, appointment, "SOAP", "pt", Now.AddMinutes(-30)));
+        buffers.Begin(id, new RecordingMeta(provider, patient, appointment, "SOAP", "pt", Now.AddMinutes(-30), "session", [RecordingSources.InPerson]));
         buffers.Append(id, provider, 0, [1, 0, 2, 0]);
         return (buffers, new TranscriptionQueue(), id);
     }

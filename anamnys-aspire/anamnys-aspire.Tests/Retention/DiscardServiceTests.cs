@@ -43,6 +43,7 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         """SELECT count(*) FROM "FollowUpItems" WHERE "PatientId" = @pa""",
         """SELECT count(*) FROM "PatientInvitations" WHERE "PatientId" = @pa""",
         """SELECT count(*) FROM "Notifications" WHERE "SubjectId" = @pa OR "SubjectId" = ANY(@notes)""",
+        """SELECT count(*) FROM "AudioDestructionLogs" WHERE "PatientId" = @pa""",
     ];
 
     internal sealed record Record(
@@ -104,7 +105,9 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
             """
             INSERT INTO "Transcripts" ("SessionId","NoteId","Text") VALUES (@s, @n, @m);
             UPDATE "Notes" SET "SessionId" = @s WHERE "Id" = @n;
-            """, Ct, ("s", session), ("n", signed), ("m", Marker));
+            INSERT INTO "AudioDestructionLogs" ("SessionId","ProviderId","PatientId","NoteId","RecordingMode","Sources","Outcome")
+            VALUES (gen_random_uuid(), @p, @pa, @n, 'session', ARRAY['in_person'], 'transcribed');
+            """, Ct, ("s", session), ("n", signed), ("m", Marker), ("p", provider), ("pa", patient));
         // Different hours per patient: one provider's appointments never overlap.
         await s.AddAppointmentAsync(provider, patient, new DateTimeOffset(2020, 1, 1, first == "Ana" ? 15 : 17, 0, 0, TimeSpan.Zero), "attended", Ct);
         // A cancelled future appointment does not block the discard and is deleted with the rest.
@@ -212,7 +215,7 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
             ["notes"] = 2, ["clinicalDocuments"] = 1, ["externalDocuments"] = 1, ["sessions"] = 1, ["appointments"] = 2,
             ["transcripts"] = 1, ["scaleApplications"] = 1, ["medications"] = 1, ["diagnoses"] = 1, ["treatmentPlans"] = 1,
             ["planObjectives"] = 1, ["auditEntries"] = 2, ["notifications"] = 3, ["appointmentSeries"] = 1, ["invitations"] = 1, ["followUpItems"] = 1,
-            ["patientQuotes"] = 1,
+            ["patientQuotes"] = 1, ["audioDestructionLogs"] = 1,
         });
 
         // The patient row keeps only the name and the discard date.

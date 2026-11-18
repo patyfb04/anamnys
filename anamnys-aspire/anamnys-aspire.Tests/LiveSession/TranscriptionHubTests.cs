@@ -56,7 +56,7 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
         var recordingId = Guid.NewGuid();
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", recordingId, patient, (Guid?)null, "DAP", "pt", "dictation", true, Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", recordingId, patient, (Guid?)null, "DAP", "pt", "dictation", true, "in_person", Ct);
         var first = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 0, new byte[3200], Ct);
         var again = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 0, new byte[3200], Ct);
         var gap = await hub.InvokeAsync<JsonElement>("SendAudioChunk", recordingId, 5, new byte[3200], Ct);
@@ -80,7 +80,7 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         var stranger = await seed.AddPatientAsync("Outro", "Paciente", cancellationToken: Ct);
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), stranger, (Guid?)null, "DAP", "pt", "dictation", true, Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), stranger, (Guid?)null, "DAP", "pt", "dictation", true, "in_person", Ct);
 
         begin.GetProperty("status").GetString().Should().Be("not_found");
     }
@@ -94,7 +94,7 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Hub", "SemTermo", providerId: providerId, cancellationToken: Ct);
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "session", false, Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "session", false, "online_capture", Ct);
 
         begin.GetProperty("status").GetString().Should().Be("consent_required");
         begin.GetProperty("reason").GetString().Should().Be("none");
@@ -109,9 +109,36 @@ public class TranscriptionHubTests(SharedAppHostFixture fixture)
         var patient = await seed.AddPatientAsync("Hub", "Ditado", providerId: providerId, cancellationToken: Ct);
         await using var hub = await ConnectAsync(session, "/hubs/transcription");
 
-        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "dictation", false, Ct);
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "dictation", false, "in_person", Ct);
 
         begin.GetProperty("status").GetString().Should().Be("dictation_not_confirmed");
+    }
+
+    [Fact]
+    public async Task BeginRecording_DictationWithAnOnlineSource_IsInvalid()
+    {
+        using var session = await LoginAsProviderAsync();
+        var providerId = await ProviderIdAsync(session);
+        await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
+        var patient = await seed.AddPatientAsync("Hub", "DitadoOnline", providerId: providerId, cancellationToken: Ct);
+        await using var hub = await ConnectAsync(session, "/hubs/transcription");
+
+        var begin = await hub.InvokeAsync<JsonElement>("BeginRecording", Guid.NewGuid(), patient, (Guid?)null, "DAP", "pt", "dictation", true, "online_speaker", Ct);
+
+        begin.GetProperty("status").GetString().Should().Be("invalid");
+    }
+
+    [Fact]
+    public async Task SwitchSource_ExpiredOrUnknownSource_ReturnsTheAckStatus()
+    {
+        using var session = await LoginAsProviderAsync();
+        await using var hub = await ConnectAsync(session, "/hubs/transcription");
+
+        var expired = await hub.InvokeAsync<JsonElement>("SwitchSource", Guid.NewGuid(), "online_speaker", Ct);
+        var invalid = await hub.InvokeAsync<JsonElement>("SwitchSource", Guid.NewGuid(), "phone", Ct);
+
+        expired.GetProperty("status").GetString().Should().Be("expired");
+        invalid.GetProperty("status").GetString().Should().Be("invalid");
     }
 
     [Fact]

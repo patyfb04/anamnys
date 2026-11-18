@@ -640,6 +640,30 @@ Recording consent (F-23 + F-24; spec `design/specs/2026-11-15-recording-consent-
 - **Tab audio capture (F-25)** is G2; **transient-audio proof (F-26)**, pseudonymisation (F-27) and transcript as source (F-28) are G2 to G4.
 - **Not exercised in a browser or against a live server;** the migration is not applied to the dev database, so a few dev-database suites fail until it is. The Confluence page is pending.
 
+## Captura de áudio
+
+Transient audio proof and online session capture (F-25 + F-26; spec `design/specs/2026-11-16-transient-audio-tab-capture-design.md`; chapter `documentation/45-transient-audio-online-capture.md`).
+
+- **No direct capture of a call app's audio on mobile.** iOS and Android do not allow it; "Online pelo viva-voz" covers it (the call on the loudspeaker, no headset).
+- **No system audio on macOS.** The browser cannot capture a desktop app's audio there; use the web version of the call or the speaker method.
+- **Screen off on a phone.** Browsers suspend the page: the recording pauses and "Retomar" continues it; nothing is recorded meanwhile.
+- **No speaker separation in the transcript.** The two voices are mixed into one stream.
+- **No video or screen recording.** The video track is stopped at once.
+- **No unit-test runner in the provider app.** The pure logic of `audioCapture.ts` (support detection, constraints, state machine, `pauseWhenHidden`, `sourceFor`, `processingMatches`) is ready to be tested but has no tests; only build and lint plus manual checks.
+- **A resume that adds a source is not audited.** `BeginRecording` on a resume adds the new source to the recording's set without a `recording_source_switched` entry (only `SwitchSource` audits); the destruction row still lists every source.
+- **The source audit is not atomic with the source change.** `SwitchSource` adds the source to the buffer first and audits second; if the audit save fails the source stays added and the call throws (the client can retry).
+- **Test gaps on the hub:** mode mismatch on a resume is tested on the buffers (a resume with another mode is refused with `invalid`) but not through a real hub; `forbidden` through a real hub and concurrent switches are not covered.
+- **A buffer that expired and is re-opened can take another mode.** A resume of a live buffer must keep its mode, but an expired buffer leaves no memory of the recording id, so a dictation-mode begin with the same id is accepted (it needs the dictation confirmation; a session begin runs the consent gate again).
+- **One destruction row per destroyed server copy, not per recording.** A recording swept during a pause longer than 10 minutes, a suspension or a disconnection (or whose finalize failed) and then re-sent by the client ends with an `abandoned`/`failed` row (note null) and then its final row (`transcribed`); no audio survives and the note page shows its own latest row. No keep-alive is sent. A finalize ack lost across a reconnect that is never retried ends with `abandoned` next to `transcribed`.
+- **Audio sent after the finalize** is covered by the same row only when the client calls the finalize again after re-opening; otherwise the sweeper writes an `abandoned` row.
+- **A failed finalize transaction still destroys the audio** and records a `failed` row (no note); a server restart loses in-memory audio with no row (by design, nothing to recover).
+- **The cue outside our tab needs notification permission.** When the share stops or the page is suspended, the tab title gets "Gravação pausada · "; the system notification appears only if the browser permission was already granted (the app never asks for it), so on a desktop without it the cue is weak.
+- **Hidden page pauses only on mobile.** On desktop the provider sits in the call tab, so a hidden page does not pause; only a real `AudioContext` suspension does (a deviation from the spec's wording, decided in the ledger; to be confirmed by the user).
+- **Partial-join paths are untested in a browser.** Paths where only part of a new method joined during a switch (the call or the microphone missing) depend on `AudioMixer.add` throwing, which is unlikely in practice.
+- **The exact-constraint retry for echo cancellation was not observed in a browser.** If a device cannot honour it, the plain stream is kept and the mismatch remains.
+- **No begin audit for a session (deviation from spec §2.2, "the existing begin audit").** The source is kept in the meta and the destruction row; `recording_source_switched` is the only audit value naming a source. A dictation reconnect writes one `dictation_confirmed` per begin (see the consent gap above).
+- **Not exercised in a browser or against a live server by the implementers;** the migration is not applied to the dev database, so `NoteEndpointTests` and other dev-database suites fail until it is. The Confluence page is pending.
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

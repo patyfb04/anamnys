@@ -30,9 +30,9 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
         var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
         var queue = new TranscriptionQueue();
         var id = Guid.NewGuid();
-        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10)));
+        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10), "session", [RecordingSources.InPerson]));
         buffers.Append(id, seed.ProviderId, 0, [1, 0, 2, 0]);
-        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct);
+        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct, NullLogger.Instance);
         queue.Reader.TryRead(out var job).Should().BeTrue();
         var proxy = new RecordingProxy(failOn: "NoteProgress");
         var services = new ServiceCollection()
@@ -167,9 +167,9 @@ public class TranscriptionWorkerTests(SharedAppHostFixture fixture)
         var buffers = new RecordingBuffers(new FakeTimeProvider(Now));
         var queue = new TranscriptionQueue();
         var id = Guid.NewGuid();
-        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10)));
+        buffers.Begin(id, new RecordingMeta(seed.ProviderId, patient, null, "DAP", "pt", Now.AddMinutes(-10), "session", [RecordingSources.InPerson]));
         buffers.Append(id, seed.ProviderId, 0, [1, 0, 2, 0]);
-        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct);
+        await LiveRecordings.FinalizeAsync(db, buffers, queue, seed.ProviderId, id, Now, Ct, NullLogger.Instance);
         queue.Reader.TryRead(out var job).Should().BeTrue();
         var services = new ServiceCollection()
             .AddScoped(_ => seed.CreateDbContext())

@@ -97,6 +97,7 @@ assuming that because something is *referenced* in the code, it must *exist*.
 42. Recurring Appointments (F-29, delivery 3)
 43. Structured Intake (F-31)
 44. Recording Consent (F-23, F-24)
+45. Transient Audio and Online Session Capture (F-25, F-26)
 
 ## Building a single PDF from these files
 

@@ -10,7 +10,7 @@ public class RecordingBuffersTests
     private static readonly Guid Provider = Guid.NewGuid();
     private static readonly Guid Other = Guid.NewGuid();
 
-    private static RecordingMeta Meta(Guid provider) => new(provider, Guid.NewGuid(), null, "DAP", "pt", Start);
+    private static RecordingMeta Meta(Guid provider) => new(provider, Guid.NewGuid(), null, "DAP", "pt", Start, "session", [RecordingSources.InPerson]);
 
     [Fact]
     public void Append_InOrder_AcceptsAndTake_ReturnsAllBytes()
@@ -105,14 +105,19 @@ public class RecordingBuffersTests
         var buffers = new RecordingBuffers(clock);
         var idle = Guid.NewGuid();
         var active = Guid.NewGuid();
-        buffers.Begin(idle, Meta(Provider));
+        var idleMeta = Meta(Provider);
+        buffers.Begin(idle, idleMeta);
+        buffers.Append(idle, Provider, 0, [7, 8]);
+        var idleBytes = buffers.BackingBytes(idle)!;
         buffers.Begin(active, Meta(Provider));
         clock.Advance(TimeSpan.FromMinutes(9));
         buffers.Append(active, Provider, 0, [1, 2]);
         clock.Advance(TimeSpan.FromMinutes(2));
 
-        buffers.SweepExpired().Should().Be(1);
+        buffers.SweepExpired().Should().Equal((idle, idleMeta));
 
+        idleBytes.Should().OnlyContain(b => b == 0);
+        buffers.BackingBytes(idle).Should().BeNull();
         buffers.Peek(idle, Provider).Should().BeNull();
         buffers.Peek(active, Provider).Should().NotBeNull();
     }

@@ -681,7 +681,16 @@ export interface NoteDetail {
   exportedAt: string | null;
   // Set on an Anamnese note generated from an intake (F-31).
   intakeId?: string | null;
+  // Audio destruction record of the recording the note came from (F-26); null when it did not come from one.
+  audioDestroyedAt?: string | null;
+  audioOutcome?: AudioOutcome | null;
+  audioSources?: RecordingSource[] | null;
 }
+
+// How a recording's audio ended (AudioDestructionLogs.Outcome).
+export type AudioOutcome = "transcribed" | "failed" | "abandoned";
+// Where a recording's audio came from (F-25): the microphone in person, the call's tab/screen, or the call on speaker.
+export type RecordingSource = "in_person" | "online_capture" | "online_speaker";
 
 export type NoteListFilter = "pending" | "signed" | "failed";
 export type NoteMode = "ai" | "manual";

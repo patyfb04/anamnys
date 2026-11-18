@@ -160,6 +160,10 @@ gate.
 - `dictation`: needs `dictationConfirmed = true`, else `dictation_not_confirmed`; then it writes the audit row
   `dictation_confirmed` (actor the provider, value = the patient id only) and saves.
 
+Since G2 the hub's `BeginRecording` also takes a `source` (`in_person|online_capture|online_speaker`) and there is a
+`SwitchSource` method; the consent gate above is unchanged. The online sources, the destruction record and the proof
+that no audio survives are chapter 45.
+
 The ack is `{ status, reason }` with statuses `ok`, `invalid`, `not_found`, `archived`, `forbidden`, `consent_required`
 (reason `none|sent|revoked|expired|assent_missing|archived`) and `dictation_not_confirmed` (reason null).
 
@@ -344,5 +348,5 @@ gravação"):
 - No signing without e-mail (paper term).
 - A consent revoked mid-recording does not stop the running recording; only a reconnect is refused.
 - The dictation audit row is written per begin, so per reconnect.
-- Tab audio capture (F-25) belongs to G2.
+- Tab audio capture (F-25) and the transient-audio proof (F-26) are built in G2: chapter 45.
 - The Confluence documentation is updated separately.

@@ -33,7 +33,9 @@ function clock(ms: number): string {
 export default function RecordingCard(props: Props) {
   const { state, connection, elapsedMs, level, canStart, startHint, onStart, onPause, onResume, onStop, processing } = props;
   const { t } = useTranslation();
-  const live = state === "recording" || state === "paused";
+  // suspended (by the browser) and share_lost (the call's share stopped) are pauses too; CaptureStatusPanel explains them.
+  const live = state === "recording" || state === "paused" || state === "suspended" || state === "share_lost";
+  const paused = state === "paused" || state === "suspended" || state === "share_lost";
   const [history, setHistory] = useState<number[]>(() => Array(BARS).fill(0));
 
   // Keeps the last BARS peaks while recording so the meter scrolls like a waveform.
@@ -48,7 +50,7 @@ export default function RecordingCard(props: Props) {
       ? { label: t("liveSession.status.reconnecting"), tone: "bg-errorContainer text-onErrorContainer" }
       : state === "recording"
         ? { label: t("liveSession.status.recording"), tone: "bg-errorContainer text-onErrorContainer" }
-        : state === "paused"
+        : paused
           ? { label: t("liveSession.status.paused"), tone: "bg-surfaceContainerHighest text-onSurfaceVariant" }
           : { label: t("liveSession.status.ready"), tone: "bg-primaryFixed text-onPrimaryFixedVariant" };
 
@@ -106,7 +108,7 @@ export default function RecordingCard(props: Props) {
                 {t("liveSession.pause")}
               </button>
             )}
-            {state === "paused" && (
+            {(state === "paused" || state === "suspended") && (
               <button
                 type="button"
                 onClick={onResume}

@@ -1,5 +1,5 @@
 import * as signalR from "@microsoft/signalr";
-import type { LiveLanguage, LiveNoteFormat, NoteFailureReason, NoteSnapshot } from "@anamnys/shared/lib/types";
+import type { LiveLanguage, LiveNoteFormat, NoteFailureReason, NoteSnapshot, RecordingSource } from "@anamnys/shared/lib/types";
 
 // Unset in normal Aspire-hosted dev/prod — relative "/hubs" resolves through vite.config.ts's
 // same-origin proxy to the server resource (see also api/client.ts).
@@ -17,6 +17,8 @@ export interface ChunkAck {
   lastSeq: number;
 }
 export interface FinalizeAck { status: "ok" | "buffer_expired"; noteId: string | null }
+// invalid: unknown source or a dictation (cannot switch); expired: no buffer for the recording.
+export interface SwitchAck { status: "ok" | "invalid" | "expired" | "forbidden" }
 
 // SignalR's JSON hub protocol serializes byte[] as base64 (System.Text.Json), so the client
 // encodes manually.
@@ -68,8 +70,12 @@ export const liveSessionHub = {
     language: LiveLanguage,
     mode: LiveMode,
     dictationConfirmed: boolean,
+    // Where the audio comes from now; a resume with a new source adds it to the recording's list.
+    source: RecordingSource,
   ) =>
-    live!.invoke<BeginAck>("BeginRecording", recordingId, patientId, appointmentId, format, language, mode, dictationConfirmed),
+    live!.invoke<BeginAck>("BeginRecording", recordingId, patientId, appointmentId, format, language, mode, dictationConfirmed, source),
+  // Mid-recording method change (session mode only); the chunks keep their sequence.
+  switchSource: (recordingId: string, source: RecordingSource) => live!.invoke<SwitchAck>("SwitchSource", recordingId, source),
   sendChunk: (recordingId: string, seq: number, bytes: Uint8Array) =>
     live!.invoke<ChunkAck>("SendAudioChunk", recordingId, seq, toBase64(bytes)),
   finalize: (recordingId: string) => live!.invoke<FinalizeAck>("FinalizeStream", recordingId),
