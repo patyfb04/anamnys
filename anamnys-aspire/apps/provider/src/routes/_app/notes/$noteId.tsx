@@ -13,6 +13,10 @@ import Avatar from "@anamnys/shared/ui/Avatar";
 import Badge from "@anamnys/shared/ui/Badge";
 import DetailCard from "@/components/patients/detail/DetailCard";
 import NoteSections from "@/components/notes/NoteSections";
+import { highlightTokens } from "@/components/notes/PseudonymTokens";
+import { pseudonymizationApi } from "@anamnys/shared/api/pseudonymization";
+import { ApiError } from "@anamnys/shared/api/client";
+import { toast } from "@anamnys/shared/ui/Toaster";
 import RestructureControl from "@/components/notes/RestructureControl";
 import SignCard from "@/components/notes/SignCard";
 import NoteThemes from "@/components/themes/NoteThemes";
@@ -169,6 +173,7 @@ function NotePage() {
                 sections={note.sections}
                 editable={editable}
                 noteId={noteId}
+                markTokens={!!note.transcriptPseudonymized}
                 onSaved={() => void query.refetch()}
                 highlight={passage.data && passage.data.id === activeExcerptId && passage.data.noteId === noteId ? passage.data : null}
                 onMark={(note.status === "ReadyForReview" || !!note.signedAt) && patient.data && !patient.data.archivedAt ? setSelection : undefined}
@@ -211,6 +216,7 @@ function NotePage() {
           {note.rawTranscript && (
             <TranscriptCard
               text={note.rawTranscript}
+              markTokens={!!note.transcriptPseudonymized}
               defaultOpen={!hasSections}
               title={note.inputMode === "Text" ? t("noteView.originalText") : t("noteView.transcript")}
             />
@@ -273,7 +279,7 @@ function WriteManually({ noteId, onCreated }: { noteId: string; onCreated: () =>
 
 // The raw transcript can be long (up to ~35 min of speech), so it starts collapsed once the note
 // has sections; with no sections it is the note, so it starts open.
-function TranscriptCard({ text, defaultOpen, title }: { text: string; defaultOpen: boolean; title: string }) {
+function TranscriptCard({ text, defaultOpen, title, markTokens }: { text: string; defaultOpen: boolean; title: string; markTokens: boolean }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -294,9 +300,15 @@ function TranscriptCard({ text, defaultOpen, title }: { text: string; defaultOpe
         </button>
       }
     >
+      {open && markTokens && (
+        <p className="mb-3 flex items-start gap-2 text-body-sm text-onSurfaceVariant">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+          {t("pseudonymization.notice")}
+        </p>
+      )}
       {open && (
         <p id="note-transcript" className="max-h-96 overflow-y-auto whitespace-pre-wrap text-body-md text-onSurface">
-          {text}
+          {markTokens ? highlightTokens(text) : text}
         </p>
       )}
     </DetailCard>
@@ -320,19 +332,68 @@ function NoteBody({ note, onRetried }: { note: NoteDetail; onRetried: () => void
     }
   };
 
+  const retryProtection = async () => {
+    setRetrying(true);
+    try {
+      await pseudonymizationApi.retry(note.id);
+    } catch (e) {
+      // 404/409/410: the refetch below shows the note as it is now (the text may be gone).
+      const status = e instanceof ApiError ? e.status : undefined;
+      if (status !== 404 && status !== 409 && status !== 410) toast.error(t("pseudonymization.failed.retryFailed"));
+    } finally {
+      setRetrying(false);
+      onRetried();
+    }
+  };
+
   if (note.status === "Processing" || note.structureStatus === "pending") {
+    // An AI-mode note has no stored text until the pseudonymisation step finishes.
+    const protecting = note.status === "Processing" && note.inputMode === "Text" && !note.rawTranscript;
     return (
       <p className="mb-4 flex items-center gap-2 rounded-radii-lg bg-surfaceContainerLow p-4 text-body-md text-onSurfaceVariant">
         <Loader2 size={18} className="animate-spin text-primary" aria-hidden />
-        {note.status === "Processing" ? t("noteView.processing") : t("noteView.structuring")}
+        {protecting
+          ? t("pseudonymization.processing")
+          : note.status === "Processing"
+            ? t("noteView.processing")
+            : t("noteView.structuring")}
       </p>
+    );
+  }
+  if (note.status === "Failed" && note.failureReason === "pseudonymization_failed") {
+    return (
+      <div className="mb-4 flex flex-col items-start gap-3 rounded-radii-lg bg-errorContainer p-4 text-onErrorContainer">
+        <p className="flex items-center gap-2 text-body-md">
+          <AlertCircle size={18} aria-hidden />
+          {t("pseudonymization.failed.title")}
+        </p>
+        <p className="text-body-sm">
+          {note.pseudonymizationRetryable ? t("pseudonymization.failed.retryable") : t("pseudonymization.failed.gone")}
+        </p>
+        {note.pseudonymizationRetryable && (
+          <button
+            type="button"
+            disabled={retrying}
+            onClick={retryProtection}
+            aria-busy={retrying}
+            className="inline-flex items-center gap-2 rounded-radii-lg bg-primary px-4 py-2 text-label-lg text-onPrimary disabled:opacity-60"
+          >
+            {retrying && <Loader2 size={14} className="animate-spin" aria-hidden />}
+            {t("pseudonymization.failed.retry")}
+          </button>
+        )}
+      </div>
     );
   }
   if (note.status === "Failed") {
     return (
       <p className="flex items-center gap-2 rounded-radii-lg bg-errorContainer p-4 text-body-md text-onErrorContainer">
         <AlertCircle size={18} aria-hidden />
-        {note.failureReason ? t(`liveSession.failed.${note.failureReason}`) : t("noteView.failed")}
+        {note.failureReason === "server_restart" && note.inputMode === "Text"
+          ? t("liveSession.failed.server_restart_text")
+          : note.failureReason
+            ? t(`liveSession.failed.${note.failureReason}`)
+            : t("noteView.failed")}
       </p>
     );
   }

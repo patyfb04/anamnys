@@ -664,6 +664,30 @@ Transient audio proof and online session capture (F-25 + F-26; spec `design/spec
 - **No begin audit for a session (deviation from spec §2.2, "the existing begin audit").** The source is kept in the meta and the destruction row; `recording_source_switched` is the only audit value naming a source. A dictation reconnect writes one `dictation_confirmed` per begin (see the consent gap above).
 - **Not exercised in a browser or against a live server by the implementers;** the migration is not applied to the dev database, so `NoteEndpointTests` and other dev-database suites fail until it is. The Confluence page is pending.
 
+## Pseudonimização
+
+Third-party pseudonymisation (F-27; spec `design/specs/2026-11-17-pseudonymization-design.md`; chapter `documentation/46-pseudonymization.md`). The wording is "reduz a exposição de terceiros", never "anonimizado": the data stays pseudonymised personal data.
+
+- **"Zé" and "José" get different tokens.** The fingerprint is of the normalised surface string; nicknames and spelling variants of one person are not linked (spec §9).
+- **What the provider writes in review is not pseudonymised.** The manual note and any edit made in review keep the typed names (spec §9).
+- **Names inside uploaded external documents and their extracted facts are not pseudonymised** (spec §9).
+- **No provider-side legend of tokens.** It would rebuild a reversible map (spec §9).
+- **Residual risk: with the patient's secret one can test a guessed name** against the stored fingerprints. No mapping from a token back to a name exists.
+- **Sentence-start over-suppression.** The first-name safety net also fires at the start of a sentence, so ordinary words that are first names ("Rosa", "Clara", "Vitória", "Glória") may become person tokens; over-suppression is preferred to a leak. The same goes for a capitalised word right after a name (an organisation after a person) and for a segment cut inside a name that the 200-character overlap does not recover.
+- **A relative with the patient's surname stays partly visible.** The patient's own names are never tokenised, so "Pedro Silva" for a patient "Ana Silva" becomes "[P1] Silva".
+- **The provider's first name alone is not excluded.** Only the provider's full profile name is; a third party who shares the provider's first name is replaced.
+- **No nickname field.** `Patients` has none, so a nickname of the patient is replaced unless it is also a name of the patient.
+- **A legacy note restructured before the backfill converts it still sends its original names to the in-process model.** Until the backfill converts it, a legacy transcript is restructured and theme-suggested from its original text; the draft sections written before are never converted either (the notice is shown on the transcript only). Accepted by spec ("applied from now on").
+- **Backfill assumes a single server instance.** Two instances would both process a running backfill; the guarded update keeps one conversion per note but the `Total` can be decremented twice for a note changed by the other.
+- **The backfill advances only between live requests** (background priority on the model gate), and a run over the 12-minute budget counts as a failed note.
+- **Backfill HTTP paths are tested through the service.** The 202 and 409 answers and the retry endpoint's authenticated paths are covered through `TryStartAsync` and `PseudonymizationRetry`, not through an authenticated HTTP call; only the 401 is tested over HTTP.
+- **The 12-minute run budget is an estimate** (`NoteStructuring:PseudonymizationRunTimeout`, about 2 tokens per second plus prompt evaluation), not measured on the target CPU.
+- **A restart loses the held text.** After a restart or after 10 minutes a failed note cannot be retried; a typed AI-mode note left in `Processing` by a restart is failed with `server_restart`.
+- **Development key ring uses DPAPI.** Without a certificate the pseudonymisation keys in `PseudonymizationKeys` are bound to the Windows user: a dev database copied to another machine or user loses every patient secret (tokens change, existing patients fail until the secret row is deleted).
+- **Certificate rotation needs the old certificate installed** and listed in `DataProtection:PreviousCertificateThumbprints`; losing it makes the older keys, and so the secrets they protect, unreadable.
+- **Real-model quality is a manual check.** Tests use a fake detector with fixed answers; the prompt on real Portuguese clinical speech is verified only by the user.
+- **Not exercised in a browser or against a live server by the implementers;** the migration is not applied to the dev database. The Confluence page is pending (spec §10).
+
 ## Guarda e descarte
 
 Retention and compliance panel (F-06; chapter `documentation/30-retention-panel.md`).

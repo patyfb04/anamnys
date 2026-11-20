@@ -4,6 +4,7 @@ using Anamnys.Server.Appointments;
 using Anamnys.Server.Data;
 using Anamnys.Server.Data.Entities;
 using Anamnys.Server.Patients;
+using Anamnys.Server.Pseudonymization;
 using Anamnys.Server.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,8 +25,10 @@ public static class DiscardService
 
     public static async Task<DiscardResult> DiscardAsync(
         AnamnysDbContext db, INoteFileStore store, ILogger logger, Guid providerId, Guid patientId, string? confirmName,
-        DateTimeOffset now, CancellationToken ct)
+        DateTimeOffset now, CancellationToken ct, PseudonymizationHolds? holds = null)
     {
+        // F-27: a held original text of any of the patient's notes goes with the record.
+        List<Guid> noteIds = [];
         var nowUtc = now.ToUniversalTime();
         var today = PatientSearchQuery.PracticeToday(now);
         var termId = Guid.NewGuid();
@@ -52,6 +55,10 @@ public static class DiscardService
 
         if (result.Outcome == DiscardOutcome.Ok)
         {
+            foreach (var noteId in noteIds)
+            {
+                holds?.Forget(noteId);
+            }
             await DeleteWithRetriesAsync(store, logger, objectKeys);
         }
         else if (stored && !committing)
@@ -107,6 +114,7 @@ public static class DiscardService
                 .SingleOrDefaultAsync(r => r.ProviderId == providerId && r.RecordKind == RetentionRule.Prontuario, ct);
             var period = await RetentionClock.PeriodAsync(db, providerId, patientId, ct);
             objectKeys = await ObjectKeysAsync(db, providerId, patientId, ct);
+            noteIds = await db.Notes.Where(n => n.PatientId == patientId && n.ProviderId == providerId).Select(n => n.Id).ToListAsync(ct);
             var counts = await DeleteContentAsync(db, providerId, patientId, patient.AccountId, nowUtc, ct);
 
             var provider = await db.Providers.AsNoTracking().SingleAsync(p => p.Id == providerId, ct);
@@ -268,6 +276,10 @@ public static class DiscardService
         await Run("intakes", $"""DELETE FROM "Intakes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         // F-26: the audio destruction records of the patient's recordings (ids and codes only; the audio never existed here).
         await Run("audioDestructionLogs", $"""DELETE FROM "AudioDestructionLogs" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
+        // F-27: the pseudonym tokens and the patient's secret (fingerprints and a protected key, no text). Not counted in
+        // the term: they are not clinical content. The patient row is already locked for this provider above.
+        await db.Database.ExecuteSqlAsync($"""DELETE FROM "PseudonymTokens" WHERE "PatientId" = {p}""", ct);
+        await db.Database.ExecuteSqlAsync($"""DELETE FROM "PatientPseudonymSecrets" WHERE "PatientId" = {p}""", ct);
         await Run("clinicalDocuments", $"""DELETE FROM "ClinicalDocuments" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("notes", $"""DELETE FROM "Notes" WHERE "PatientId" = {p} AND "ProviderId" = {v}""");
         await Run("medications", $"""DELETE FROM "MedicationEntries" WHERE "PatientId" = {p}""");

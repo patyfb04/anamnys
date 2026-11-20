@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { notesApi } from "@anamnys/shared/api/notes";
+import { pseudonymizationApi } from "@anamnys/shared/api/pseudonymization";
+import { ApiError } from "@anamnys/shared/api/client";
+import { toast } from "@anamnys/shared/ui/Toaster";
 import type { NoteFailureReason } from "@anamnys/shared/lib/types";
 import { progressHub } from "@/lib/signalr";
 
@@ -28,6 +31,30 @@ export default function ProcessingStep({ noteId, onRecordAgain }: { noteId: stri
   const polledFailure = poll.data?.status === "Failed" ? (poll.data.failureReason ?? "transcription_error") : null;
   const polledReady = poll.data?.status === "ReadyForReview";
   const failed = hubFailed ?? polledFailure;
+  const [retrying, setRetrying] = useState(false);
+  const [gone, setGone] = useState(false);
+
+  // A hub failure may arrive before the polled note shows the failure: refetch once to learn whether it is retryable.
+  useEffect(() => {
+    if (hubFailed === "pseudonymization_failed") void poll.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubFailed]);
+
+  const retryProtection = async () => {
+    if (!noteId) return;
+    setRetrying(true);
+    try {
+      await pseudonymizationApi.retry(noteId);
+      setHubFailed(null);
+    } catch (e) {
+      const status = e instanceof ApiError ? e.status : undefined;
+      if (status === 404 || status === 409 || status === 410) setGone(true);
+      else toast.error(t("pseudonymization.failed.retryFailed"));
+    } finally {
+      setRetrying(false);
+      void poll.refetch();
+    }
+  };
 
   const goToNote = (id: string) => {
     if (navigated.current) return;
@@ -64,6 +91,31 @@ export default function ProcessingStep({ noteId, onRecordAgain }: { noteId: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteId, navigate]);
 
+  if (failed === "pseudonymization_failed" && noteId) {
+    const retryable = poll.data?.status === "Failed" && !!poll.data.pseudonymizationRetryable && !gone;
+    return (
+      <div className="flex flex-col items-start gap-4">
+        <p className="text-body-lg text-error">{t(`liveSession.failed.${failed}`)}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          {retryable && (
+            <button
+              type="button"
+              disabled={retrying}
+              aria-busy={retrying}
+              onClick={retryProtection}
+              className="px-4 py-2 rounded-radii-lg bg-primary text-label-lg text-onPrimary disabled:opacity-60"
+            >
+              {t("pseudonymization.failed.retry")}
+            </button>
+          )}
+          <Link to="/notes/$noteId" params={{ noteId }} className="px-4 py-2 rounded-radii-lg text-label-lg text-primary hover:bg-pastelLavender">
+            {t("pseudonymization.openNote")}
+          </Link>
+          <button type="button" onClick={onRecordAgain} className="px-4 py-2 rounded-radii-lg text-label-lg text-primary hover:bg-pastelLavender">{t("liveSession.recordAgain")}</button>
+        </div>
+      </div>
+    );
+  }
   if (failed) {
     return (
       <div className="flex flex-col items-start gap-4">

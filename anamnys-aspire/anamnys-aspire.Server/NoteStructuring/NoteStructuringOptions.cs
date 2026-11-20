@@ -15,6 +15,11 @@ public sealed class NoteStructuringOptions
     public int MaxOutputTokens { get; set; }
     public float Temperature { get; set; } = 0.1f;
 
+    // F-27: time budget of one pseudonymisation detector run (a chunk of at most 1536 text tokens plus up to 1024 output
+    // tokens), counted once the LLM gate is held. A run over it fails the step. The default leaves room for a full
+    // 1024-token output on a slow CPU (about 2 tokens/s) after the prompt; raise it on slower machines.
+    public TimeSpan PseudonymizationRunTimeout { get; set; } = TimeSpan.FromMinutes(12);
+
     // Theme suggestion keeps its own small context for the life of the process: the cached prompt
     // prefix (rules + vocabulary), the note text cut to what remains, and the output.
     public uint SuggestionContextSize { get; set; } = 4096;

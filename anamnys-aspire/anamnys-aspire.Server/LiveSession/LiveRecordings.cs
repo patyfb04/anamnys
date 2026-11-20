@@ -191,7 +191,8 @@ public static class LiveRecordings
     public static async Task<int> FailOrphansAsync(AnamnysDbContext db, DateTimeOffset now, CancellationToken ct)
     {
         var transcriptions = await db.Notes
-            .Where(n => n.Status == "Processing" && n.RecordingId != null)
+            // F-27: a "Nota com IA" waits in Processing for the pseudonymisation step; its text was in memory only.
+            .Where(n => n.Status == "Processing" && (n.RecordingId != null || n.InputMode == "Text"))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(n => n.Status, "Failed")
                 .SetProperty(n => n.FailureReason, "server_restart")

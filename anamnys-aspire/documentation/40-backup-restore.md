@@ -174,6 +174,13 @@ fails on a database with no providers).
   6. Run a drill (section 9) with the new key.
 - The key serves WAL-G and rclone at once, so a compromise exposes both stores. Rotate as above and treat the old
   backups as exposed.
+- **Pseudonymisation keys (F-27).** The table `PseudonymizationKeys` (the Data Protection key ring that protects each
+  patient's pseudonymisation secret) lives in the database, so it travels with the database backup and the restore.
+  Those keys are encrypted with the certificate named by `DataProtection:CertificateThumbprint` (and, after a rotation,
+  `DataProtection:PreviousCertificateThumbprints`): **the certificate is not in the backup and must be restorable
+  separately** (and installed on the restore host before the server starts). Without the keys or the certificate the
+  patient secrets cannot be read, tokens are no longer stable and each pseudonymisation of an existing patient fails. See
+  chapter 46, section 5.
 
 ---
 

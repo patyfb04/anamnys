@@ -43,6 +43,7 @@ public class RetentionPanelMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-11-12-structured-intake.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-15-recording-consent.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-16-transient-audio.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-11-17-pseudonymization.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))
@@ -200,6 +201,7 @@ public class RetentionPanelMigrationTests(SharedAppHostFixture fixture)
         await RunMigrationAsync(oldDb, MigrationFile);
         await RunMigrationAsync(oldDb, "2026-11-12-structured-intake.sql"); // adds the Intakes trigger; the bootstrap script already includes it
         await RunMigrationAsync(oldDb, "2026-11-16-transient-audio.sql"); // adds the AudioDestructionLogs trigger; the bootstrap script already includes it
+        await RunMigrationAsync(oldDb, "2026-11-17-pseudonymization.sql"); // adds the pseudonym secret and token triggers; the bootstrap script already includes it
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using var freshDb = await fresh.OpenAsync(Ct);
         await RunMigrationAsync(freshDb, MigrationFile);
@@ -214,7 +216,7 @@ public class RetentionPanelMigrationTests(SharedAppHostFixture fixture)
 
         // Assert
         oldTriggers.Should().Equal(freshTriggers);
-        oldTriggers.Should().HaveCount(20);
+        oldTriggers.Should().HaveCount(22);
         oldTriggers.Should().Contain(t => t.StartsWith("Notes:Notes_patient_not_discarded") && t.Contains("BEFORE INSERT"));
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be("ANDIS");
     }

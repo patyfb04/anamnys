@@ -644,7 +644,18 @@ export type LiveLanguage = "pt";
 
 // Server status strings, as stored in Notes.Status.
 export type NoteDetailStatus = "Draft" | "Processing" | "ReadyForReview" | "Signed" | "Exported" | "Failed";
-export type NoteFailureReason = "no_speech" | "transcription_error" | "server_restart";
+export type NoteFailureReason = "no_speech" | "transcription_error" | "server_restart" | "pseudonymization_failed";
+
+// Third-party pseudonymisation (F-27): progress of the backfill of old transcripts.
+export interface PseudonymizationBackfillStatus {
+  pending: number;
+  running: boolean;
+  total: number;
+  done: number;
+  failed: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+}
 
 export type StructureStatus = "pending" | "done" | "failed";
 export type StructureFailure = "model_error" | "too_long" | "server_restart";
@@ -685,6 +696,11 @@ export interface NoteDetail {
   audioDestroyedAt?: string | null;
   audioOutcome?: AudioOutcome | null;
   audioSources?: RecordingSource[] | null;
+  // F-27: the stored transcript carries codes ([P1], [Empresa 1]…) instead of third-party names.
+  transcriptPseudonymized?: boolean;
+  pseudonymizationFailedAt?: string | null;
+  // A failed note whose original text is still held in memory, so "Tentar de novo" can work.
+  pseudonymizationRetryable?: boolean;
 }
 
 // How a recording's audio ended (AudioDestructionLogs.Outcome).

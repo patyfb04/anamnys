@@ -48,6 +48,7 @@ public class RecordingConsentMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, MigrationFile);
             await RunMigrationAsync(db, MigrationFile);
             await RunMigrationAsync(db, "2026-11-16-transient-audio.sql"); // the bootstrap script already includes it
+            await RunMigrationAsync(db, "2026-11-17-pseudonymization.sql"); // the bootstrap script already includes it
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))

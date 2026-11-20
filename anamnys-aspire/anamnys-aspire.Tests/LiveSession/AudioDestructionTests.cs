@@ -5,6 +5,8 @@ using Amazon.S3.Model;
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.Notes;
+using Anamnys.Server.Pseudonymization;
+using Anamnys.Tests.Pseudonymization;
 using Anamnys.Tests.RecordingConsents;
 using FluentAssertions;
 using Microsoft.AspNetCore.SignalR;
@@ -28,12 +30,15 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    // The only bytea columns of the schema: token hashes and the timestamp authority's tokens. None holds audio.
+    // The only bytea columns of the schema: token hashes, the timestamp authority's tokens and the F-27 pseudonym secret
+    // and fingerprints (32-byte values). None holds audio.
     private static readonly string[] ByteaWhitelist =
     [
         "AppointmentConfirmationTokens.TokenHash", "Dossiers.AnchorToken", "IntegrityAnchors.Token", "PatientInvitations.TokenHash",
-        "RecordingConsents.RevokeTokenHash", "RecordingConsents.SignTokenHash",
+        "RecordingConsents.RevokeTokenHash", "RecordingConsents.SignTokenHash", "PatientPseudonymSecrets.Protected", "PseudonymTokens.Fingerprint",
     ];
+
+    private static PseudonymizationStep Step() => PseudonymizationKit.Step(clock: new FakeTimeProvider(Later));
 
     static AudioDestructionTests() => QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
@@ -52,7 +57,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         // Act
         await using (var db = s.CreateDbContext())
         {
-            var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(x => { samples = x; return "Paciente relata melhora."; }), job,
+            var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(x => { samples = x; return "Paciente relata melhora."; }), Step(), job,
                 new FakeTimeProvider(Later), NullLogger.Instance, Ct);
             outcome.Should().Be(TranscriptionOutcome.Ready);
         }
@@ -79,7 +84,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         // Act
         await using (var db = s.CreateDbContext())
         {
-            (await NoteTranscription.ProcessAsync(db, transcriber, job, new FakeTimeProvider(Later), NullLogger.Instance, Ct))
+            (await NoteTranscription.ProcessAsync(db, transcriber, Step(), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct))
                 .Should().Be(TranscriptionOutcome.Ready);
         }
 
@@ -110,7 +115,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         // Act
         await using (var db = s.CreateDbContext())
         {
-            var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(x => { samples = x; throw new InvalidOperationException(echo); }), job,
+            var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(x => { samples = x; throw new InvalidOperationException(echo); }), Step(), job,
                 new FakeTimeProvider(Later), logger, Ct);
             outcome.Should().Be(TranscriptionOutcome.Error);
         }
@@ -135,7 +140,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         // Act
         await using (var db = s.CreateDbContext())
         {
-            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => " "), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
+            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => " "), Step(), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
         }
 
         // Assert
@@ -192,7 +197,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         var job = await FinalizeAsync(s, rec);
         await using (var db = s.CreateDbContext())
         {
-            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "texto"), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
+            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "texto"), Step(), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
         }
         var typed = await s.Db.AddNoteAsync(s.Provider, s.Adult, Later, Ct);
 
@@ -265,7 +270,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         var job = await FinalizeAsync(s, rec);
         await using (var db = s.CreateDbContext())
         {
-            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "texto"), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
+            await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "texto"), Step(), job, new FakeTimeProvider(Later), NullLogger.Instance, Ct);
         }
         rec.Buffers.Begin(rec.Id, LiveRecordings.NewMeta(s.Provider, s.Adult, null, "DAP", "pt", LiveRecordings.DictationMode, RecordingSources.InPerson, Later))
             .Should().Be(BeginStatus.Opened);
@@ -325,7 +330,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         // Act
         await using (var db = s.CreateDbContext())
         {
-            (await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "Paciente relata melhora."), job, new FakeTimeProvider(finalizedAt),
+            (await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "Paciente relata melhora."), Step(), job, new FakeTimeProvider(finalizedAt),
                 NullLogger.Instance, Ct)).Should().Be(TranscriptionOutcome.Ready);
         }
 
@@ -424,6 +429,7 @@ public class AudioDestructionTests(SharedAppHostFixture fixture)
         new ServiceCollection()
             .AddScoped(_ => s.CreateDbContext())
             .AddSingleton(transcriber)
+            .AddSingleton(Step())
             .BuildServiceProvider();
 
     // Objects: key → ETag of every object in the bucket.

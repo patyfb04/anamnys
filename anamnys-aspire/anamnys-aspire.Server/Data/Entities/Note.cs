@@ -24,6 +24,9 @@ public class Note
     public DateTimeOffset? ExportedAt { get; set; }
     // F-31: set on the Anamnese note generated from an intake (design/specs/2026-11-12-structured-intake-design.md §2).
     public Guid? IntakeId { get; set; }
+    // F-27: true once RawTranscript was written through the pseudonymisation step (design/specs/2026-11-17-pseudonymization-design.md §5).
+    public bool TranscriptPseudonymized { get; set; }
+    public DateTimeOffset? PseudonymizationFailedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }

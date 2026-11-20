@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.NoteStructuring;
+using Anamnys.Server.Pseudonymization;
 using Anamnys.Server.Themes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,9 @@ public sealed class TranscriptionWorker(
                 case StructureJob structure:
                     await RunStructureAsync(structure.NoteId, structure.ProviderId, scopes, progress, clock, logger, stoppingToken, structure.Format);
                     break;
+                case PseudonymizeJob pseudonymize:
+                    await RunPseudonymizeAsync(pseudonymize, scopes, progress, clock, logger, stoppingToken);
+                    break;
             }
         }
     }
@@ -43,6 +47,7 @@ public sealed class TranscriptionWorker(
             var outcome = await NoteTranscription.ProcessAsync(
                 scope.ServiceProvider.GetRequiredService<AnamnysDbContext>(),
                 scope.ServiceProvider.GetRequiredService<ITranscriber>(),
+                scope.ServiceProvider.GetRequiredService<PseudonymizationStep>(),
                 job, clock, logger, stoppingToken);
             recorded = true;
             ready = outcome == TranscriptionOutcome.Ready;
@@ -50,6 +55,8 @@ public sealed class TranscriptionWorker(
             {
                 TranscriptionOutcome.Ready => group.SendAsync("NoteReady", job.NoteId, stoppingToken),
                 TranscriptionOutcome.NoSpeech => group.SendAsync("NoteFailed", job.NoteId, "no_speech", stoppingToken),
+                TranscriptionOutcome.PseudonymizationFailed => group.SendAsync("NoteFailed", job.NoteId, PseudonymizationStep.FailureReason, stoppingToken),
+                TranscriptionOutcome.Gone => Task.CompletedTask,
                 _ => group.SendAsync("NoteFailed", job.NoteId, "transcription_error", stoppingToken),
             });
         }
@@ -74,6 +81,71 @@ public sealed class TranscriptionWorker(
         if (ready)
         {
             await RunStructureAsync(job.NoteId, job.ProviderId, scopes, progress, clock, logger, stoppingToken);
+        }
+    }
+
+    // F-27: the text of "Nota com IA" or a retried note goes through the pseudonymisation step, then structuring. Never
+    // throws; an unexpected error fails a note still in Processing (the text is then not held).
+    internal static async Task RunPseudonymizeAsync(
+        PseudonymizeJob job, IServiceScopeFactory scopes, IHubContext<ProgressHub> progress,
+        TimeProvider clock, ILogger logger, CancellationToken stoppingToken)
+    {
+        var group = progress.Clients.Group(ProgressHub.Group(job.NoteId));
+        var outcome = PseudonymizationOutcome.Gone;
+        try
+        {
+            using var scope = scopes.CreateScope();
+            outcome = await scope.ServiceProvider.GetRequiredService<PseudonymizationStep>().RunAsync(
+                scope.ServiceProvider.GetRequiredService<AnamnysDbContext>(),
+                job.NoteId, job.ProviderId, job.PatientId, job.Text, stoppingToken, job.HeldUntil);
+            if (outcome == PseudonymizationOutcome.Failed)
+            {
+                await group.SendAsync("NoteFailed", job.NoteId, PseudonymizationStep.FailureReason, stoppingToken);
+            }
+            else if (outcome == PseudonymizationOutcome.Done)
+            {
+                await group.SendAsync("NoteReady", job.NoteId, stoppingToken);
+            }
+        }
+        catch (Exception e) when (!stoppingToken.IsCancellationRequested)
+        {
+            logger.LogError("Pseudonymization job for note {NoteId} failed: {ExceptionType}", job.NoteId, e.GetType().Name);
+            if (outcome != PseudonymizationOutcome.Done)
+            {
+                await PseudonymizationFailBestEffortAsync(job, scopes, group, clock, logger, stoppingToken);
+            }
+        }
+
+        if (outcome == PseudonymizationOutcome.Done)
+        {
+            await RunStructureAsync(job.NoteId, job.ProviderId, scopes, progress, clock, logger, stoppingToken);
+        }
+    }
+
+    private static async Task PseudonymizationFailBestEffortAsync(
+        PseudonymizeJob job, IServiceScopeFactory scopes, IClientProxy group, TimeProvider clock, ILogger logger, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AnamnysDbContext>();
+            var now = clock.GetUtcNow();
+            var updated = await db.Notes
+                .Where(n => n.Id == job.NoteId && n.ProviderId == job.ProviderId && n.Status == "Processing")
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(n => n.Status, "Failed")
+                    .SetProperty(n => n.FailureReason, PseudonymizationStep.FailureReason)
+                    .SetProperty(n => n.StructureStatus, (string?)null)
+                    .SetProperty(n => n.PseudonymizationFailedAt, now)
+                    .SetProperty(n => n.UpdatedAt, now), ct);
+            if (updated > 0)
+            {
+                await group.SendAsync("NoteFailed", job.NoteId, PseudonymizationStep.FailureReason, ct);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Could not mark note {NoteId} as failed: {ExceptionType}", job.NoteId, e.GetType().Name);
         }
     }
 

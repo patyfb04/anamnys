@@ -35,6 +35,8 @@ public class NotificationsMigrationTests(SharedAppHostFixture fixture)
             await RunMigrationAsync(db, "2026-11-12-structured-intake.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-15-recording-consent.sql"); // the bootstrap script already includes it
             await RunMigrationAsync(db, "2026-11-16-transient-audio.sql"); // the bootstrap script already includes it
+            // 2026-11-17-pseudonymization.sql is left out: it needs Notes.FailureReason (2026-10-10-live-session.sql, not in
+            // this chain) and touches none of the tables compared here.
         }
         await using var fresh = await ScratchDatabase.CreateAsync(fixture, Ct, "anamnys-db-script.sql");
         await using (var db = await fresh.OpenAsync(Ct))
