@@ -1,17 +1,21 @@
 using Anamnys.Server.Data;
+using Anamnys.Server.Pseudonymization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.LiveSession;
 
-public enum TranscriptionOutcome { Ready, NoSpeech, Error }
+// Gone: the note left Processing during the pseudonymisation step (deleted or discarded); nothing to notify.
+public enum TranscriptionOutcome { Ready, NoSpeech, Error, PseudonymizationFailed, Gone }
 
-// One queued recording: transcribe, write the note, and destroy the audio on every path
-// (design/specs/2026-10-10-live-session-transcription-design.md §4.3 and §7).
+// One queued recording: transcribe, pseudonymise, write the note, and destroy the audio on every path
+// (design/specs/2026-10-10-live-session-transcription-design.md §4.3 and §7; F-27: the transcript goes through the
+// pseudonymisation step before it is written, design/specs/2026-11-17-pseudonymization-design.md §2).
 // Delivery 2 adds the structuring step between the transcript and ReadyForReview.
 public static class NoteTranscription
 {
     public static async Task<TranscriptionOutcome> ProcessAsync(
-        AnamnysDbContext db, ITranscriber transcriber, TranscriptionJob job, TimeProvider clock, ILogger logger, CancellationToken ct)
+        AnamnysDbContext db, ITranscriber transcriber, PseudonymizationStep pseudonymization, TranscriptionJob job, TimeProvider clock,
+        ILogger logger, CancellationToken ct)
     {
         var samples = job.Audio.ToSamples();
         string text;
@@ -42,14 +46,17 @@ public static class NoteTranscription
             await FailAsync(db, job.NoteId, "no_speech", clock.GetUtcNow(), ct);
             return TranscriptionOutcome.NoSpeech;
         }
-        await db.Notes
-            .Where(n => n.Id == job.NoteId && n.ProviderId == job.ProviderId)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(n => n.RawTranscript, text)
-                .SetProperty(n => n.Status, "ReadyForReview")
-                .SetProperty(n => n.UpdatedAt, clock.GetUtcNow()), ct);
+        // The audio was transcribed whatever the step's outcome; the original text lives only in this call (and, on a
+        // failure, in the step's in-memory hold).
+        var outcome = await pseudonymization.RunAsync(db, job.NoteId, job.ProviderId, job.Meta.PatientId, text, ct);
+        db.ChangeTracker.Clear();
         await RecordDestructionAsync(db, job, AudioDestruction.Transcribed, clock, logger, ct);
-        return TranscriptionOutcome.Ready;
+        return outcome switch
+        {
+            PseudonymizationOutcome.Done => TranscriptionOutcome.Ready,
+            PseudonymizationOutcome.Failed => TranscriptionOutcome.PseudonymizationFailed,
+            _ => TranscriptionOutcome.Gone,
+        };
     }
 
     // F-26: the audio is already zeroed here; the record never throws but on shutdown.

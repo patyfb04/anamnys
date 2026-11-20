@@ -721,7 +721,9 @@
     "failed": {
       "no_speech": "Nenhuma fala foi detectada. Grave novamente.",
       "transcription_error": "Não foi possível transcrever esta gravação.",
-      "server_restart": "O servidor reiniciou durante o processamento e o áudio foi descartado. Grave novamente."
+      "server_restart": "O servidor reiniciou durante o processamento e o áudio foi descartado. Grave novamente.",
+      "pseudonymization_failed": "Não foi possível proteger os nomes de terceiros. Você pode tentar de novo nos próximos minutos, na nota; depois disso, grave novamente.",
+      "server_restart_text": "O servidor reiniciou antes de proteger o texto. Escreva a nota novamente."
     },
     "recordAgain": "Gravar novamente",
     "errors": {
@@ -959,6 +961,34 @@
       "term_inactive": "Este tema foi aposentado e não pode mais ser adicionado.",
       "already_tagged": "Este tema já está na nota.",
       "suggest_failed": "Não foi possível sugerir temas agora. Tente novamente."
+    }
+  },
+  "pseudonymization": {
+    "notice": "Na transcrição, nomes de terceiros foram substituídos por códigos ([P1], [Empresa 1]…), o que reduz a exposição de terceiros. O mesmo código indica a mesma pessoa em todas as sessões deste paciente.",
+    "processing": "Protegendo nomes de terceiros…",
+    "openNote": "Abrir a nota",
+    "failed": {
+      "title": "Não foi possível proteger os nomes de terceiros",
+      "retryable": "Nada com nomes foi guardado. Você pode tentar de novo agora.",
+      "gone": "O texto original não é mais guardado, por isso não dá para tentar de novo. Dite outra vez ou escreva a nota à mão.",
+      "retry": "Tentar de novo",
+      "retryFailed": "Não foi possível tentar de novo agora. Verifique a conexão e tente outra vez."
+    },
+    "backfill": {
+      "title": "Pseudonimizar transcrições antigas",
+      "description": "Troca nomes de terceiros por códigos nas transcrições anteriores, o que reduz a exposição de terceiros. Só o texto-fonte é alterado; o conteúdo das notas assinadas não muda. Roda em segundo plano, uma nota por vez.",
+      "pending_one": "{{count}} transcrição aguardando.",
+      "pending_other": "{{count}} transcrições aguardando.",
+      "start": "Iniciar",
+      "running": "Em andamento…",
+      "progress": "{{done}} de {{total}} transcrições processadas",
+      "progressLabel": "Progresso da pseudonimização",
+      "failedCount_one": "{{count}} transcrição não pôde ser processada e será tentada de novo na próxima execução.",
+      "failedCount_other": "{{count}} transcrições não puderam ser processadas e serão tentadas de novo na próxima execução.",
+      "finishedAt": "Última execução concluída em {{date}} às {{time}}.",
+      "alreadyRunning": "Já está em andamento.",
+      "startFailed": "Não foi possível iniciar.",
+      "loadFailed": "Não foi possível carregar o andamento."
     }
   },
   "noteView": {

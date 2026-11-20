@@ -70,6 +70,9 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
     public DbSet<RecordingConsent> RecordingConsents => Set<RecordingConsent>();
     public DbSet<ConsentEvent> ConsentEvents => Set<ConsentEvent>();
     public DbSet<AudioDestructionLog> AudioDestructionLogs => Set<AudioDestructionLog>();
+    public DbSet<PatientPseudonymSecret> PatientPseudonymSecrets => Set<PatientPseudonymSecret>();
+    public DbSet<PseudonymToken> PseudonymTokens => Set<PseudonymToken>();
+    public DbSet<PseudonymizationBackfill> PseudonymizationBackfills => Set<PseudonymizationBackfill>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -571,6 +574,28 @@ public class AnamnysDbContext(DbContextOptions<AnamnysDbContext> options) : DbCo
             e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne<Note>().WithMany().HasForeignKey(x => x.NoteId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<PatientPseudonymSecret>(e =>
+        {
+            e.ToTable("PatientPseudonymSecrets");
+            e.HasKey(x => x.PatientId);
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PseudonymToken>(e =>
+        {
+            e.ToTable("PseudonymTokens");
+            e.HasKey(x => new { x.PatientId, x.Kind, x.Fingerprint });
+            e.HasIndex(x => new { x.PatientId, x.Kind, x.Number }).IsUnique();
+            e.HasOne<Patient>().WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<PseudonymizationBackfill>(e =>
+        {
+            e.ToTable("PseudonymizationBackfills");
+            e.HasKey(x => x.ProviderId);
+            e.HasOne<Provider>().WithMany().HasForeignKey(x => x.ProviderId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

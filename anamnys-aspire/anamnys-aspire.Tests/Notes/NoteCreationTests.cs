@@ -13,7 +13,7 @@ public class NoteCreationTests(SharedAppHostFixture fixture)
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task CreateAsync_AiMode_CreatesPendingTextNoteEnqueuesAndAudits()
+    public async Task CreateAsync_AiMode_CreatesProcessingTextNoteWithoutTextEnqueuesPseudonymizationAndAudits()
     {
         // Arrange
         await using var seed = await PatientSearchSeed.CreateAsync(fixture, Ct);
@@ -29,13 +29,15 @@ public class NoteCreationTests(SharedAppHostFixture fixture)
         result.Outcome.Should().Be(CreateNoteOutcome.Created);
         var note = await db.Notes.AsNoTracking().SingleAsync(n => n.Id == result.NoteId, Ct);
         note.InputMode.Should().Be("Text");
-        note.Status.Should().Be("ReadyForReview");
+        // F-27: the typed text waits in memory for the pseudonymisation step; nothing with names is written yet.
+        note.Status.Should().Be("Processing");
         note.Format.Should().Be("SOAP");
-        note.RawTranscript.Should().Be("Relata insônia.");
+        note.RawTranscript.Should().BeNull();
+        note.TranscriptPseudonymized.Should().BeFalse();
         note.StructureStatus.Should().Be("pending");
         note.SessionId.Should().BeNull();
         queue.Reader.TryRead(out var job).Should().BeTrue();
-        job.Should().BeEquivalentTo(new StructureJob(result.NoteId!.Value, seed.ProviderId, "SOAP"));
+        job.Should().BeEquivalentTo(new PseudonymizeJob(result.NoteId!.Value, seed.ProviderId, patient, "Relata insônia."));
         var audit = await db.AuditEntries.AsNoTracking().SingleAsync(a => a.NoteId == result.NoteId, Ct);
         audit.Action.Should().Be("note_created");
         audit.NewValue.Should().Be("Text,SOAP");

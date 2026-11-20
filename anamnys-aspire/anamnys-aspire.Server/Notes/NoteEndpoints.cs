@@ -1,6 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Server.Patients;
+using Anamnys.Server.Pseudonymization;
 using Anamnys.Server.Storage;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,13 +64,13 @@ public static class NoteEndpoints
             return candidates is null ? Results.NotFound() : Results.Ok(candidates);
         });
 
-        notes.MapGet("{noteId:guid}", async (Guid noteId, HttpContext http, AnamnysDbContext db, CancellationToken ct) =>
+        notes.MapGet("{noteId:guid}", async (Guid noteId, HttpContext http, AnamnysDbContext db, PseudonymizationHolds holds, CancellationToken ct) =>
         {
             if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
             {
                 return Results.Unauthorized();
             }
-            var note = await NoteQueries.GetAsync(db, providerId, noteId, ct);
+            var note = await NoteQueries.GetAsync(db, providerId, noteId, ct, holds);
             return note is null ? Results.NotFound() : Results.Ok(note);
         });
 

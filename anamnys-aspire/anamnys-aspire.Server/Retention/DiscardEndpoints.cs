@@ -1,5 +1,6 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.Patients;
+using Anamnys.Server.Pseudonymization;
 using Anamnys.Server.Storage;
 
 namespace Anamnys.Server.Retention;
@@ -15,14 +16,14 @@ public static class DiscardEndpoints
 
         group.MapPost("patients/{patientId:guid}/discard", async (
             Guid patientId, DiscardRequest request, HttpContext http, AnamnysDbContext db, INoteFileStore store,
-            ILoggerFactory loggers, CancellationToken ct) =>
+            ILoggerFactory loggers, PseudonymizationHolds holds, CancellationToken ct) =>
         {
             if (await PatientRecordEndpoints.ProviderIdAsync(http) is not { } providerId)
             {
                 return Results.Unauthorized();
             }
             var result = await DiscardService.DiscardAsync(
-                db, store, loggers.CreateLogger(typeof(DiscardService)), providerId, patientId, request.ConfirmName, DateTimeOffset.UtcNow, ct);
+                db, store, loggers.CreateLogger(typeof(DiscardService)), providerId, patientId, request.ConfirmName, DateTimeOffset.UtcNow, ct, holds);
             return result.Outcome switch
             {
                 DiscardOutcome.Ok => Results.Ok(new { termId = result.TermId, counts = result.Counts }),

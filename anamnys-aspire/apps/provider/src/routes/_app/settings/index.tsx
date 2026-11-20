@@ -5,6 +5,7 @@ import AvailabilitySection from "../../../components/settings/AvailabilitySectio
 import AccountExportSection from "../../../components/settings/AccountExportSection";
 import DocumentSettingsSection from "../../../components/settings/DocumentSettingsSection";
 import RetentionSettingsSection from "../../../components/settings/RetentionSettingsSection";
+import PseudonymizationBackfillSection from "../../../components/settings/PseudonymizationBackfillSection";
 import AnalysisSettingsSection from "../../../components/settings/AnalysisSettingsSection";
 import IntakeTemplatesSection from "../../../components/settings/IntakeTemplatesSection";
 import FolderTabs from "../../../components/FolderTabs";
@@ -48,6 +49,7 @@ function SettingsPage() {
           <>
             <DocumentSettingsSection />
             <RetentionSettingsSection />
+            <PseudonymizationBackfillSection />
             <AnalysisSettingsSection />
             <IntakeTemplatesSection />
           </>

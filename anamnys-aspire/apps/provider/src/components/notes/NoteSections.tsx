@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
 import { isAxiosError } from "axios";
 import { notesApi } from "@anamnys/shared/api/notes";
+import { highlightTokens } from "./PseudonymTokens";
 import type { ExcerptPassage, NoteSectionView, QuoteSelection, ThemeSelection } from "@anamnys/shared/lib/types";
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
   onMarkFollowUp?: (selection: ThemeSelection) => void;
   /** "Marcar como fala do paciente" on the selected text (F-15). */
   onMarkQuote?: (selection: QuoteSelection) => void;
+  /** F-27: show third-party codes ([P1]…) highlighted; display only, the text itself is untouched. */
+  markTokens?: boolean;
 }
 
 // Mirrors the server limit on a stored quote.
@@ -24,7 +27,7 @@ const MAX_QUOTE = 200;
 
 // The structured note: one tonal block per section, in format order. Empty sections stay visible
 // and say so — the AI never fills them in. When editable, each block can be edited in place.
-export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote }: Props) {
+export default function NoteSections({ sections, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote, markTokens }: Props) {
   const ordered = [...sections].sort((a, b) => a.position - b.position);
 
   return (
@@ -40,13 +43,14 @@ export default function NoteSections({ sections, editable, noteId, onSaved, high
           onMark={onMark}
           onMarkFollowUp={onMarkFollowUp}
           onMarkQuote={onMarkQuote}
+          markTokens={markTokens}
         />
       ))}
     </div>
   );
 }
 
-function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote }: Omit<Props, "sections"> & { section: NoteSectionView }) {
+function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, onMarkFollowUp, onMarkQuote, markTokens }: Omit<Props, "sections"> & { section: NoteSectionView }) {
   const { t } = useTranslation();
   // Anamnese notes carry their template's section titles (F-31); the fixed formats use the translated key.
   const title = section.title ?? t(`noteView.sections.${section.key}`, { defaultValue: section.key });
@@ -84,6 +88,7 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, o
 
   // The provider selects text inside the section; offsets are into the section text, trimmed.
   const content = current.content;
+  const show = (text: string) => (markTokens ? highlightTokens(text) : text);
   useEffect(() => {
     if (!onMark || editing) {
       setRange(null);
@@ -212,17 +217,17 @@ function SectionBlock({ section, editable, noteId, onSaved, highlight, onMark, o
           <p ref={textRef} className="whitespace-pre-wrap text-body-md text-onSurface">
             {exact ? (
               <>
-                {current.content.slice(0, exact.start)}
+                {show(current.content.slice(0, exact.start))}
                 <mark
                   ref={markRef}
                   className="rounded-sm bg-pastelLavender text-onSurface underline decoration-primary decoration-2 underline-offset-2"
                 >
-                  {current.content.slice(exact.start, exact.end)}
+                  {show(current.content.slice(exact.start, exact.end))}
                 </mark>
-                {current.content.slice(exact.end)}
+                {show(current.content.slice(exact.end))}
               </>
             ) : (
-              current.content
+              show(current.content)
             )}
           </p>
           {range && onMark && (

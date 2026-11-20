@@ -45,5 +45,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="..\anamnys-db-script.sql" LogicalName="anamnys-db-script.sql" />
+    <EmbeddedResource Include="Pseudonymization\first-names.txt" LogicalName="Anamnys.Server.Pseudonymization.first-names.txt" />
   </ItemGroup>
 </Project>

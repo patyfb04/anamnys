@@ -44,6 +44,8 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
         """SELECT count(*) FROM "PatientInvitations" WHERE "PatientId" = @pa""",
         """SELECT count(*) FROM "Notifications" WHERE "SubjectId" = @pa OR "SubjectId" = ANY(@notes)""",
         """SELECT count(*) FROM "AudioDestructionLogs" WHERE "PatientId" = @pa""",
+        """SELECT count(*) FROM "PseudonymTokens" WHERE "PatientId" = @pa""",
+        """SELECT count(*) FROM "PatientPseudonymSecrets" WHERE "PatientId" = @pa""",
     ];
 
     internal sealed record Record(
@@ -107,6 +109,8 @@ public class DiscardServiceTests(SharedAppHostFixture fixture)
             UPDATE "Notes" SET "SessionId" = @s WHERE "Id" = @n;
             INSERT INTO "AudioDestructionLogs" ("SessionId","ProviderId","PatientId","NoteId","RecordingMode","Sources","Outcome")
             VALUES (gen_random_uuid(), @p, @pa, @n, 'session', ARRAY['in_person'], 'transcribed');
+            INSERT INTO "PatientPseudonymSecrets" ("PatientId","Protected") VALUES (@pa, '\x0102');
+            INSERT INTO "PseudonymTokens" ("PatientId","Kind","Fingerprint","Number") VALUES (@pa, 'person', decode(repeat('ab', 32), 'hex'), 1);
             """, Ct, ("s", session), ("n", signed), ("m", Marker), ("p", provider), ("pa", patient));
         // Different hours per patient: one provider's appointments never overlap.
         await s.AddAppointmentAsync(provider, patient, new DateTimeOffset(2020, 1, 1, first == "Ana" ? 15 : 17, 0, 0, TimeSpan.Zero), "attended", Ct);

@@ -31,6 +31,10 @@ public sealed record CreateNoteRequest(Guid? PatientId, Guid? AppointmentId, str
         {
             errors["text"] = ["Escreva as anotações para a IA organizar."];
         }
+        else if (Mode == "manual" && text.Length > 0)
+        {
+            errors["text"] = ["Uma nota manual não recebe texto para a IA."];
+        }
         else if (text.Length > MaxText)
         {
             errors["text"] = [$"Use no máximo {MaxText} caracteres."];
@@ -108,16 +112,18 @@ public static class NoteCreation
                 session = await NoteSessions.AttendAsync(db, providerId, patientId, appointment, null, null, now, write);
             }
 
+            // F-27: the text of an AI note is never written as typed; it waits in memory for the pseudonymisation step
+            // (the queued job), which writes the transcript and moves the note to ReadyForReview.
             var note = new Note
             {
                 Id = Guid.NewGuid(),
                 ProviderId = providerId,
                 PatientId = patientId,
                 SessionId = session?.Id,
-                Status = "ReadyForReview",
+                Status = ai ? "Processing" : "ReadyForReview",
                 InputMode = "Text",
                 Format = format,
-                RawTranscript = text,
+                RawTranscript = null,
                 StructureStatus = ai ? "pending" : null,
                 CreatedAt = now,
                 UpdatedAt = now,
@@ -136,7 +142,8 @@ public static class NoteCreation
 
         if (ai && result.Outcome == CreateNoteOutcome.Created)
         {
-            queue.Enqueue(new StructureJob(result.NoteId!.Value, providerId, format));
+            // Structuring follows the step in the worker (the note's own format).
+            queue.Enqueue(new PseudonymizeJob(result.NoteId!.Value, providerId, patientId, text!));
         }
         return result;
     }

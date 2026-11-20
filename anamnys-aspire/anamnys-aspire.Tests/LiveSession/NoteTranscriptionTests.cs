@@ -1,6 +1,7 @@
 using Anamnys.Server.Data;
 using Anamnys.Server.LiveSession;
 using Anamnys.Tests.Patients;
+using Anamnys.Tests.Pseudonymization;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -21,7 +22,8 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var (db, job, bytes) = await QueuedJobAsync(seed);
         await using var _ = db;
 
-        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "  Paciente relata melhora.  "), job,
+        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => "  Paciente relata melhora.  "),
+            PseudonymizationKit.Step(clock: new FakeTimeProvider(Now.AddMinutes(2))), job,
             new FakeTimeProvider(Now.AddMinutes(2)), NullLogger.Instance, Ct);
 
         outcome.Should().Be(TranscriptionOutcome.Ready);
@@ -39,7 +41,7 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var (db, job, bytes) = await QueuedJobAsync(seed);
         await using var _ = db;
 
-        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => " \n "), job,
+        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => " \n "), PseudonymizationKit.Step(), job,
             new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         outcome.Should().Be(TranscriptionOutcome.NoSpeech);
@@ -58,7 +60,7 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         var (db, job, bytes) = await QueuedJobAsync(seed);
         await using var _ = db;
 
-        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => throw new InvalidOperationException("boom")), job,
+        var outcome = await NoteTranscription.ProcessAsync(db, new FakeTranscriber(_ => throw new InvalidOperationException("boom")), PseudonymizationKit.Step(), job,
             new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         outcome.Should().Be(TranscriptionOutcome.Error);
@@ -77,7 +79,7 @@ public class NoteTranscriptionTests(SharedAppHostFixture fixture)
         await using var _ = db;
         float[]? captured = null;
 
-        await NoteTranscription.ProcessAsync(db, new FakeTranscriber(s => { captured = s; return "texto"; }), job,
+        await NoteTranscription.ProcessAsync(db, new FakeTranscriber(s => { captured = s; return "texto"; }), PseudonymizationKit.Step(), job,
             new FakeTimeProvider(Now), NullLogger.Instance, Ct);
 
         captured.Should().NotBeNull();

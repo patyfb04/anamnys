@@ -1,4 +1,5 @@
 using Anamnys.Server.Data;
+using Anamnys.Server.Pseudonymization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Anamnys.Server.Notes;
@@ -12,11 +13,14 @@ public sealed record NoteDetail(
     string? StructureStatus, string? StructureFailure, IReadOnlyList<NoteSectionDto> Sections,
     DateTimeOffset? SignedAt, string? SignedByCrp, bool ProviderHasCrp, bool SectionsByAi,
     DateTimeOffset? ExportedAt, Guid? SessionId, Guid? IntakeId = null,
-    DateTimeOffset? AudioDestroyedAt = null, string? AudioOutcome = null, IReadOnlyList<string>? AudioSources = null);
+    DateTimeOffset? AudioDestroyedAt = null, string? AudioOutcome = null, IReadOnlyList<string>? AudioSources = null,
+    bool TranscriptPseudonymized = false, DateTimeOffset? PseudonymizationFailedAt = null, bool PseudonymizationRetryable = false);
 
 public static class NoteQueries
 {
-    public static async Task<NoteDetail?> GetAsync(AnamnysDbContext db, Guid providerId, Guid noteId, CancellationToken ct)
+    // holds: when given, PseudonymizationRetryable says whether the failed note's text is still in memory (F-27).
+    public static async Task<NoteDetail?> GetAsync(
+        AnamnysDbContext db, Guid providerId, Guid noteId, CancellationToken ct, PseudonymizationHolds? holds = null)
     {
         var note = await (from n in db.Notes.AsNoTracking()
                           join p in db.Patients.AsNoTracking() on n.PatientId equals p.Id
@@ -25,6 +29,7 @@ public static class NoteQueries
                           {
                               n.Id, n.PatientId, PatientName = p.FirstName + " " + p.LastName, n.Status, n.InputMode, n.Format,
                               n.RawTranscript, n.FailureReason, n.CreatedAt, n.StructureStatus, n.StructureFailure, n.SignedAt, n.SignedByCrp, n.ExportedAt, n.SessionId, n.IntakeId,
+                              n.TranscriptPseudonymized, n.PseudonymizationFailedAt,
                               ProviderHasCrp = db.Providers.Any(pr => pr.Id == n.ProviderId && pr.CrpNumber != null && pr.CrpRegion != null),
                               SectionsByAi = db.AuditEntries
                                   .Where(a => a.NoteId == n.Id && (a.Action == "ai_generated" || a.Action == "sections_created"))
@@ -57,6 +62,8 @@ public static class NoteQueries
         return new NoteDetail(note.Id, note.PatientId, note.PatientName, note.Status, note.InputMode, note.Format,
             note.RawTranscript, note.FailureReason, note.CreatedAt, note.StructureStatus, note.StructureFailure, sections,
             note.SignedAt, note.SignedByCrp, note.ProviderHasCrp, note.SectionsByAi, note.ExportedAt, note.SessionId, note.IntakeId,
-            audio?.DestroyedAt, audio?.Outcome, audio?.Sources);
+            audio?.DestroyedAt, audio?.Outcome, audio?.Sources,
+            note.TranscriptPseudonymized, note.PseudonymizationFailedAt,
+            note.Status == "Failed" && note.FailureReason == PseudonymizationStep.FailureReason && holds?.IsHeld(noteId, providerId) == true);
     }
 }
